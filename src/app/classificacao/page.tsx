@@ -28,7 +28,7 @@ export default async function Classificacao() {
               grupos.length === 0 ? (
                 <p className="text-sm text-text-3">Grupos ainda não definidos.</p>
               ) : (
-                <div className="grid gap-4 xl:grid-cols-2">
+                <div className="grid gap-4">
                   {grupos.map((g) => (
                     <TabelaClassificacao
                       key={g.id}
