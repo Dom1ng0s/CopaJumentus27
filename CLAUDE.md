@@ -13,7 +13,7 @@ Este arquivo é a fonte de verdade do projeto. Ao implementar qualquer coisa, si
 | **Operador** | o dono do projeto (única pessoa com acesso de escrita) | cadastra jogadores e capitães, dispara o sorteio, conduz a cerimônia na própria tela |
 | **Plateia** | a galera da pelada | abre o **link de resultado** no celular depois da cerimônia e vê os elencos |
 
-Não há contas de usuário. Os **admins** (operador e quem ele autorizar) entram com uma senha única (`ADMIN_SENHA`) e são os únicos que editam qualquer coisa. A plateia vê o campeonato (tabela, jogos, rankings, elencos) sem login e nunca vê estrelas.
+Há **contas de admin**, só para a organização (decisão do operador em 17/11/2026): cada admin entra com usuário e senha próprios e só admins editam qualquer coisa. Não há níveis entre admins. A plateia não tem conta nem login: vê o campeonato (tabela, jogos, rankings, elencos) e nunca vê estrelas.
 
 ---
 
@@ -31,7 +31,7 @@ Não há contas de usuário. Os **admins** (operador e quem ele autorizar) entra
 Um campeonato por instalação: equipes, elencos vindos do sorteio, fases e grupos editáveis, partidas com data/hora editáveis, súmula ao vivo, classificação, rankings e controle de pagamento. Pedido do operador em 17/11/2026: "só o simples do campeonato, apenas os admins editam".
 
 ### Fora de escopo (não construir, nem "preparar terreno" com abstração especulativa)
-Contas de usuário, seguidores, comentários, enquetes, mídia enviada pelo público, vários campeonatos por instalação, histórico de temporadas, app mobile nativo, notificações, impressão de súmula e carteirinhas.
+Contas de usuário para a plateia (só os admins têm conta, §4.5), seguidores, comentários, enquetes, mídia enviada pelo público, vários campeonatos por instalação, histórico de temporadas, app mobile nativo, notificações, impressão de súmula e carteirinhas.
 
 ---
 
@@ -106,7 +106,7 @@ Número de times e tamanho de elenco são **derivados do cadastro**, nunca hardc
 ### 4.1 Stack
 - **Next.js (App Router) + TypeScript (strict) + Tailwind CSS**
 - **Postgres com Drizzle ORM** (§9): Neon em produção (Vercel), PGlite (Postgres em WebAssembly, arquivo local) em desenvolvimento. Decisão do operador em 17/11/2026.
-- Admin por senha única em `ADMIN_SENHA` (`.env.local`), cookie httpOnly derivado da senha; `src/middleware.ts` protege `/admin`, `/sorteio` e `/cerimonia`, e cada server action confere o cookie de novo.
+- **Contas de admin** (tabela `admin`, §9), detalhes em §4.5. `src/middleware.ts` protege `/admin`, `/sorteio` e `/cerimonia` conferindo só o cookie; cada server action e cada layout do admin passam por `exigirAdmin()`, que confere a conta no banco.
 - Testes: **Vitest** — obrigatórios para a camada de domínio (§4.3).
 
 ### 4.2 Camada de dados — trocável de propósito
@@ -154,6 +154,16 @@ A lógica de sorteio em `lib/domain` precisa ser testável sem renderizar nada. 
 - O resultado é serializado e **codificado na própria URL** (JSON compacto → base64url), rota `/resultado/[payload]`.
 - A página de resultado é read-only: renderiza do payload, não lê `localStorage` nem repo.
 - Mantenha o payload enxuto: ids curtos, nomes, estrelas, times. Se a URL passar de ~2000 caracteres, avise e proponha alternativa (publicar página estática) em vez de truncar dados.
+
+### 4.5 Contas de admin
+
+Substituiu a senha única `ADMIN_SENHA` em 17/11/2026. Código em `src/lib/auth/` (regras, testadas) e `src/lib/repo/admins-repo.ts` (banco).
+- **Senha:** hash scrypt do `node:crypto`, formato `scrypt$N$r$p$<sal base64url>$<chave base64url>` (N=16384, r=8, p=1, sal de 16 bytes, chave de 64), comparação com `timingSafeEqual`. Nova senha: mínimo 10 caracteres, diferente da atual, digitada duas vezes. Senha temporária gerada com `node:crypto` (não pelo `random.ts`, que é do sorteio).
+- **Login** em `/admin/entrar` com usuário (sem diferenciar maiúsculas) e senha. 5 erros seguidos bloqueiam a conta por 15 minutos. A mensagem de erro é a mesma para usuário inexistente, conta desativada, bloqueada e senha errada, e o usuário inexistente gasta o mesmo tempo de verificação.
+- **Sessão:** cookie `cj_admin` httpOnly, `secure`, `sameSite=lax`, 30 dias, com `{adminId, versao, expira}` assinado por HMAC-SHA256 com `SESSAO_SEGREDO` (32+ caracteres). O middleware só confere assinatura e validade (Web Crypto, sem banco). `exigirAdmin()` confere conta ativa e `versao_sessao` igual. Trocar ou redefinir a senha e desativar a conta incrementam `versao_sessao`, encerrando as outras sessões. Sair apaga o cookie.
+- **Troca obrigatória:** com `deve_trocar_senha`, toda página do admin (painel, `/sorteio`, `/cerimonia`, via `GuardaAdmin`) fica inerte sob um pop-up que não fecha (sem X, Esc ou clique fora) e `exigirAdmin()` recusa qualquer ação no servidor até a troca.
+- **Gestão:** Admin › Admins lista, cria conta (senha temporária mostrada uma vez, só na resposta da ação), redefine senha (nova temporária, troca forçada, desbloqueia) e desativa. Ninguém desativa a própria conta nem o último admin ativo. Admin › Minha conta troca a própria senha (pede a atual).
+- **Primeira conta** num banco vazio: `npm run admin:criar -- <usuario> [Nome]`.
 
 ---
 
@@ -275,7 +285,7 @@ Nunca introduza visual corporativo/SaaS genérico, biblioteca de componentes com
 
 ### 8.5 Rotas
 - Públicas: `/`, `/classificacao`, `/jogos`, `/jogos/[id]`, `/rankings`, `/equipes`, `/resultado/[payload]`.
-- Admin: `/admin`, `/admin/inscricoes`, `/admin/campeonato`, `/admin/fases`, `/admin/partidas`, `/admin/partidas/[id]`, `/admin/equipes`, `/admin/pagamentos`, `/sorteio`, `/cerimonia`. Login em `/admin/entrar`.
+- Admin: `/admin`, `/admin/inscricoes`, `/admin/campeonato`, `/admin/fases`, `/admin/partidas`, `/admin/partidas/[id]`, `/admin/equipes`, `/admin/pagamentos`, `/admin/admins`, `/admin/conta`, `/sorteio`, `/cerimonia`. Login em `/admin/entrar`.
 
 ---
 
@@ -283,8 +293,9 @@ Nunca introduza visual corporativo/SaaS genérico, biblioteca de componentes com
 
 - **Produção:** Postgres no **Neon** (São Paulo, `sa-east-1`), app na **Vercel** com funções em São Paulo (`vercel.json`, `gru1`) para ficar perto do banco. Repositório na organização `copa-jumentus` do GitHub (a Vercel não publica repo de conta pessoal de outra pessoa). `DATABASE_URL` (connection string *pooled* do Neon) nas variáveis de ambiente da Vercel. O cliente usa `postgres` 3.x com `prepare: false` (exigido pelo pooler).
 - **Desenvolvimento:** sem `DATABASE_URL`, `src/lib/db/cliente.ts` abre um **PGlite** em `dados/pglite` e aplica as migrações sozinho. Para começar do zero, apague a pasta. Testes usam PGlite em memória (`bancoDeTeste()`).
-- **Esquema:** `src/lib/db/schema.ts`. Tabelas: `campeonato` (linha única, id 1), `inscricao`, `equipe`, `jogador`, `fase`, `grupo`, `grupo_equipe`, `partida`, `evento`. As restrições do domínio que o banco consegue garantir (estrelas 1–6, mandante ≠ visitante, FKs) estão em `check` e `foreign key`.
+- **Esquema:** `src/lib/db/schema.ts`. Tabelas: `admin` (contas, §4.5), `campeonato` (linha única, id 1), `inscricao`, `equipe`, `jogador`, `fase`, `grupo`, `grupo_equipe`, `partida`, `evento`. As restrições do domínio que o banco consegue garantir (estrelas 1–6, mandante ≠ visitante, FKs) estão em `check` e `foreign key`.
 - **Migrações:** SQL em `drizzle/`, geradas com `npm run db:gerar` depois de mudar o esquema (revise o SQL e versione). `npm run build` roda `scripts/migrar.mjs` antes do `next build`, então o deploy na Vercel atualiza o Neon sozinho. Nunca edite uma migração já aplicada; gere outra.
 - **Escrita:** `atualizarCampeonato(alterar)` trava a linha do campeonato (`select … for update`), relê, aplica a mudança e regrava as tabelas filhas numa transação. Ações concorrentes de dois admins são serializadas; erro em qualquer passo desfaz tudo. Volume esperado (~64 jogadores, ~20 partidas) torna a regravação inteira barata; se crescer muito, troque por escritas pontuais.
-- **Segredos:** `DATABASE_URL` e `ADMIN_SENHA` só em `.env.local` e nas variáveis da Vercel. Nunca no Git.
+- **Segredos:** `DATABASE_URL` e `SESSAO_SEGREDO` só em `.env.local` e nas variáveis da Vercel. Nunca no Git, nem hashes de senha de contas reais (as contas iniciais foram inseridas uma vez no Neon por SQL fora do repositório).
+- **Preview usa o banco de produção:** na Vercel, `DATABASE_URL` vale para production e preview, então o build de qualquer PR aplica as migrações dele no Neon de produção antes do merge. Toda migração precisa ser compatível com o código que está na `main`.
 

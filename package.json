@@ -11,7 +11,8 @@
     "test:watch": "vitest",
     "demo": "node scripts/gerar-demo.mjs",
     "db:gerar": "drizzle-kit generate",
-    "db:migrar": "node scripts/migrar.mjs"
+    "db:migrar": "node scripts/migrar.mjs",
+    "admin:criar": "node scripts/criar-admin.mjs"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.16",

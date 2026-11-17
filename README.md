@@ -54,17 +54,25 @@ Sem inscrições cadastradas, o sorteio usa um elenco de exemplo.
 
 Além do sorteio, o site mostra o campeonato para a galera e tem uma área de admin para editar tudo.
 
-| Público (sem login) | Admin (`/admin`, senha) |
+| Público (sem login) | Admin (`/admin`, conta de admin) |
 |---|---|
 | Início, classificação por grupo, jogos e súmulas, rankings (artilharia, assistências, cartões), elencos | Dados e pontuação, critérios de desempate, fases e grupos (sorteio aleatório ou manual), partidas com data/hora editáveis, placar e súmula ao vivo, elencos e transferências, pagamentos, pote e cerimônia |
 
 Para ver as telas com um campeonato de exemplo (nomes fictícios), rode `npm run demo` antes de `npm run dev`. Ele gera `dados/campeonato.json` e zera o banco local, que importa o arquivo na próxima abertura.
 
-Para liberar o admin, crie `.env.local` na raiz:
+Cada admin tem conta própria (usuário e senha). Para liberar o admin na sua máquina, crie `.env.local` na raiz com o segredo que assina o cookie de sessão (32+ caracteres):
 
 ```
-ADMIN_SENHA=uma-senha-forte
+SESSAO_SEGREDO=gere-com-node-crypto-randomBytes
 ```
+
+e crie a primeira conta (com o `npm run dev` parado):
+
+```
+npm run admin:criar -- seu-usuario "Seu Nome"
+```
+
+O comando mostra uma senha temporária uma vez; no primeiro acesso o sistema pede uma senha nova. As demais contas são criadas em **Admin › Admins**.
 
 Regras: vitória 3, empate 1, derrota 0 (editável); 3 amarelos ou 1 vermelho suspendem o jogo seguinte. Detalhes em [CLAUDE.md §8](CLAUDE.md).
 
@@ -73,9 +81,9 @@ Regras: vitória 3, empate 1, derrota 0 (editável); 3 amarelos ou 1 vermelho su
 1. Crie um projeto no [Neon](https://neon.tech) (região São Paulo, `sa-east-1`) e copie a connection string **pooled** (o host tem `-pooler`).
 2. Importe o repositório na [Vercel](https://vercel.com). Em **Settings › Environment Variables**, cadastre:
    - `DATABASE_URL`: a string do Neon
-   - `ADMIN_SENHA`: a senha dos admins
+   - `SESSAO_SEGREDO`: segredo do cookie de sessão dos admins (32+ caracteres)
 3. Faça o deploy. O build aplica as migrações (`drizzle/`) no Neon antes de compilar.
-4. Entre em `/admin`, cadastre os inscritos em **Inscrições** (ou importe o CSV) e siga para o sorteio.
+4. Crie a primeira conta de admin (`npm run admin:criar` com a `DATABASE_URL` do Neon no `.env.local`), entre em `/admin`, cadastre os inscritos em **Inscrições** (ou importe o CSV) e siga para o sorteio.
 
 Para usar o Neon na sua máquina, coloque a mesma `DATABASE_URL` no `.env.local` e rode `npm run db:migrar`. Detalhes em [CLAUDE.md §9](CLAUDE.md).
 

@@ -11,6 +11,7 @@ import {
   numeric,
   pgTable,
   primaryKey,
+  serial,
   smallint,
   text,
   timestamp,
@@ -166,4 +167,28 @@ export const evento = pgTable(
     ordem: integer('ordem').notNull().default(0),
   },
   (t) => [index('evento_partida').on(t.partidaId), index('evento_jogador').on(t.jogadorId)],
+);
+
+/**
+ * Contas de admin (CLAUDE.md §1 e §4.1). A plateia não tem login.
+ * `versao_sessao` entra no cookie: incrementar encerra todas as sessões da conta.
+ */
+export const admin = pgTable(
+  'admin',
+  {
+    id: serial('id').primaryKey(),
+    /** Sempre minúsculo; o login não diferencia maiúsculas. */
+    usuario: text('usuario').notNull().unique(),
+    nome: text('nome').notNull(),
+    /** scrypt$N$r$p$<sal base64url>$<chave base64url> (src/lib/auth/senha.ts). */
+    senhaHash: text('senha_hash').notNull(),
+    deveTrocarSenha: boolean('deve_trocar_senha').notNull().default(true),
+    versaoSessao: integer('versao_sessao').notNull().default(1),
+    ativo: boolean('ativo').notNull().default(true),
+    tentativasFalhas: integer('tentativas_falhas').notNull().default(0),
+    bloqueadoAte: timestamp('bloqueado_ate', { withTimezone: true }),
+    criadoEm: timestamp('criado_em', { withTimezone: true }).notNull().defaultNow(),
+    senhaAlteradaEm: timestamp('senha_alterada_em', { withTimezone: true }),
+  },
+  (t) => [check('admin_usuario_minusculo', sql`${t.usuario} = lower(${t.usuario})`)],
 );

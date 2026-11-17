@@ -7,7 +7,8 @@ import { carregarCampeonato } from '@/lib/repo/campeonato-repo';
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Admin — Copa Jumentus' };
 
-export default async function Painel() {
+export default async function Painel({ searchParams }: { searchParams: Promise<{ ok?: string; erro?: string }> }) {
+  const { ok, erro } = await searchParams;
   const c = await carregarCampeonato();
   const { equipe } = indices(c);
   const pagos = c.jogadores.filter((j) => j.pago).length;
@@ -16,6 +17,8 @@ export default async function Painel() {
   return (
     <div className="space-y-6">
       <h1 className="titulo-hero t-xl text-4xl">{c.nome}</h1>
+      <Aviso texto={ok} tipo="ok" />
+      <Aviso texto={erro} />
 
       {!c.sorteioOficializadoEm && (
         <Aviso
