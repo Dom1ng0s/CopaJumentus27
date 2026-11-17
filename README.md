@@ -56,6 +56,8 @@ Além do sorteio, o site mostra o campeonato para a galera e tem uma área de ad
 |---|---|
 | Início, classificação por grupo, jogos e súmulas, rankings (artilharia, assistências, cartões), elencos | Dados e pontuação, critérios de desempate, fases e grupos (sorteio aleatório ou manual), partidas com data/hora editáveis, placar e súmula ao vivo, elencos e transferências, pagamentos, pote e cerimônia |
 
+Para ver as telas com um campeonato de exemplo (nomes fictícios), rode `npm run demo` antes de `npm run dev`. Ele substitui `dados/campeonato.json`.
+
 Para liberar o admin, crie `.env.local` na raiz:
 
 ```

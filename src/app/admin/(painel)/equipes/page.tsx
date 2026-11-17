@@ -54,7 +54,7 @@ export default async function EquipesAdmin({ searchParams }: { searchParams: Pro
             <ul className="space-y-2">
               {elenco.map((j) => (
                 <li key={j.id}>
-                  <form action={editarJogador} className="grid grid-cols-[4rem_1fr] gap-2 rounded-component bg-[var(--surface1)] p-2 sm:grid-cols-[4rem_1fr_6rem_10rem_auto_auto]">
+                  <form action={editarJogador} className="grid grid-cols-[5.5rem_1fr] gap-2 rounded-component bg-[var(--surface1)] p-2 sm:grid-cols-[4rem_1fr_6rem_10rem_auto_auto]">
                     <input type="hidden" name="volta" value={VOLTA} />
                     <input type="hidden" name="jogadorId" value={j.id} />
                     <input name="numero" type="number" min={0} defaultValue={j.numero ?? ''} placeholder="Nº" aria-label="Número da camisa" className="campo" />
