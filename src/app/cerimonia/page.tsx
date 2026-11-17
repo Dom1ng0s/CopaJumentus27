@@ -1,9 +1,12 @@
 import { CerimoniaCliente } from './CerimoniaCliente';
-import { JOGADORES_EXEMPLO, TIMES_EXEMPLO } from '@/lib/repo/seed';
+import { carregarCadastro } from '@/lib/repo/cadastro';
 
 export const metadata = { title: 'Cerimônia do sorteio — Copa Jumentus' };
 
-export default function CerimoniaPage() {
-  // Fase 1: dados vindos do seed. Ao plugar o CopaRepo, trocar aqui apenas.
-  return <CerimoniaCliente jogadores={JOGADORES_EXEMPLO} times={TIMES_EXEMPLO} />;
+// Le dados/inscritos.csv a cada requisicao: reimportar a planilha nao exige rebuild.
+export const dynamic = 'force-dynamic';
+
+export default async function CerimoniaPage() {
+  const { jogadores, times, problemas } = await carregarCadastro();
+  return <CerimoniaCliente jogadores={jogadores} times={times} problemas={problemas} />;
 }

@@ -127,7 +127,11 @@ interface CopaRepo {
 ```
 
 - Implementação da fase 1: **`JsonLocalRepo`** — elenco e times em JSON (`dados/elenco.json`, `dados/times.json`); resultado do sorteio em `localStorage`.
-- **`dados/` está no `.gitignore`.** Mantenha `dados/*.example.json` versionados como referência de formato.
+- **Fonte atual do cadastro: a planilha oficial (Google Sheets, aba `INSCRITOS`).** `npm run importar -- "<url do CSV>"` baixa a aba para `dados/inscritos.csv`; `src/lib/repo/planilha.ts` (função pura, testada) converte o CSV em `Jogador[]`/`Time[]` e lista pendências; `src/lib/repo/cadastro.ts` lê o arquivo no servidor e cai no seed de exemplo se ele não existir. As páginas usam só `carregarCadastro()` — é o ponto a trocar quando o `CopaRepo` existir.
+  - Colunas lidas (cabeçalho, sem acento/caixa): `Nome`, `Apelido`, `Posição` (GOL/ZAG/MEI/ATA), `Estrelas` (1–6), `Capitão do time` (nome do time; marca o capitão e cria o `Time`), `Status` (só `Confirmado` entra).
+  - Goleiro com `Estrelas` vazio recebe `ESTRELAS_MIN` (não conta no balanceamento, §3.2).
+  - Qualquer pendência (posição/estrelas vazias, nome repetido, time sem capitão ou com dois) **bloqueia** o botão de sorteio.
+- **`dados/` está no `.gitignore`** (exceto `dados/*.example.*`). Mantenha os exemplos versionados como referência de formato (`dados/inscritos.example.csv`).
 - Nenhum componente de UI importa `localStorage`, `fs` ou caminho de arquivo direto. Tudo pelo repo. Trocar por Postgres depois deve ser **uma implementação nova da interface, com zero mudança de UI**.
 
 ### 4.3 Separação obrigatória
@@ -189,6 +193,10 @@ A home usa `public/banner-copa-jumentus.webp` (2000×504), arte da comissão com
 - A arte é **4:1**. Em telas largas ela se basta; abaixo de `sm` vira uma tira de ~94px, então ganha moldura com a própria arte ampliada e desfocada atrás. Isso casa as cores da emenda por construção — não tente adivinhar um gradiente equivalente.
 - O `<h1>` é `sr-only`, porque o título ali é pixel, não texto.
 - **Trocar a arte**: mantenha a proporção próxima de 4:1 e atualize `width`/`height` no `next/image`. Proporções muito diferentes quebram a moldura do celular.
+
+### Imagens da marca
+
+Ficam em `public/imagens/` (logo oficial, kits, escudos, artes), descritas em `public/imagens/README.md`. A logo oficial não é redesenhada. Escudo de time (`Time.escudo`, fase 2) usa `public/imagens/escudos/<slug-do-time>.webp`.
 
 A página de resultado **não** usa o banner: ela é consumida no celular, onde 4:1 fica pequeno demais. Lá o título é o wordmark SVG, que escala melhor em retrato.
 

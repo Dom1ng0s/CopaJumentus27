@@ -4,14 +4,17 @@ import { Estrelas } from '@/components/Estrelas';
 import { HudCard } from '@/components/HudCard';
 import { NOME_COMPETICAO, SUBTITULO_COMPETICAO, TOLERANCIA_ESTRELAS } from '@/lib/config';
 import { poteDeGoleiros, poteDeLinha } from '@/lib/domain/validacao';
-import { JOGADORES_EXEMPLO, TIMES_EXEMPLO } from '@/lib/repo/seed';
+import { carregarCadastro } from '@/lib/repo/cadastro';
 import type { Estrelas as NivelEstrelas, Jogador } from '@/lib/domain/tipos';
 
-export default function Home() {
-  const pote = poteDeLinha(JOGADORES_EXEMPLO);
-  const goleiros = poteDeGoleiros(JOGADORES_EXEMPLO);
+export const dynamic = 'force-dynamic';
+
+export default async function Home() {
+  const { jogadores, times, problemas, ignorados, origem } = await carregarCadastro();
+  const pote = poteDeLinha(jogadores);
+  const goleiros = poteDeGoleiros(jogadores);
   const capitaoPorId = new Map(
-    JOGADORES_EXEMPLO.filter((j) => j.ehCapitao).map((j) => [j.id, j]),
+    jogadores.filter((j) => j.ehCapitao).map((j) => [j.id, j]),
   );
 
   const niveis = [6, 5, 4, 3, 2, 1] as const;
@@ -79,12 +82,29 @@ export default function Home() {
            Dados vivem no campo escuro, nunca sobre o ceu aceso. */}
       <section className="relative px-4 pt-10">
         <div className="mx-auto grid max-w-2xl grid-cols-2 gap-3 sm:grid-cols-4">
-          <Metrica rotulo="Times" valor={String(TIMES_EXEMPLO.length)} cor="var(--accent-orange)" />
+          <Metrica rotulo="Times" valor={String(times.length)} cor="var(--accent-orange)" />
           <Metrica rotulo="No pote" valor={String(pote.length)} cor="var(--success)" />
           <Metrica rotulo="Goleiros" valor={String(goleiros.length)} cor="var(--accent-armor)" />
           <Metrica rotulo="Tolerância" valor={`±${TOLERANCIA_ESTRELAS}`} cor="var(--warning)" />
         </div>
       </section>
+
+      {/* ---------------- PENDENCIAS DO CADASTRO ---------------- */}
+      {problemas.length > 0 && (
+        <section className="relative px-4 pt-8">
+          <HudCard className="mx-auto max-w-2xl px-4 py-4">
+            <p className="hud-label mb-2 text-[10px]" style={{ color: 'var(--warning)' }}>
+              Cadastro com {problemas.length} pendência{problemas.length > 1 ? 's' : ''} — sorteio
+              bloqueado
+            </p>
+            <ul className="max-h-72 space-y-1 overflow-y-auto font-mono text-xs text-text-2">
+              {problemas.map((p) => (
+                <li key={p}>{p}</li>
+              ))}
+            </ul>
+          </HudCard>
+        </section>
+      )}
 
       {/* ---------------- TIMES ---------------- */}
       <section className="relative px-4 py-10">
@@ -95,7 +115,7 @@ export default function Home() {
           />
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {TIMES_EXEMPLO.map((time, i) => {
+            {times.map((time, i) => {
               const capitao = capitaoPorId.get(time.capitaoId);
               return (
                 <HudCard key={time.id} clip className="p-4 pb-5">
@@ -170,7 +190,9 @@ export default function Home() {
 
       <footer className="px-4 py-16 text-center">
         <p className="hud-label text-[10px]">
-          Elenco de demonstração — nomes placeholder a substituir pelo cadastro real
+          {origem === 'planilha'
+            ? `Cadastro importado da planilha oficial${ignorados ? ` · ${ignorados} na lista de espera` : ''}`
+            : 'Elenco de demonstração — rode npm run importar para carregar a planilha oficial'}
         </p>
       </footer>
     </>
