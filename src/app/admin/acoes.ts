@@ -1,11 +1,11 @@
 'use server';
 
-// Todas as alterações do campeonato. Só admins: cada ação confere o cookie.
+// Todas as alterações do campeonato. Só admins: cada ação passa por exigirAdmin(),
+// que confere a sessão no banco e recusa enquanto houver troca de senha pendente.
 
 import { revalidatePath } from 'next/cache';
-import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
-import { COOKIE_ADMIN, tokenDaSenha, tokenValido } from '@/lib/auth';
+import { exigirAdmin } from '@/lib/auth/servidor';
 import { gerarRodadas, nomeGrupo, sortearGrupos } from '@/lib/domain/campeonato/grupos';
 import type { Campeonato, Criterio, Partida, StatusPartida, TipoEvento, TipoFase } from '@/lib/domain/campeonato/tipos';
 import type { Posicao } from '@/lib/domain/tipos';
@@ -24,11 +24,6 @@ import {
 // ---------- utilitários ----------
 
 class ErroRegra extends Error {}
-
-async function exigirAdmin(): Promise<void> {
-  const loja = await cookies();
-  if (!(await tokenValido(loja.get(COOKIE_ADMIN)?.value))) redirect('/admin/entrar');
-}
 
 function texto(f: FormData, campo: string): string {
   const v = f.get(campo);
@@ -90,29 +85,7 @@ function acharPartida(c: Campeonato, id: string): Partida {
   return p;
 }
 
-// ---------- sessão ----------
-
-export async function entrar(f: FormData): Promise<void> {
-  const senha = process.env.ADMIN_SENHA;
-  const volta = texto(f, 'volta') || '/admin';
-  if (!senha) redirect('/admin/entrar?erro=' + encodeURIComponent('Defina ADMIN_SENHA no .env.local do servidor.'));
-  if (texto(f, 'senha') !== senha) redirect(`/admin/entrar?erro=${encodeURIComponent('Senha incorreta.')}&volta=${encodeURIComponent(volta)}`);
-  const loja = await cookies();
-  loja.set(COOKIE_ADMIN, await tokenDaSenha(senha), {
-    httpOnly: true,
-    sameSite: 'lax',
-    secure: process.env.NODE_ENV === 'production',
-    path: '/',
-    maxAge: 60 * 60 * 24 * 30,
-  });
-  redirect(volta.startsWith('/') ? volta : '/admin');
-}
-
-export async function sair(): Promise<void> {
-  const loja = await cookies();
-  loja.delete(COOKIE_ADMIN);
-  redirect('/');
-}
+// Sessão e contas: ver acoes-conta.ts.
 
 // ---------- campeonato ----------
 

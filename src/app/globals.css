@@ -592,3 +592,17 @@ select.campo option {
     border-color: #ffffff;
   }
 }
+
+/* ---------- Pop-up de troca de senha ----------
+   Fundo escurecido e desfocado; o painel materializa com .animar-revelar. */
+.modal-fundo {
+  background: rgba(6, 18, 42, 0.72);
+  backdrop-filter: blur(6px);
+  animation: revelarSuave var(--duration-medium) var(--ease) both;
+}
+@media (prefers-reduced-transparency: reduce) {
+  .modal-fundo {
+    background: rgba(6, 18, 42, 0.96);
+    backdrop-filter: none;
+  }
+}
