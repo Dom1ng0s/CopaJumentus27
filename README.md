@@ -46,7 +46,9 @@ npm run dev        # http://localhost:3100
 npm test           # testes do domínio (Vitest)
 ```
 
-Sem cadastro importado, o site usa um elenco de exemplo.
+Sem `DATABASE_URL`, o banco é um Postgres local (PGlite) em `dados/pglite`, criado sozinho no primeiro acesso. Para zerar, apague a pasta.
+
+Sem inscrições cadastradas, o sorteio usa um elenco de exemplo.
 
 ## Campeonato
 
@@ -56,7 +58,7 @@ Além do sorteio, o site mostra o campeonato para a galera e tem uma área de ad
 |---|---|
 | Início, classificação por grupo, jogos e súmulas, rankings (artilharia, assistências, cartões), elencos | Dados e pontuação, critérios de desempate, fases e grupos (sorteio aleatório ou manual), partidas com data/hora editáveis, placar e súmula ao vivo, elencos e transferências, pagamentos, pote e cerimônia |
 
-Para ver as telas com um campeonato de exemplo (nomes fictícios), rode `npm run demo` antes de `npm run dev`. Ele substitui `dados/campeonato.json`.
+Para ver as telas com um campeonato de exemplo (nomes fictícios), rode `npm run demo` antes de `npm run dev`. Ele gera `dados/campeonato.json` e zera o banco local, que importa o arquivo na próxima abertura.
 
 Para liberar o admin, crie `.env.local` na raiz:
 
@@ -66,25 +68,32 @@ ADMIN_SENHA=uma-senha-forte
 
 Regras: vitória 3, empate 1, derrota 0 (editável); 3 amarelos ou 1 vermelho suspendem o jogo seguinte. Detalhes em [CLAUDE.md §8](CLAUDE.md).
 
-Os dados ficam em `dados/campeonato.json`. Para publicar, use um servidor com disco persistente (VPS, Railway, Render com volume). Na Vercel o disco não persiste: antes é preciso trocar `src/lib/repo/campeonato-repo.ts` por um banco.
+## Publicar (Vercel + Neon)
 
-## Carregar os inscritos da planilha
+1. Crie um projeto no [Neon](https://neon.tech) (região São Paulo, `sa-east-1`) e copie a connection string **pooled** (o host tem `-pooler`).
+2. Importe o repositório na [Vercel](https://vercel.com). Em **Settings › Environment Variables**, cadastre:
+   - `DATABASE_URL`: a string do Neon
+   - `ADMIN_SENHA`: a senha dos admins
+3. Faça o deploy. O build aplica as migrações (`drizzle/`) no Neon antes de compilar.
+4. Entre em `/admin`, cadastre os inscritos em **Inscrições** (ou importe o CSV) e siga para o sorteio.
+
+Para usar o Neon na sua máquina, coloque a mesma `DATABASE_URL` no `.env.local` e rode `npm run db:migrar`. Detalhes em [CLAUDE.md §9](CLAUDE.md).
+
+## Inscritos
+
+Os inscritos ficam no banco e são editados em **Admin › Inscrições**: nome, apelido, posição, estrelas, capitão de qual time e status (confirmado ou lista de espera). A tela lista as pendências, e o botão de sorteio fica bloqueado até não restar nenhuma.
+
+Para trazer a planilha de uma vez:
 
 1. Preencha a aba **INSCRITOS** da planilha de sorteio:
    - **Posição**: GOL, ZAG, MEI ou ATA
    - **Estrelas**: 1 a 6 (goleiro pode ficar vazio)
    - **Capitão do time**: o nome do time, só na linha do capitão (1 por time)
    - **Status**: `Confirmado` entra no sorteio; `Lista de espera` fica de fora
-2. Importe a aba para `dados/inscritos.csv`:
+2. Baixe a aba em **Arquivo › Fazer download › CSV**.
+3. Em **Admin › Inscrições › Importar da planilha**, envie o arquivo. Quem já está cadastrado (mesmo nome) é mantido; as correções seguintes são feitas na própria tela.
 
-   ```bash
-   npm run importar -- "https://docs.google.com/spreadsheets/d/<ID>/export?format=csv&gid=2002"
-   ```
-
-   Esse link exige que a planilha esteja aberta para quem tiver o link, o que deixa as estrelas visíveis. Para evitar isso, baixe a aba em **Arquivo › Fazer download › CSV** e salve como `dados/inscritos.csv`.
-3. Abra o site. Se faltar alguma informação, a home lista as pendências e o botão de sorteio fica bloqueado até a planilha ser corrigida e importada de novo.
-
-Formato de referência: [`dados/inscritos.example.csv`](dados/inscritos.example.csv). A pasta `dados/` não é versionada.
+Formato de referência: [`dados/inscritos.example.csv`](dados/inscritos.example.csv).
 
 ## Depois do sorteio
 
@@ -97,12 +106,15 @@ src/
   lib/
     config.ts        # constantes de regra (tolerância, tentativas, escala de estrelas)
     domain/          # tipos, sorteio e validação — puro e testado
-    repo/            # cadastro: planilha (CSV) ou seed de exemplo
+    db/              # esquema Drizzle e conexão (Neon ou PGlite)
+    repo/            # leitura e gravação: campeonato, inscrições, CSV
     share/           # codificação do link de resultado
-  app/               # rotas: / · /cerimonia · /resultado/[payload]
+  app/               # rotas públicas, /admin, /sorteio, /cerimonia, /resultado/[payload]
   components/        # UI (HUD cards, estrelas, wordmark)
+drizzle/             # migrações SQL
 scripts/
-  importar-planilha.mjs
+  migrar.mjs         # aplica as migrações (roda no build)
+  gerar-demo.mjs     # campeonato de exemplo
 public/
   banner-copa-jumentus.webp
   imagens/           # logo, uniformes, escudos, artes — ver public/imagens/README.md
@@ -111,7 +123,7 @@ docs/
   skill-gemini/      # skill copa-jumentus-design do Gemini
   planilhas.md       # planilhas oficiais e fluxo com o sistema
   referencias/       # artes da edição passada
-dados/               # inscritos.csv local (fora do Git)
+dados/               # banco local de desenvolvimento (fora do Git)
 ```
 
 ## Identidade visual

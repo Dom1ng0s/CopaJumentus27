@@ -1,13 +1,22 @@
 import type { Metadata } from 'next';
-import { Anton, Barlow, Barlow_Condensed, Big_Shoulders_Display } from 'next/font/google';
+import { Anton, Barlow, Barlow_Condensed } from 'next/font/google';
+import localFont from 'next/font/local';
 import { Navbar } from '@/components/Navbar';
 import { NOME_COMPETICAO, SUBTITULO_COMPETICAO } from '@/lib/config';
 import './globals.css';
 
 // Fontes do manual de marca (docs/marca/manual-de-marca.md, Tipografia):
-// títulos Anton, números Big Shoulders Display, rótulos Barlow Condensed, texto Barlow.
+// títulos Anton, números Big Shoulders (antiga Display), rótulos Barlow Condensed, texto Barlow.
+// Big Shoulders vai local (src/app/fontes, OFL): o next/font/google 15.5 quebra no build com ela.
 const anton = Anton({ subsets: ['latin'], weight: '400', variable: '--font-anton' });
-const bigShoulders = Big_Shoulders_Display({ subsets: ['latin'], weight: ['800', '900'], variable: '--font-big-shoulders' });
+const bigShoulders = localFont({
+  src: [
+    { path: './fontes/big-shoulders-latin-800-normal.woff2', weight: '800', style: 'normal' },
+    { path: './fontes/big-shoulders-latin-900-normal.woff2', weight: '900', style: 'normal' },
+  ],
+  variable: '--font-big-shoulders',
+  fallback: ['Impact', 'Arial Narrow', 'sans-serif'],
+});
 const barlowCondensed = Barlow_Condensed({ subsets: ['latin'], weight: ['500', '600', '700'], variable: '--font-barlow-condensed' });
 const barlow = Barlow({ subsets: ['latin'], weight: ['400', '500', '600', '700'], variable: '--font-barlow' });
 

@@ -1,0 +1,154 @@
+import Link from 'next/link';
+import { Aviso, Numero, Secao } from '@/components/campeonato/ui';
+import { MARCAS } from '@/lib/campeonato/marcas';
+import { listarInscricoes, paraLinhas } from '@/lib/repo/inscricoes-repo';
+import { interpretarInscricoes } from '@/lib/repo/planilha';
+import {
+  criarInscricaoAcao,
+  editarInscricaoAcao,
+  importarInscricoesAcao,
+  removerInscricaoAcao,
+} from '../../acoes';
+
+export const dynamic = 'force-dynamic';
+export const metadata = { title: 'Inscrições — Admin Copa Jumentus' };
+const VOLTA = '/admin/inscricoes';
+const POSICOES = ['GOL', 'ZAG', 'MEI', 'ATA'] as const;
+
+function Volta() {
+  return <input type="hidden" name="volta" value={VOLTA} />;
+}
+
+export default async function Inscricoes({ searchParams }: { searchParams: Promise<{ erro?: string; ok?: string }> }) {
+  const { erro, ok } = await searchParams;
+  const inscricoes = await listarInscricoes();
+  const cadastro = interpretarInscricoes(paraLinhas(inscricoes));
+  const confirmados = inscricoes.filter((i) => i.status === 'confirmado');
+  const goleiros = confirmados.filter((i) => i.posicao === 'GOL').length;
+  const capitaes = confirmados.filter((i) => i.capitaoDe).length;
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <h1 className="titulo-hero t-xl text-4xl">Inscrições</h1>
+        <Link href="/sorteio" className="btn-hud">
+          Ver o pote do sorteio
+        </Link>
+      </div>
+      <p className="text-sm text-text-2">
+        Cadastro que alimenta o sorteio. As estrelas só aparecem aqui e no pote; nunca em página pública.
+      </p>
+      <Aviso texto={erro} />
+      <Aviso texto={ok} tipo="ok" />
+
+      <div className="hud-card hud-clip modulo relative grid grid-cols-2 gap-4 px-4 py-4 sm:grid-cols-4">
+        <Numero valor={confirmados.length} rotulo="Confirmados" />
+        <Numero valor={inscricoes.length - confirmados.length} rotulo="Lista de espera" />
+        <Numero valor={`${goleiros}/${MARCAS.length}`} rotulo="Goleiros" />
+        <Numero valor={`${capitaes}/${MARCAS.length}`} rotulo="Capitães" />
+      </div>
+
+      {inscricoes.length > 0 && cadastro.problemas.length > 0 && (
+        <Secao titulo={`Pendências (${cadastro.problemas.length})`}>
+          <p className="mb-2 text-sm text-text-2">Enquanto houver pendência, o botão de sortear fica bloqueado.</p>
+          <ul className="max-h-60 space-y-1 overflow-y-auto font-mono text-sm text-text-2">
+            {cadastro.problemas.map((p) => (
+              <li key={p}>{p}</li>
+            ))}
+          </ul>
+        </Secao>
+      )}
+
+      <Secao titulo="Nova inscrição">
+        <form action={criarInscricaoAcao} className="grid gap-2 sm:grid-cols-[1fr_1fr_6rem_8rem_1fr_9rem_auto]">
+          <Volta />
+          <CamposInscricao />
+          <button type="submit" className="btn-mini">
+            Adicionar
+          </button>
+        </form>
+      </Secao>
+
+      <Secao titulo={`Inscritos (${inscricoes.length})`}>
+        {inscricoes.length === 0 ? (
+          <p className="text-sm text-text-3">Ninguém cadastrado ainda. Adicione acima ou importe a planilha abaixo.</p>
+        ) : (
+          <ul className="space-y-2">
+            {inscricoes.map((i) => (
+              <li key={i.id}>
+                <form
+                  action={editarInscricaoAcao}
+                  className="grid grid-cols-2 gap-2 bg-[var(--surface1)] p-2 sm:grid-cols-[1fr_1fr_6rem_8rem_1fr_9rem_auto_auto]"
+                  style={{ opacity: i.status === 'espera' ? 0.65 : 1 }}
+                >
+                  <Volta />
+                  <input type="hidden" name="inscricaoId" value={i.id} />
+                  <CamposInscricao valores={i} />
+                  <button type="submit" className="btn-mini">
+                    Salvar
+                  </button>
+                  <button type="submit" formAction={removerInscricaoAcao} className="btn-mini" data-perigo>
+                    Remover
+                  </button>
+                </form>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Secao>
+
+      <Secao titulo="Importar da planilha">
+        <p className="mb-3 text-sm text-text-2">
+          Na planilha, abra a aba INSCRITOS e use Arquivo › Fazer download › CSV. Quem já está cadastrado (mesmo nome) é
+          mantido como está.
+        </p>
+        <form action={importarInscricoesAcao} className="flex flex-wrap items-center gap-2">
+          <Volta />
+          <input name="arquivo" type="file" accept=".csv,text/csv" required className="campo max-w-sm" />
+          <button type="submit" className="btn-mini">
+            Importar
+          </button>
+        </form>
+      </Secao>
+    </div>
+  );
+}
+
+function CamposInscricao({
+  valores,
+}: {
+  valores?: { nome: string; apelido: string | null; posicao: string | null; estrelas: number | null; capitaoDe: string | null; status: string };
+}) {
+  return (
+    <>
+      <input name="nome" required defaultValue={valores?.nome ?? ''} placeholder="Nome" aria-label="Nome" className="campo" />
+      <input name="apelido" defaultValue={valores?.apelido ?? ''} placeholder="Apelido" aria-label="Apelido" className="campo" />
+      <select name="posicao" defaultValue={valores?.posicao ?? ''} aria-label="Posição" className="campo">
+        <option value="">Posição</option>
+        {POSICOES.map((p) => (
+          <option key={p}>{p}</option>
+        ))}
+      </select>
+      <select name="estrelas" defaultValue={valores?.estrelas ?? ''} aria-label="Estrelas" className="campo">
+        <option value="">Estrelas</option>
+        {[6, 5, 4, 3, 2, 1].map((n) => (
+          <option key={n} value={n}>
+            {'★'.repeat(n)}
+          </option>
+        ))}
+      </select>
+      <select name="capitaoDe" defaultValue={valores?.capitaoDe ?? ''} aria-label="Capitão do time" className="campo">
+        <option value="">Não é capitão</option>
+        {MARCAS.map((m) => (
+          <option key={m.slug} value={m.nome}>
+            Capitão · {m.nome}
+          </option>
+        ))}
+      </select>
+      <select name="status" defaultValue={valores?.status ?? 'confirmado'} aria-label="Status" className="campo">
+        <option value="confirmado">Confirmado</option>
+        <option value="espera">Lista de espera</option>
+      </select>
+    </>
+  );
+}

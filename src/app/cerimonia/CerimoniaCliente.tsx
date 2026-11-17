@@ -153,7 +153,7 @@ export function CerimoniaCliente({ jogadores, times, problemas = [] }: Props) {
               {bloqueado ? (
                 <HudCard className="mx-auto mt-8 max-w-xl px-4 py-3 text-left">
                   <p className="hud-label mb-2 text-[10px]">
-                    Corrija na planilha e rode npm run importar ({problemas.length})
+                    Corrija em Admin › Inscrições ({problemas.length})
                   </p>
                   <ul className="max-h-64 space-y-1 overflow-y-auto font-mono text-xs text-text-2">
                     {problemas.map((p) => (

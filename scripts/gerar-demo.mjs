@@ -2,7 +2,7 @@
 // para testar as telas sem cadastrar nada. Uso: npm run demo
 // Atenção: substitui o arquivo atual. Não rode em produção.
 
-import { mkdir, writeFile } from 'node:fs/promises';
+import { mkdir, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 const MARCAS = [
@@ -122,4 +122,12 @@ const campeonato = {
 const destino = path.join(process.cwd(), 'dados', 'campeonato.json');
 await mkdir(path.dirname(destino), { recursive: true });
 await writeFile(destino, JSON.stringify(campeonato, null, 2), 'utf8');
+// O banco local só importa dados/campeonato.json quando está vazio: apaga o PGlite
+// para o exemplo entrar no próximo `npm run dev`. Nunca mexe num banco remoto.
+if (process.env.DATABASE_URL) {
+  console.log('DATABASE_URL definida: o banco remoto não foi alterado. O exemplo só entra num banco vazio.');
+} else {
+  await rm(path.join(process.cwd(), 'dados', 'pglite'), { recursive: true, force: true });
+}
 console.log(`Exemplo gravado em dados/campeonato.json: ${jogadores.length} jogadores, ${partidas.length} partidas.`);
+console.log('Reinicie o npm run dev para carregar no banco local.');
