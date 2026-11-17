@@ -5,8 +5,12 @@ import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
 const LINKS = [
-  { href: '/', rotulo: 'Pote' },
-  { href: '/cerimonia', rotulo: 'Cerimônia' },
+  { href: '/', rotulo: 'Início' },
+  { href: '/classificacao', rotulo: 'Tabela' },
+  { href: '/jogos', rotulo: 'Jogos' },
+  { href: '/rankings', rotulo: 'Rankings' },
+  { href: '/equipes', rotulo: 'Equipes' },
+  { href: '/admin', rotulo: 'Admin' },
 ];
 
 export function Navbar() {
@@ -22,14 +26,14 @@ export function Navbar() {
           <span className="titulo-hero t-sm texto-gradiente text-lg sm:text-xl">JUMENTUS</span>
         </Link>
 
-        <div className="ml-auto flex items-center gap-1 sm:gap-2">
+        <div className="ml-auto flex items-center gap-0.5 overflow-x-auto sm:gap-2">
           {LINKS.map((l) => {
-            const ativo = pathname === l.href;
+            const ativo = l.href === '/' ? pathname === '/' : pathname.startsWith(l.href);
             return (
               <Link
                 key={l.href}
                 href={l.href}
-                className="hud-label rounded-full px-3 py-1.5 transition-colors duration-200 ease-hud"
+                className="hud-label shrink-0 rounded-full px-2 py-1.5 transition-colors duration-200 ease-hud sm:px-3"
                 style={
                   ativo
                     ? { color: '#fff', background: 'rgba(255,255,255,0.1)', boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.35)' }

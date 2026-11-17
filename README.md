@@ -16,8 +16,8 @@
 1. **Lê os inscritos** da planilha oficial (Google Sheets, aba `INSCRITOS`).
 2. **Sorteia os jogadores de linha** entre 8 times de capitães fixos, equilibrando a soma de estrelas (diferença máxima de 2 entre o time mais forte e o mais fraco).
 3. **Sorteia os goleiros** em etapa separada, 1 por time. Estrelas de goleiro não contam.
-4. **Conduz a cerimônia**: o operador revela um jogador por vez (clique, espaço ou Enter), com a tela projetada.
-5. **Gera um link de resultado** (`/resultado/...`) que abre no celular sem precisar de servidor.
+4. **Conduz a cerimônia** (só admins): o operador revela um jogador por vez (clique, espaço ou Enter), com a tela projetada.
+5. **Gera um link de resultado** (`/resultado/...`) e **oficializa os elencos** no campeonato.
 
 As regras completas estão em [CLAUDE.md](CLAUDE.md) §3, que é a fonte de verdade do projeto.
 
@@ -47,6 +47,24 @@ npm test           # testes do domínio (Vitest)
 ```
 
 Sem cadastro importado, o site usa um elenco de exemplo.
+
+## Campeonato
+
+Além do sorteio, o site mostra o campeonato para a galera e tem uma área de admin para editar tudo.
+
+| Público (sem login) | Admin (`/admin`, senha) |
+|---|---|
+| Início, classificação por grupo, jogos e súmulas, rankings (artilharia, assistências, cartões), elencos | Dados e pontuação, critérios de desempate, fases e grupos (sorteio aleatório ou manual), partidas com data/hora editáveis, placar e súmula ao vivo, elencos e transferências, pagamentos, pote e cerimônia |
+
+Para liberar o admin, crie `.env.local` na raiz:
+
+```
+ADMIN_SENHA=uma-senha-forte
+```
+
+Regras: vitória 3, empate 1, derrota 0 (editável); 3 amarelos ou 1 vermelho suspendem o jogo seguinte. Detalhes em [CLAUDE.md §8](CLAUDE.md).
+
+Os dados ficam em `dados/campeonato.json`. Para publicar, use um servidor com disco persistente (VPS, Railway, Render com volume). Na Vercel o disco não persiste: antes é preciso trocar `src/lib/repo/campeonato-repo.ts` por um banco.
 
 ## Carregar os inscritos da planilha
 

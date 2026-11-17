@@ -324,6 +324,70 @@ body {
   cursor: not-allowed;
 }
 
+/* ---------- Formulários do admin ---------- */
+.campo {
+  width: 100%;
+  min-height: 2.5rem;
+  background: var(--surface1);
+  border: 1px solid var(--border-visible);
+  border-radius: var(--radius-element);
+  color: var(--text1);
+  font-size: 0.9375rem;
+  padding: 0.5rem 0.75rem;
+  transition: border-color var(--duration-fast) var(--ease);
+  touch-action: manipulation;
+}
+.campo:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+.rotulo-campo {
+  display: block;
+  margin-bottom: 0.25rem;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text3);
+}
+/* Botão compacto em pílula para ações de linha (+1, remover, mover). */
+.btn-mini {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2.25rem;
+  min-height: 2.25rem;
+  padding: 0 0.75rem;
+  border-radius: var(--radius-control);
+  border: 1px solid var(--border-visible);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text1);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition: all var(--duration-fast) var(--ease);
+}
+.btn-mini:hover:not(:disabled) {
+  border-color: #ffffff;
+}
+.btn-mini:active:not(:disabled) {
+  transform: scale(0.96);
+}
+.btn-mini:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+.btn-mini[data-perigo] {
+  color: var(--error-text);
+}
+.btn-mini[aria-pressed='true'] {
+  background: var(--success-bg);
+  border-color: var(--success);
+  color: var(--success-text);
+}
+
 /* ---------- Animacoes ---------- */
 @keyframes wantedPulse {
   0%,

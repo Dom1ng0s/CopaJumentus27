@@ -13,7 +13,7 @@ Este arquivo é a fonte de verdade do projeto. Ao implementar qualquer coisa, si
 | **Operador** | o dono do projeto (única pessoa com acesso de escrita) | cadastra jogadores e capitães, dispara o sorteio, conduz a cerimônia na própria tela |
 | **Plateia** | a galera da pelada | abre o **link de resultado** no celular depois da cerimônia e vê os elencos |
 
-Não há login, não há contas, não há permissões. O operador roda a aplicação localmente (ou num deploy que só ele usa para operar); a plateia só consome resultado.
+Não há contas de usuário. Os **admins** (operador e quem ele autorizar) entram com uma senha única (`ADMIN_SENHA`) e são os únicos que editam qualquer coisa. A plateia vê o campeonato (tabela, jogos, rankings, elencos) sem login e nunca vê estrelas.
 
 ---
 
@@ -27,14 +27,11 @@ Não há login, não há contas, não há permissões. O operador roda a aplica�
 5. **Cerimônia de revelação**: um jogador por vez, com animação e suspense, controlada pelo operador.
 6. **Link de resultado estático**: ao fim, gerar uma URL compartilhável que renderiza os elencos finais sem precisar de backend.
 
-### Fase 2 — Páginas de time (planejada, não implementar sem pedido)
-Página por time com escudo, elenco em cards HUD, soma de estrelas, goleiro destacado.
-
-### Fase 3 — Tabela e resultados (planejada, não implementar sem pedido)
-Rodadas, placares, classificação, artilharia.
+### Fase 2 — Campeonato simples (implementada, ver §8)
+Um campeonato por instalação: equipes, elencos vindos do sorteio, fases e grupos editáveis, partidas com data/hora editáveis, súmula ao vivo, classificação, rankings e controle de pagamento. Pedido do operador em 17/11/2026: "só o simples do campeonato, apenas os admins editam".
 
 ### Fora de escopo (não construir, nem "preparar terreno" com abstração especulativa)
-Autenticação, sincronização ao vivo entre dispositivos, histórico de temporadas, app mobile nativo, notificações.
+Contas de usuário, seguidores, comentários, enquetes, mídia enviada pelo público, vários campeonatos por instalação, histórico de temporadas, app mobile nativo, notificações, impressão de súmula e carteirinhas.
 
 ---
 
@@ -108,7 +105,8 @@ Número de times e tamanho de elenco são **derivados do cadastro**, nunca hardc
 
 ### 4.1 Stack
 - **Next.js (App Router) + TypeScript (strict) + Tailwind CSS**
-- Sem backend na fase 1. Sem ORM, sem banco.
+- Sem ORM e sem banco: o campeonato é um documento JSON (`dados/campeonato.json`) gravado pelo servidor (§8.4).
+- Admin por senha única em `ADMIN_SENHA` (`.env.local`), cookie httpOnly derivado da senha; `src/middleware.ts` protege `/admin`, `/sorteio` e `/cerimonia`, e cada server action confere o cookie de novo.
 - Testes: **Vitest** — obrigatórios para a camada de domínio (§4.3).
 
 ### 4.2 Camada de dados — trocável de propósito
@@ -241,3 +239,39 @@ Nunca introduza visual corporativo/SaaS genérico, biblioteca de componentes com
 3. **Não amplie o escopo.** Fases 2 e 3 estão documentadas para dar contexto, não para serem implementadas.
 4. **Não especule na abstração.** A única abstração deliberada é `CopaRepo` (§4.2), porque a decisão de dados foi adiada de propósito. Fora dela, código direto.
 5. **Mantenha este arquivo vivo.** Decisão nova de regra, stack ou escopo → atualize o CLAUDE.md na mesma mudança.
+
+---
+
+## 8. Campeonato
+
+### 8.1 Regras de disputa (decididas pelo operador)
+- **Pontuação:** vitória 3, empate 1, derrota 0 por padrão, editável em Admin › Campeonato.
+- **Desempate:** pontos, vitórias, saldo, gols marcados, gols sofridos, confronto direto. A ordem é editável.
+- **Formato:** livre e editável. O admin cria as fases na ordem; cada fase é `grupos` (pontos corridos) ou `mata-mata`. O formato desta edição ainda está sendo definido; não fixe um formato no código.
+- **Grupos:** o admin escolhe a quantidade e sorteia aleatoriamente (via `random.ts`) ou define à mão. "Gerar jogos dos grupos" cria o todos contra todos que falta.
+- **Mata-mata:** confrontos criados à mão em Admin › Partidas. Empate decide nos pênaltis, lançados no controle da partida.
+- **Datas, horários e local** de cada partida são editáveis a qualquer momento.
+
+### 8.2 Cartões e suspensão
+- 3 amarelos acumulados: suspenso no jogo seguinte da equipe; a contagem zera.
+- Vermelho: suspenso no jogo seguinte da equipe.
+- A suspensão é cumprida quando esse jogo seguinte é encerrado. Cartões contam em jogos ao vivo e encerrados.
+- Cálculo em `lib/domain/campeonato/suspensoes.ts`, derivado das súmulas; nada é gravado.
+
+### 8.3 Súmula e placar
+- Os admins editam o resultado durante o jogo em `/admin/partidas/[id]`.
+- Gol registrado na súmula soma no placar (gol contra soma para o adversário); remover o evento desconta.
+- Os botões + e − ajustam gols sem autor e pênaltis.
+- Classificação e rankings são calculados das partidas (`lib/domain/campeonato/`); só jogos **encerrados** entram na tabela.
+
+### 8.4 Dados e integração com o sorteio
+- `lib/repo/campeonato-repo.ts` lê e grava `dados/campeonato.json` com fila de escrita. Sem o arquivo, parte do `campeonatoPadrao()` (8 equipes do manual de marca, fases "Fase de grupos" e "Mata-mata").
+- Para hospedar onde o disco não persiste (ex.: Vercel), troque só esse módulo por um banco; as telas não mudam.
+- No fim da cerimônia, **"Oficializar no campeonato"** grava equipes, jogadores e capitães. É bloqueado se já houver súmula preenchida. O pagamento de quem já estava cadastrado (pelo nome) é preservado.
+- **Pagamentos** (pago/pendente por jogador, valor da inscrição) só aparecem em `/admin/pagamentos`.
+- **Estrelas nunca aparecem em página pública.** O pote foi para `/sorteio`, protegido.
+
+### 8.5 Rotas
+- Públicas: `/`, `/classificacao`, `/jogos`, `/jogos/[id]`, `/rankings`, `/equipes`, `/resultado/[payload]`.
+- Admin: `/admin`, `/admin/campeonato`, `/admin/fases`, `/admin/partidas`, `/admin/partidas/[id]`, `/admin/equipes`, `/admin/pagamentos`, `/sorteio`, `/cerimonia`. Login em `/admin/entrar`.
+

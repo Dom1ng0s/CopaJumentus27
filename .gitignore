@@ -5,3 +5,4 @@ dados/*
 next-env.d.ts
 *.tsbuildinfo
 docs/skill-gemini/*.zip
+.env*.local
