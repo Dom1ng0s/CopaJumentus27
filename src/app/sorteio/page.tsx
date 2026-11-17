@@ -192,9 +192,9 @@ export default async function PaginaPote() {
 
       <footer className="px-4 py-16 text-center">
         <p className="hud-label text-[10px]">
-          {origem === 'planilha'
-            ? `Cadastro importado da planilha oficial${ignorados ? ` · ${ignorados} na lista de espera` : ''}`
-            : 'Elenco de demonstração — rode npm run importar para carregar a planilha oficial'}
+          {origem === 'banco'
+            ? `Cadastro de Admin › Inscrições${ignorados ? ` · ${ignorados} na lista de espera` : ''}`
+            : 'Elenco de demonstração — cadastre os jogadores em Admin › Inscrições'}
         </p>
       </footer>
     </>

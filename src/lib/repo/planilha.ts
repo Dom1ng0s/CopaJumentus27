@@ -98,14 +98,26 @@ export function lerCsv(texto: string): string[][] {
   return linhas;
 }
 
-export function interpretarPlanilha(csv: string): CadastroPlanilha {
-  const problemas: string[] = [];
-  const linhas = lerCsv(csv);
-  if (linhas.length === 0) {
-    return { jogadores: [], times: [], problemas: ['Planilha vazia.'], ignorados: 0 };
-  }
+/** Uma inscrição já separada em campos (do banco ou de uma linha do CSV). */
+export interface LinhaInscricao {
+  id: string;
+  nome: string;
+  apelido?: string | null;
+  posicao?: string | null;
+  estrelas?: string | number | null;
+  /** Nome do time do qual é capitão; vazio = não é capitão. */
+  capitaoDe?: string | null;
+  /** "confirmado" entra no sorteio; qualquer outro valor fica de fora. Vazio conta como confirmado. */
+  status?: string | null;
+  /** Como citar a linha nas mensagens, ex.: "linha 7" no CSV. */
+  referencia?: string;
+}
 
-  const cabecalho = linhas[0].map(normalizar);
+/** Lê o CSV da aba INSCRITOS e devolve as linhas em campos, sem validar. */
+export function linhasDoCsv(csv: string): { linhas: LinhaInscricao[]; erro?: string } {
+  const tabela = lerCsv(csv);
+  if (tabela.length === 0) return { linhas: [], erro: 'Planilha vazia.' };
+  const cabecalho = tabela[0].map(normalizar);
   const indice = (nome: string) => cabecalho.indexOf(nome);
   const col = {
     nome: indice(COLUNAS.nome),
@@ -117,50 +129,75 @@ export function interpretarPlanilha(csv: string): CadastroPlanilha {
   };
   const faltando = (Object.keys(col) as (keyof typeof col)[]).filter((k) => col[k] < 0);
   if (faltando.length > 0) {
-    return {
-      jogadores: [],
-      times: [],
-      problemas: [`Colunas ausentes no cabeçalho: ${faltando.map((k) => COLUNAS[k]).join(', ')}.`],
-      ignorados: 0,
-    };
+    return { linhas: [], erro: `Colunas ausentes no cabeçalho: ${faltando.map((k) => COLUNAS[k]).join(', ')}.` };
   }
-
-  const jogadores: Jogador[] = [];
-  const capitaesPorTime = new Map<string, { nomeTime: string; jogadorIds: string[] }>();
-  const nomesVistos = new Map<string, number>();
-  let ignorados = 0;
-
-  linhas.slice(1).forEach((celulas, i) => {
+  const linhas: LinhaInscricao[] = [];
+  tabela.slice(1).forEach((celulas, i) => {
     const numeroLinha = i + 2;
     const pegar = (c: number) => (celulas[c] ?? '').trim();
-    const nome = pegar(col.nome);
-    if (nome === '') return;
+    if (pegar(col.nome) === '') return;
+    linhas.push({
+      id: `p${String(numeroLinha - 1).padStart(3, '0')}`,
+      nome: pegar(col.nome),
+      apelido: pegar(col.apelido),
+      posicao: pegar(col.posicao),
+      estrelas: pegar(col.estrelas),
+      capitaoDe: pegar(col.capitao),
+      status: pegar(col.status),
+      referencia: `linha ${numeroLinha}`,
+    });
+  });
+  return { linhas };
+}
 
-    const status = normalizar(pegar(col.status));
+export function interpretarPlanilha(csv: string): CadastroPlanilha {
+  const { linhas, erro } = linhasDoCsv(csv);
+  if (erro) return { jogadores: [], times: [], problemas: [erro], ignorados: 0 };
+  return interpretarInscricoes(linhas);
+}
+
+/** Valida as inscrições e monta elenco e times para o sorteio, com a lista de pendências. */
+export function interpretarInscricoes(linhas: readonly LinhaInscricao[]): CadastroPlanilha {
+  const problemas: string[] = [];
+  const jogadores: Jogador[] = [];
+  const capitaesPorTime = new Map<string, { nomeTime: string; jogadorIds: string[] }>();
+  const nomesVistos = new Map<string, LinhaInscricao>();
+  let ignorados = 0;
+
+  for (const l of linhas) {
+    const nome = l.nome.trim();
+    if (nome === '') continue;
+
+    const status = normalizar(l.status ?? '');
     if (status !== '' && status !== 'confirmado') {
       ignorados++;
-      return;
+      continue;
     }
 
-    const id = `p${String(numeroLinha - 1).padStart(3, '0')}`;
-    const rotulo = `${nome} (linha ${numeroLinha})`;
+    const id = l.id;
+    const rotulo = l.referencia ? `${nome} (${l.referencia})` : nome;
 
     const chaveNome = normalizar(nome);
     const anterior = nomesVistos.get(chaveNome);
     if (anterior !== undefined) {
-      problemas.push(`Nome repetido: ${nome} (linhas ${anterior} e ${numeroLinha}).`);
+      const onde =
+        anterior.referencia && l.referencia
+          ? ` (${anterior.referencia.replace('linha ', 'linhas ')} e ${l.referencia.replace('linha ', '')})`
+          : '';
+      problemas.push(`Nome repetido: ${nome}${onde}.`);
     } else {
-      nomesVistos.set(chaveNome, numeroLinha);
+      nomesVistos.set(chaveNome, l);
     }
 
-    const posicaoBruta = pegar(col.posicao).toUpperCase();
+    const posicaoBruta = (l.posicao ?? '').trim().toUpperCase();
     const posicao = POSICOES.find((p) => p === posicaoBruta);
     if (!posicao) {
       problemas.push(`${rotulo}: posição ${posicaoBruta ? `"${posicaoBruta}" inválida` : 'vazia'}.`);
     }
 
     // Estrelas de goleiro nao contam no balanceamento (CLAUDE.md §3.2): vazio vira o minimo.
-    const estrelasBrutas = pegar(col.estrelas) || (posicao === 'GOL' ? String(ESTRELAS_MIN) : '');
+    const estrelasTexto = l.estrelas === null || l.estrelas === undefined ? '' : String(l.estrelas).trim();
+    const estrelasBrutas = estrelasTexto || (posicao === 'GOL' ? String(ESTRELAS_MIN) : '');
     const numero = Number(estrelasBrutas.replace(',', '.'));
     const estrelasValidas =
       estrelasBrutas !== '' && Number.isInteger(numero) && numero >= ESTRELAS_MIN && numero <= ESTRELAS_MAX;
@@ -170,7 +207,7 @@ export function interpretarPlanilha(csv: string): CadastroPlanilha {
       );
     }
 
-    const timeCapitao = pegar(col.capitao);
+    const timeCapitao = (l.capitaoDe ?? '').trim();
     if (timeCapitao !== '') {
       if (posicao === 'GOL') problemas.push(`${rotulo}: goleiro não pode ser capitão.`);
       const chave = chaveTime(timeCapitao);
@@ -179,9 +216,9 @@ export function interpretarPlanilha(csv: string): CadastroPlanilha {
       capitaesPorTime.set(chave, atual);
     }
 
-    if (!posicao || !estrelasValidas) return;
+    if (!posicao || !estrelasValidas) continue;
 
-    const apelido = pegar(col.apelido);
+    const apelido = (l.apelido ?? '').trim();
     jogadores.push({
       id,
       nome,
@@ -190,7 +227,7 @@ export function interpretarPlanilha(csv: string): CadastroPlanilha {
       estrelas: numero as Estrelas,
       ehCapitao: timeCapitao !== '',
     });
-  });
+  }
 
   const ordem = ORDEM_TIMES.map(chaveTime);
   const entradas = [...capitaesPorTime.entries()].sort(([a], [b]) => {

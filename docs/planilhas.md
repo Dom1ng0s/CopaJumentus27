@@ -11,7 +11,7 @@ Todas ficam no Google Sheets, com acesso restrito à comissão. Os links abaixo 
 ## Fluxo
 
 1. **Inscritos** (aba `INSCRITOS`): `Nome`, `Apelido`, `Posição` (GOL/ZAG/MEI/ATA), `Estrelas` (1–6), `Capitão do time` (nome do time, só na linha do capitão) e `Status` (`Confirmado` ou `Lista de espera`).
-2. **Sistema**: `npm run importar -- "<url do CSV da aba INSCRITOS>"` copia a aba para `dados/inscritos.csv`. O site lista as pendências e só libera o sorteio quando não houver nenhuma (ver README da raiz).
+2. **Sistema**: baixe a aba em *Arquivo › Fazer download › CSV* e envie em **Admin › Inscrições › Importar da planilha**. Depois disso, o cadastro vive no sistema: corrija lá, não na planilha. A tela lista as pendências e só libera o sorteio quando não houver nenhuma.
 3. **Depois do sorteio**: cole os elencos em `TIMES › Times Definidos` (H14:O22). Não insira linhas nessa aba, porque a planilha de uniformes lê exatamente esse intervalo via `IMPORTRANGE`.
 4. **Uniformes** se preenche sozinha com os times e nomes; falta só número, nome na camisa e tamanho.
 

@@ -10,6 +10,16 @@ import { gerarRodadas, nomeGrupo, sortearGrupos } from '@/lib/domain/campeonato/
 import type { Campeonato, Criterio, Partida, StatusPartida, TipoEvento, TipoFase } from '@/lib/domain/campeonato/tipos';
 import type { Posicao } from '@/lib/domain/tipos';
 import { atualizarCampeonato, novoId } from '@/lib/repo/campeonato-repo';
+import {
+  atualizarInscricao,
+  criarInscricao,
+  importarCsv,
+  lerEstrelas,
+  lerPosicao,
+  lerStatus,
+  removerInscricao,
+  type DadosInscricao,
+} from '@/lib/repo/inscricoes-repo';
 
 // ---------- utilitários ----------
 
@@ -53,6 +63,25 @@ async function alterar(f: FormData, mudanca: (c: Campeonato) => void): Promise<v
   }
   revalidatePath('/', 'layout');
   if (erro) redirect(`${volta}${volta.includes('?') ? '&' : '?'}erro=${encodeURIComponent(erro)}`);
+}
+
+/** Igual a `alterar`, para operações fora do documento do campeonato. */
+async function executar(f: FormData, operacao: () => Promise<string | void>): Promise<void> {
+  await exigirAdmin();
+  const volta = texto(f, 'volta') || '/admin';
+  let mensagem: string | null = null;
+  let erro: string | null = null;
+  try {
+    mensagem = (await operacao()) ?? null;
+  } catch (e) {
+    if (e instanceof ErroRegra) erro = e.message;
+    else throw e;
+  }
+  revalidatePath('/', 'layout');
+  const sep = volta.includes('?') ? '&' : '?';
+  if (erro) redirect(`${volta}${sep}erro=${encodeURIComponent(erro)}`);
+  // Sempre volta para a URL limpa, para não reexibir o aviso da ação anterior.
+  redirect(mensagem ? `${volta}${sep}ok=${encodeURIComponent(mensagem)}` : volta);
 }
 
 function acharPartida(c: Campeonato, id: string): Partida {
@@ -459,4 +488,49 @@ export async function oficializarSorteio(elencos: ElencoParaOficializar[]): Prom
   }
   revalidatePath('/', 'layout');
   return { ok: true };
+}
+
+// ---------- inscrições do sorteio ----------
+
+function dadosInscricao(f: FormData): DadosInscricao {
+  const nome = texto(f, 'nome');
+  if (!nome) throw new ErroRegra('Informe o nome.');
+  return {
+    nome,
+    apelido: opcional(f, 'apelido') ?? null,
+    posicao: lerPosicao(texto(f, 'posicao')),
+    estrelas: lerEstrelas(texto(f, 'estrelas')),
+    capitaoDe: opcional(f, 'capitaoDe') ?? null,
+    status: lerStatus(texto(f, 'status') === 'espera' ? 'espera' : 'confirmado'),
+  };
+}
+
+export async function criarInscricaoAcao(f: FormData): Promise<void> {
+  await executar(f, async () => {
+    await criarInscricao(dadosInscricao(f));
+  });
+}
+
+export async function editarInscricaoAcao(f: FormData): Promise<void> {
+  await executar(f, async () => {
+    await atualizarInscricao(texto(f, 'inscricaoId'), dadosInscricao(f));
+  });
+}
+
+export async function removerInscricaoAcao(f: FormData): Promise<void> {
+  await executar(f, async () => {
+    await removerInscricao(texto(f, 'inscricaoId'));
+  });
+}
+
+/** Importa o CSV baixado da planilha (Arquivo › Fazer download › CSV na aba INSCRITOS). */
+export async function importarInscricoesAcao(f: FormData): Promise<void> {
+  await executar(f, async () => {
+    const arquivo = f.get('arquivo');
+    if (!(arquivo instanceof File) || arquivo.size === 0) throw new ErroRegra('Escolha o arquivo CSV.');
+    if (arquivo.size > 1_000_000) throw new ErroRegra('Arquivo grande demais para uma lista de inscritos.');
+    const r = await importarCsv(await arquivo.text());
+    if (r.erro) throw new ErroRegra(r.erro);
+    return `${r.importadas} importada(s)${r.puladas ? `, ${r.puladas} já estavam cadastradas` : ''}.`;
+  });
 }

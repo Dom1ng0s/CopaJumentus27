@@ -3,6 +3,7 @@ import { sair } from '../acoes';
 
 const ITENS = [
   { href: '/admin', rotulo: 'Painel' },
+  { href: '/admin/inscricoes', rotulo: 'Inscrições' },
   { href: '/admin/campeonato', rotulo: 'Campeonato' },
   { href: '/admin/fases', rotulo: 'Fases e grupos' },
   { href: '/admin/partidas', rotulo: 'Partidas' },

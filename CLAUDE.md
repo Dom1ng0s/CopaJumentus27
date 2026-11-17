@@ -105,7 +105,7 @@ Número de times e tamanho de elenco são **derivados do cadastro**, nunca hardc
 
 ### 4.1 Stack
 - **Next.js (App Router) + TypeScript (strict) + Tailwind CSS**
-- Sem ORM e sem banco: o campeonato é um documento JSON (`dados/campeonato.json`) gravado pelo servidor (§8.4).
+- **Postgres com Drizzle ORM** (§9): Neon em produção (Vercel), PGlite (Postgres em WebAssembly, arquivo local) em desenvolvimento. Decisão do operador em 17/11/2026.
 - Admin por senha única em `ADMIN_SENHA` (`.env.local`), cookie httpOnly derivado da senha; `src/middleware.ts` protege `/admin`, `/sorteio` e `/cerimonia`, e cada server action confere o cookie de novo.
 - Testes: **Vitest** — obrigatórios para a camada de domínio (§4.3).
 
@@ -124,13 +124,13 @@ interface CopaRepo {
 }
 ```
 
-- Implementação da fase 1: **`JsonLocalRepo`** — elenco e times em JSON (`dados/elenco.json`, `dados/times.json`); resultado do sorteio em `localStorage`.
-- **Fonte atual do cadastro: a planilha oficial (Google Sheets, aba `INSCRITOS`).** `npm run importar -- "<url do CSV>"` baixa a aba para `dados/inscritos.csv`; `src/lib/repo/planilha.ts` (função pura, testada) converte o CSV em `Jogador[]`/`Time[]` e lista pendências; `src/lib/repo/cadastro.ts` lê o arquivo no servidor e cai no seed de exemplo se ele não existir. As páginas usam só `carregarCadastro()` — é o ponto a trocar quando o `CopaRepo` existir.
-  - Colunas lidas (cabeçalho, sem acento/caixa): `Nome`, `Apelido`, `Posição` (GOL/ZAG/MEI/ATA), `Estrelas` (1–6), `Capitão do time` (nome do time; marca o capitão e cria o `Time`), `Status` (só `Confirmado` entra).
+- O resultado do sorteio continua em `localStorage` e no link (§4.4); o que vale para o campeonato é o "Oficializar" (§8.4).
+- **Fonte do cadastro: tabela `inscricao` no banco, editada em Admin › Inscrições** (decisão do operador em 17/11/2026: "direto no sistema"). A planilha vira só uma importação: o admin envia o CSV da aba `INSCRITOS` na mesma tela, e quem já existe (mesmo nome, sem acento/caixa) é mantido. `src/lib/repo/inscricoes-repo.ts` faz o CRUD; `interpretarInscricoes()` em `planilha.ts` (pura, testada) valida e monta `Jogador[]`/`Time[]` com as pendências, a mesma função para o CSV e para o banco. `carregarCadastro()` lê o banco e cai no seed de exemplo se não houver nenhuma inscrição.
+  - Colunas do CSV (cabeçalho, sem acento/caixa): `Nome`, `Apelido`, `Posição` (GOL/ZAG/MEI/ATA), `Estrelas` (1–6), `Capitão do time` (nome do time; marca o capitão e cria o `Time`), `Status` (só `Confirmado` entra).
   - Goleiro com `Estrelas` vazio recebe `ESTRELAS_MIN` (não conta no balanceamento, §3.2).
   - Qualquer pendência (posição/estrelas vazias, nome repetido, time sem capitão ou com dois) **bloqueia** o botão de sorteio.
-- **`dados/` está no `.gitignore`** (exceto `dados/*.example.*`). Mantenha os exemplos versionados como referência de formato (`dados/inscritos.example.csv`).
-- Nenhum componente de UI importa `localStorage`, `fs` ou caminho de arquivo direto. Tudo pelo repo. Trocar por Postgres depois deve ser **uma implementação nova da interface, com zero mudança de UI**.
+- **`dados/` está no `.gitignore`** (exceto `dados/*.example.*`): lá fica o banco local (`dados/pglite`). Mantenha `dados/inscritos.example.csv` como referência de formato do CSV.
+- Nenhum componente de UI importa `localStorage`, `fs`, caminho de arquivo ou o cliente do banco direto. Tudo pelos módulos de `src/lib/repo/`.
 
 ### 4.3 Separação obrigatória
 
@@ -268,13 +268,23 @@ Nunca introduza visual corporativo/SaaS genérico, biblioteca de componentes com
 - Classificação e rankings são calculados das partidas (`lib/domain/campeonato/`); só jogos **encerrados** entram na tabela.
 
 ### 8.4 Dados e integração com o sorteio
-- `lib/repo/campeonato-repo.ts` lê e grava `dados/campeonato.json` com fila de escrita. Sem o arquivo, parte do `campeonatoPadrao()` (8 equipes do manual de marca, fases "Fase de grupos" e "Mata-mata").
-- Para hospedar onde o disco não persiste (ex.: Vercel), troque só esse módulo por um banco; as telas não mudam.
+- `lib/repo/campeonato-repo.ts` monta o documento `Campeonato` a partir das tabelas (§9) e o grava inteiro numa transação. Banco vazio: importa `dados/campeonato.json` se existir (legado e `npm run demo`), senão parte do `campeonatoPadrao()` (8 equipes do manual de marca, fases "Fase de grupos" e "Mata-mata").
 - No fim da cerimônia, **"Oficializar no campeonato"** grava equipes, jogadores e capitães. É bloqueado se já houver súmula preenchida. O pagamento de quem já estava cadastrado (pelo nome) é preservado.
 - **Pagamentos** (pago/pendente por jogador, valor da inscrição) só aparecem em `/admin/pagamentos`.
 - **Estrelas nunca aparecem em página pública.** O pote foi para `/sorteio`, protegido.
 
 ### 8.5 Rotas
 - Públicas: `/`, `/classificacao`, `/jogos`, `/jogos/[id]`, `/rankings`, `/equipes`, `/resultado/[payload]`.
-- Admin: `/admin`, `/admin/campeonato`, `/admin/fases`, `/admin/partidas`, `/admin/partidas/[id]`, `/admin/equipes`, `/admin/pagamentos`, `/sorteio`, `/cerimonia`. Login em `/admin/entrar`.
+- Admin: `/admin`, `/admin/inscricoes`, `/admin/campeonato`, `/admin/fases`, `/admin/partidas`, `/admin/partidas/[id]`, `/admin/equipes`, `/admin/pagamentos`, `/sorteio`, `/cerimonia`. Login em `/admin/entrar`.
+
+---
+
+## 9. Banco de dados
+
+- **Produção:** Postgres no **Neon**, app na **Vercel**. `DATABASE_URL` (connection string *pooled* do Neon) nas variáveis de ambiente da Vercel. O cliente usa `postgres` 3.x com `prepare: false` (exigido pelo pooler).
+- **Desenvolvimento:** sem `DATABASE_URL`, `src/lib/db/cliente.ts` abre um **PGlite** em `dados/pglite` e aplica as migrações sozinho. Para começar do zero, apague a pasta. Testes usam PGlite em memória (`bancoDeTeste()`).
+- **Esquema:** `src/lib/db/schema.ts`. Tabelas: `campeonato` (linha única, id 1), `inscricao`, `equipe`, `jogador`, `fase`, `grupo`, `grupo_equipe`, `partida`, `evento`. As restrições do domínio que o banco consegue garantir (estrelas 1–6, mandante ≠ visitante, FKs) estão em `check` e `foreign key`.
+- **Migrações:** SQL em `drizzle/`, geradas com `npm run db:gerar` depois de mudar o esquema (revise o SQL e versione). `npm run build` roda `scripts/migrar.mjs` antes do `next build`, então o deploy na Vercel atualiza o Neon sozinho. Nunca edite uma migração já aplicada; gere outra.
+- **Escrita:** `atualizarCampeonato(alterar)` trava a linha do campeonato (`select … for update`), relê, aplica a mudança e regrava as tabelas filhas numa transação. Ações concorrentes de dois admins são serializadas; erro em qualquer passo desfaz tudo. Volume esperado (~64 jogadores, ~20 partidas) torna a regravação inteira barata; se crescer muito, troque por escritas pontuais.
+- **Segredos:** `DATABASE_URL` e `ADMIN_SENHA` só em `.env.local` e nas variáveis da Vercel. Nunca no Git.
 

@@ -3,7 +3,7 @@ import { carregarCadastro } from '@/lib/repo/cadastro';
 
 export const metadata = { title: 'Cerimônia do sorteio — Copa Jumentus' };
 
-// Le dados/inscritos.csv a cada requisicao: reimportar a planilha nao exige rebuild.
+// Lê as inscrições do banco a cada requisição.
 export const dynamic = 'force-dynamic';
 
 export default async function CerimoniaPage() {
