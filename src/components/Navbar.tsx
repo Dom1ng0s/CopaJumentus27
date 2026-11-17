@@ -1,0 +1,73 @@
+'use client';
+
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { useEffect, useState } from 'react';
+
+const LINKS = [
+  { href: '/', rotulo: 'Pote' },
+  { href: '/cerimonia', rotulo: 'Cerimônia' },
+];
+
+export function Navbar() {
+  const pathname = usePathname();
+
+  return (
+    <nav className="fixed inset-x-0 top-4 z-50 flex justify-center px-4">
+      <div
+        className="flex w-full max-w-5xl items-center gap-1 rounded-full border border-hud px-2 py-2 sm:gap-3 sm:px-4"
+        style={{ background: 'rgba(11, 7, 22, 0.85)', backdropFilter: 'blur(16px)' }}
+      >
+        <Link href="/" className="shrink-0 px-2">
+          <span className="titulo-hero t-sm texto-gradiente text-lg sm:text-xl">JUMENTUS</span>
+        </Link>
+
+        <div className="ml-auto flex items-center gap-1 sm:gap-2">
+          {LINKS.map((l) => {
+            const ativo = pathname === l.href;
+            return (
+              <Link
+                key={l.href}
+                href={l.href}
+                className="hud-label rounded-full px-3 py-1.5 transition-colors duration-200 ease-hud"
+                style={
+                  ativo
+                    ? { color: '#fff', background: 'rgba(255,255,255,0.1)', boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.35)' }
+                    : undefined
+                }
+              >
+                {l.rotulo}
+              </Link>
+            );
+          })}
+          <RelogioLeonida />
+        </div>
+      </div>
+    </nav>
+  );
+}
+
+/** Badge de imersao: relogio + caixinha da copa (design system §4.D). */
+function RelogioLeonida() {
+  const [hora, setHora] = useState<string>('--:--');
+
+  useEffect(() => {
+    const tick = () =>
+      setHora(
+        new Date().toLocaleTimeString('pt-BR', {
+          hour: '2-digit',
+          minute: '2-digit',
+        }),
+      );
+    tick();
+    const id = setInterval(tick, 20_000);
+    return () => clearInterval(id);
+  }, []);
+
+  return (
+    <div className="ml-1 hidden items-center gap-3 border-l border-hud pl-3 sm:flex">
+      <span className="font-mono text-xs text-text-2">{hora}</span>
+      <span className="font-mono text-xs font-bold text-success">$1.450.920</span>
+    </div>
+  );
+}

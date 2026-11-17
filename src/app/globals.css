@@ -1,0 +1,451 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================================
+   LEONIDA - tokens
+   Fonte normativa: ~/.claude/skills/leonida-design (SKILL.md + references/).
+   Os neutros, o raio pilula e a rampa de superficies foram medidos na pagina
+   rockstargames.com/VI; o trio de sunset vem da key art.
+   Este app e dark-only de proposito: a cerimonia acontece a noite.
+   ============================================================ */
+:root {
+  /* Campo e superficies (dusk roxo-marinho medido) */
+  --background: #0c0d1b;
+  --bg: var(--background);
+  --surface1: #18182d;
+  --surface2: #252644;
+  --surface3: #38365d;
+  --border: #252644;
+  --border-visible: #38365d;
+
+  /* Texto */
+  --text1: #fdfbff;
+  --text2: #c0b5d9;
+  --text3: #9488ba;
+  --text4: #706ba6;
+
+  /* Acento */
+  --accent: #f143a2;
+  --accent-subtle: #2b0819;
+
+  /* Status */
+  --success: #4ade80;
+  --success-bg: #0f3d24;
+  --success-text: var(--success);
+  --warning: #facc15;
+  --warning-bg: #4a3508;
+  --warning-text: var(--warning);
+  --error: #fb7185;
+  --error-bg: #4e1020;
+  --error-text: var(--error);
+
+  /* Trio de sunset - sinal, nunca preenchimento de superficie */
+  --accent-orange: #ff9347;
+  --accent-violet: #8b3dff;
+  --accent-armor: #38bdf8;
+
+  /* Gradientes assinatura */
+  --gradient-leonida: linear-gradient(135deg, #ff9347 0%, #f143a2 45%, #8b3dff 100%);
+  --gradient-dusk: linear-gradient(189deg, #1f1f38 0%, #18182d 30%, #111222 65%, #0c0d1b 100%);
+  --gradient-glow: radial-gradient(circle at center, rgba(241, 67, 162, 0.25) 0%, transparent 70%);
+
+  /* Painel HUD */
+  --panel-fill: rgba(24, 24, 45, 0.72);
+  --panel-stroke: rgba(255, 255, 255, 0.14);
+  --row-hover: rgba(255, 255, 255, 0.04);
+
+  /* Fontes - carregadas via next/font no <html> */
+  --font-display: var(--font-bowlby), Impact, 'Arial Narrow', sans-serif;
+  --font-sans: var(--font-manrope), system-ui, -apple-system, sans-serif;
+  --font-mono: var(--font-jetbrains), ui-monospace, 'SF Mono', monospace;
+
+  /* Raios: paineis cortam, controles viram pilula. Nada entre 5 e 11px. */
+  --radius-hud: 0px;
+  --radius-element: 4px;
+  --radius-component: 12px;
+  --radius-container: 26px;
+  --radius-control: 999px;
+  --radius-pill: 999px;
+
+  /* Movimento mecanico - uma curva so no sistema inteiro */
+  --ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --duration-fast: 140ms;
+  --duration-medium: 200ms;
+  --duration-slow: 320ms;
+
+  /* Elevacao por glow, nunca por desfoque cinza */
+  --shadow-1: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+  --shadow-2: 0 0 24px rgba(241, 67, 162, 0.18);
+  --shadow-3: 0 0 40px rgba(241, 67, 162, 0.3);
+}
+
+html {
+  color-scheme: dark;
+}
+
+/* ---------- Resposta ----------
+   Latencia e o chao de tudo: no instante em que aparece atraso, a sensacao de
+   manipulacao direta cai. touch-action mata o atraso de ~300ms do toque, e o
+   tap-highlight do sistema e substituido pelo nosso proprio estado de pressao. */
+button,
+a,
+[role='button'],
+summary {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  background-color: var(--background);
+  background-image: var(--gradient-dusk);
+  background-attachment: fixed;
+  color: var(--text1);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ---------- Film grain (fixo, pointer-events none, 4%) ---------- */
+.grain-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  pointer-events: none;
+  opacity: 0.04;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* ---------- Scroll edge ----------
+   A nav flutua e o conteudo passa por baixo. Em vez de uma borda de 1px, o
+   conteudo se dissolve onde encontra a chrome flutuante. */
+.scroll-edge {
+  position: fixed;
+  inset: 0 0 auto 0;
+  height: 96px;
+  z-index: 40;
+  pointer-events: none;
+  background-image: linear-gradient(180deg, var(--background) 0%, transparent 100%);
+  opacity: 0.85;
+  -webkit-mask-image: linear-gradient(180deg, #000 0%, #000 45%, transparent 100%);
+  mask-image: linear-gradient(180deg, #000 0%, #000 45%, transparent 100%);
+}
+
+/* ---------- Halftone / spray accent ---------- */
+.halftone {
+  background-image: radial-gradient(rgba(241, 67, 162, 0.2) 1px, transparent 1px);
+  background-size: 8px 8px;
+}
+
+/* ---------- Tipografia ---------- */
+/* Tracking e leading sao especificos de tamanho, nunca um valor so.
+   Texto grande le com as letras longe demais e pede tracking negativo;
+   texto pequeno pede tracking proximo de zero para nao fechar. */
+.titulo-hero {
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  /* padrao = faixa media; use .t-xl ou .t-sm para as pontas */
+  letter-spacing: -0.02em;
+  line-height: 0.98;
+}
+
+/* 2.2rem para cima: display, revelacao, titulos de tela */
+.titulo-hero.t-xl {
+  letter-spacing: -0.035em;
+  line-height: 0.92;
+}
+
+/* abaixo de 1.5rem: wordmark da nav, rotulos compactos */
+.titulo-hero.t-sm {
+  letter-spacing: -0.005em;
+  line-height: 1.05;
+}
+
+/* ---------- Wordmark vetorizado (Pricedown) ---------- */
+/* Arte fixa, nao tipografia viva. Ver src/components/Wordmark.tsx. */
+.wordmark,
+.wordmark-vice {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/* Sticker aplicado nos paths: branco, contorno escuro, sombra dura.
+   stroke-width esta em unidades do viewBox, entao escala junto. */
+.wordmark path {
+  fill: #ffffff;
+  stroke: var(--background);
+  stroke-width: 26;
+  paint-order: stroke fill;
+  stroke-linejoin: round;
+}
+.wordmark {
+  filter: drop-shadow(0 0.055em 0 var(--background));
+}
+
+/* O gradiente sozinho some em cima do sol: o contorno escuro destaca do ceu */
+.wordmark-vice path {
+  fill: url(#grad-leonida-vice);
+  stroke: var(--background);
+  stroke-width: 30;
+  paint-order: stroke fill;
+  stroke-linejoin: round;
+}
+.wordmark-vice {
+  filter: drop-shadow(0 0.05em 0 var(--background));
+}
+
+/* Sticker: preenchimento branco, contorno escuro, sombra dura */
+.sticker {
+  color: #ffffff;
+  -webkit-text-stroke: 2px var(--background);
+  paint-order: stroke fill;
+  filter: drop-shadow(0 4px 0 var(--background));
+}
+
+.texto-gradiente {
+  background-image: var(--gradient-leonida);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.hud-label {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--text2);
+}
+
+/* ---------- HUD Card ---------- */
+.hud-card {
+  position: relative;
+  background: var(--panel-fill);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--panel-stroke);
+  border-radius: var(--radius-component);
+  box-shadow: var(--shadow-1);
+  transition:
+    border-color var(--duration-medium) var(--ease),
+    box-shadow var(--duration-medium) var(--ease),
+    transform var(--duration-medium) var(--ease);
+}
+
+.hud-card:hover {
+  border-color: var(--accent);
+  box-shadow: var(--shadow-2);
+}
+
+/* Canto cortado assimetrico. Painel que recorta nao arredonda. */
+.hud-clip {
+  border-radius: var(--radius-hud);
+  clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 0 100%);
+}
+
+/* Barra segmentada inferior: motivo fixo 50/25/25, nunca reflete dados */
+.hud-minimap-bar {
+  display: flex;
+  height: 3px;
+  width: 100%;
+  overflow: hidden;
+}
+.hud-minimap-bar > span:nth-child(1) {
+  width: 50%;
+  background: var(--success);
+}
+.hud-minimap-bar > span:nth-child(2) {
+  width: 25%;
+  background: var(--accent-armor);
+}
+.hud-minimap-bar > span:nth-child(3) {
+  width: 25%;
+  background: var(--accent-orange);
+}
+
+/* ---------- Botoes: controles sao pilula ---------- */
+.btn-cta {
+  display: inline-block;
+  background-image: var(--gradient-leonida);
+  color: #ffffff;
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  font-size: 1.125rem;
+  letter-spacing: 0.05em;
+  padding: 0.875rem 2rem;
+  border: 2px solid transparent;
+  border-radius: var(--radius-control);
+  transform: skewX(-6deg);
+  transition: all var(--duration-medium) var(--ease);
+}
+.btn-cta > span {
+  display: inline-block;
+  transform: skewX(6deg);
+}
+.btn-cta:hover:not(:disabled),
+.btn-cta:focus-visible:not(:disabled) {
+  border-color: #ffffff;
+  transform: skewX(-6deg) scale(1.03);
+  outline: none;
+}
+.btn-cta:active:not(:disabled) {
+  transform: skewX(-6deg) scale(0.98);
+}
+.btn-cta:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.btn-hud {
+  display: inline-block;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border-visible);
+  color: var(--text1);
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  font-size: 0.9375rem;
+  letter-spacing: 0.05em;
+  padding: 0.625rem 1.5rem;
+  border-radius: var(--radius-control);
+  transition: all var(--duration-medium) var(--ease);
+}
+.btn-hud:hover:not(:disabled),
+.btn-hud:focus-visible:not(:disabled) {
+  border-color: #ffffff;
+  box-shadow: inset 0 0 12px rgba(255, 255, 255, 0.25);
+  outline: none;
+}
+/* Feedback nasce na pressao, nao na soltura */
+.btn-hud:active:not(:disabled) {
+  transform: scale(0.98);
+  transition-duration: var(--duration-fast);
+}
+.btn-hud:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+/* ---------- Animacoes ---------- */
+@keyframes wantedPulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.62;
+    transform: scale(1.12);
+  }
+}
+.wanted-pulse {
+  animation: wantedPulse 1.5s infinite;
+}
+
+/* Materializar, nao so aparecer: o painel e vidro, entao o desfoque e a escala
+   crescem juntos e ele chega como material, nao como opacidade subindo. */
+@keyframes revelar {
+  0% {
+    opacity: 0;
+    filter: blur(10px);
+    transform: translateY(14px) scale(0.96);
+  }
+  60% {
+    filter: blur(0px);
+  }
+  100% {
+    opacity: 1;
+    filter: blur(0px);
+    transform: translateY(0) scale(1);
+  }
+}
+.animar-revelar {
+  animation: revelar var(--duration-slow) var(--ease) both;
+  will-change: transform, opacity, filter;
+}
+
+/* O quadro intermediario aponta para o desfecho: o time que recebeu cresce
+   na direcao do jogador antes de assentar, em vez de so piscar a borda. */
+@keyframes flashSelecao {
+  0% {
+    border-color: #ffffff;
+    box-shadow: 0 0 28px rgba(255, 255, 255, 0.55);
+    transform: scale(1.025);
+  }
+  100% {
+    border-color: var(--accent);
+    box-shadow: var(--shadow-2);
+    transform: scale(1);
+  }
+}
+.flash-selecao {
+  animation: flashSelecao var(--duration-slow) var(--ease) both;
+  will-change: transform;
+}
+
+/* ---------- Preferencias do sistema ----------
+   Movimento reduzido nao quer dizer sem retorno: quer dizer um equivalente
+   suave e nao vestibular. Opacidade continua, deslocamento e escala saem. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .animar-revelar {
+    animation: revelarSuave 200ms ease both;
+  }
+  .btn-cta:hover:not(:disabled),
+  .btn-cta:focus-visible:not(:disabled) {
+    transform: skewX(-6deg);
+  }
+  .btn-cta:active:not(:disabled),
+  .btn-hud:active:not(:disabled) {
+    transform: none;
+  }
+  .wanted-pulse {
+    animation: none;
+  }
+}
+
+@keyframes revelarSuave {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Transparencia reduzida: o vidro fica solido em vez de desfocado. */
+@media (prefers-reduced-transparency: reduce) {
+  .hud-card,
+  .btn-hud {
+    backdrop-filter: none;
+  }
+  .hud-card {
+    background: var(--surface1);
+  }
+  .grain-overlay,
+  .scroll-edge {
+    display: none;
+  }
+}
+
+/* Contraste alto: fundo quase solido e borda definida. */
+@media (prefers-contrast: more) {
+  :root {
+    --panel-fill: var(--surface1);
+    --panel-stroke: var(--text2);
+    --text2: #e6dff5;
+    --text3: #c0b5d9;
+  }
+  .hud-card {
+    backdrop-filter: none;
+    border-width: 2px;
+  }
+  .btn-cta {
+    border-color: #ffffff;
+  }
+}

@@ -1,0 +1,55 @@
+// Tipos de dominio. Fonte: CLAUDE.md §3.1
+
+export type Posicao = 'GOL' | 'ZAG' | 'MEI' | 'ATA';
+
+export type Estrelas = 1 | 2 | 3 | 4 | 5 | 6;
+
+export interface Jogador {
+  id: string;
+  nome: string;
+  apelido?: string;
+  posicao: Posicao;
+  estrelas: Estrelas;
+  ehCapitao: boolean;
+}
+
+export interface Time {
+  id: string;
+  nome: string;
+  capitaoId: string;
+  escudo?: string;
+}
+
+/** Uma alocacao individual, na ordem em que deve ser revelada. */
+export interface Alocacao {
+  jogadorId: string;
+  timeId: string;
+  /** 'linha' = sorteio principal; 'goleiro' = etapa separada (CLAUDE.md §3.4) */
+  etapa: 'linha' | 'goleiro';
+}
+
+export interface Sorteio {
+  /** ISO timestamp de quando o sorteio foi gerado. */
+  geradoEm: string;
+  /** Ordem de revelacao da etapa de linha. */
+  linha: Alocacao[];
+  /** Ordem de revelacao da etapa de goleiros. */
+  goleiros: Alocacao[];
+  /** Goleiros excedentes: ficam de fora, nao voltam ao pote (CLAUDE.md §3.4). */
+  goleirosReservaIds: string[];
+  /** Times que ficaram sem goleiro por falta de goleiros no pote. */
+  timesSemGoleiroIds: string[];
+  /** Diferenca final entre a maior e a menor soma de estrelas. */
+  amplitudeEstrelas: number;
+  /** true quando a tolerancia nao foi atingida em MAX_TENTATIVAS. */
+  toleranciaEstourada: boolean;
+}
+
+export interface ElencoDoTime {
+  time: Time;
+  capitao: Jogador;
+  goleiro: Jogador | null;
+  linha: Jogador[];
+  /** Soma de estrelas de capitao + linha. Goleiro NAO conta (CLAUDE.md §3.2). */
+  somaEstrelas: number;
+}
