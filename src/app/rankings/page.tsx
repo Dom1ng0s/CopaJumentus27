@@ -1,4 +1,4 @@
-import { Cabecalho, Escudo, Secao } from '@/components/campeonato/ui';
+import { Cabecalho, Cartao, Escudo, Secao } from '@/components/campeonato/ui';
 import { indices } from '@/lib/campeonato/consultas';
 import { artilharia, assistencias, cartoes } from '@/lib/domain/campeonato/rankings';
 import { carregarCampeonato } from '@/lib/repo/campeonato-repo';
@@ -35,7 +35,7 @@ export default async function Rankings({ searchParams }: { searchParams: Promise
           <li key={it.jogadorId} className="flex items-center gap-3 py-2">
             <span className="w-6 font-mono text-sm text-text-3">{i + 1}</span>
             <span className="min-w-0 flex-1">{linhaJogador(it.jogadorId)}</span>
-            <span className="font-mono text-xl font-bold tabular-nums">{it.valor}</span>
+            <span className="numero text-3xl" style={{ color: 'var(--accent)' }}>{it.valor}</span>
           </li>
         ))}
       </ol>
@@ -62,9 +62,9 @@ export default async function Rankings({ searchParams }: { searchParams: Promise
             cartoes(partidas).map((x) => ({
               jogadorId: x.jogadorId,
               valor: (
-                <span className="flex gap-2 text-base">
-                  {x.amarelos > 0 && <span>🟨{x.amarelos}</span>}
-                  {x.vermelhos > 0 && <span>🟥{x.vermelhos}</span>}
+                <span className="flex gap-3">
+                  {x.amarelos > 0 && <Cartao cor="amarelo" quantidade={x.amarelos} />}
+                  {x.vermelhos > 0 && <Cartao cor="vermelho" quantidade={x.vermelhos} />}
                 </span>
               ),
             })),

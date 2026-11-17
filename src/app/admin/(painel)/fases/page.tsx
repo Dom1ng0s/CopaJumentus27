@@ -96,7 +96,7 @@ export default async function Fases({ searchParams }: { searchParams: Promise<{ 
                   <input type="hidden" name="faseId" value={fase.id} />
                   <input type="hidden" name="quantidade" value={quantidade} />
                   <p className="rotulo-campo">Ou defina à mão ({quantidade} grupos)</p>
-                  <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                  <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
                     {c.equipes.map((e) => (
                       <label key={e.id} className="flex items-center gap-2 rounded-component bg-[var(--surface1)] px-2 py-1.5">
                         <Escudo equipe={e} tamanho={22} />

@@ -1,8 +1,10 @@
 'use client';
 
+// Barra de transmissão: brasão oficial como assinatura à esquerda, links em
+// Barlow Condensed e filete dourado na base (manual, "Cabeçalho padrão").
+
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useEffect, useState } from 'react';
 
 const LINKS: Array<{ href: string; rotulo: string; curto?: string }> = [
   { href: '/', rotulo: 'Início' },
@@ -17,63 +19,42 @@ export function Navbar() {
   const pathname = usePathname();
 
   return (
-    <nav className="fixed inset-x-0 top-4 z-50 flex justify-center px-2 sm:px-4">
+    <nav className="fixed inset-x-0 top-0 z-50">
       <div
-        className="flex w-full max-w-5xl items-center gap-1 rounded-full border border-hud px-1 py-2 sm:gap-3 sm:px-4"
-        style={{ background: 'rgba(11, 7, 22, 0.85)', backdropFilter: 'blur(16px)' }}
+        className="mx-auto flex w-full items-center gap-2 px-2 sm:px-6"
+        style={{ background: 'rgba(6, 18, 42, 0.92)', backdropFilter: 'blur(14px)' }}
       >
-        {/* No celular o logo sai para os 6 links caberem; "Início" leva à home. */}
-        <Link href="/" className="hidden shrink-0 px-2 sm:block">
-          <span className="titulo-hero t-sm texto-gradiente text-lg sm:text-xl">JUMENTUS</span>
+        {/* No celular o brasão fica e o nome sai, para os 6 links caberem. */}
+        <Link href="/" className="flex shrink-0 items-center gap-2 py-2" aria-label="Copa Jumentus — início">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/imagens/logo/copa-jumentus-logo.png" alt="" width={30} height={41} className="h-10 w-auto" />
+          <span className="titulo-hero t-sm hidden text-xl text-text-1 md:block">
+            Copa <span style={{ color: 'var(--accent)' }}>Jumentus</span>
+          </span>
         </Link>
 
-        <div className="flex w-full items-center justify-between gap-0 sm:ml-auto sm:w-auto sm:justify-start sm:gap-2">
+        <div className="ml-auto flex items-stretch self-stretch">
           {LINKS.map((l) => {
             const ativo = l.href === '/' ? pathname === '/' : pathname.startsWith(l.href);
             return (
               <Link
                 key={l.href}
                 href={l.href}
-                className="hud-label shrink-0 rounded-full px-[6px] py-1.5 !tracking-[0.04em] transition-colors duration-200 ease-hud sm:px-3 sm:!tracking-[0.12em]"
-                style={
-                  ativo
-                    ? { color: '#fff', background: 'rgba(255,255,255,0.1)', boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.35)' }
-                    : undefined
-                }
+                aria-current={ativo ? 'page' : undefined}
+                className="relative flex items-center px-[6px] font-mono text-[13px] font-bold uppercase tracking-[0.04em] transition-colors duration-200 ease-hud sm:px-3 sm:text-[15px] sm:tracking-[0.07em]"
+                style={{ color: ativo ? 'var(--text1)' : 'var(--text2)' }}
               >
                 <span className="sm:hidden">{l.curto ?? l.rotulo}</span>
                 <span className="hidden sm:inline">{l.rotulo}</span>
+                {ativo && (
+                  <span className="absolute inset-x-1 bottom-0 h-[3px] sm:inset-x-2" style={{ backgroundImage: 'var(--gradient-leonida)' }} />
+                )}
               </Link>
             );
           })}
-          <RelogioLeonida />
         </div>
       </div>
+      <div className="filete !h-[2px] opacity-80" aria-hidden="true" />
     </nav>
-  );
-}
-
-/** Badge de imersao: relogio + caixinha da copa (design system §4.D). */
-function RelogioLeonida() {
-  const [hora, setHora] = useState<string>('--:--');
-
-  useEffect(() => {
-    const tick = () =>
-      setHora(
-        new Date().toLocaleTimeString('pt-BR', {
-          hour: '2-digit',
-          minute: '2-digit',
-        }),
-      );
-    tick();
-    const id = setInterval(tick, 20_000);
-    return () => clearInterval(id);
-  }, []);
-
-  return (
-    <div className="ml-1 hidden items-center gap-3 border-l border-hud pl-3 sm:flex">
-      <span className="font-mono text-xs text-text-2">{hora}</span>
-      <span className="font-mono text-xs font-bold text-success">$1.450.920</span>
-    </div>
   );
 }

@@ -20,20 +20,23 @@ export function Escudo({ equipe, tamanho = 28 }: { equipe?: Equipe; tamanho?: nu
   return <img src={equipe.escudo} alt="" width={tamanho} height={tamanho} className="shrink-0 object-contain" style={{ width: tamanho, height: tamanho }} />;
 }
 
+/** Título de tela em Anton com o filete dourado e o grupo de faixas a 45° à direita. */
 export function Cabecalho({ titulo, legenda }: { titulo: string; legenda?: string }) {
   return (
-    <div className="mb-6">
-      <h1 className="titulo-hero t-xl text-4xl sm:text-5xl">{titulo}</h1>
-      {legenda && <p className="mt-2 text-sm text-text-2">{legenda}</p>}
+    <div className="relative mb-8 overflow-hidden pb-4 pt-2">
+      <div className="faixas hidden sm:block" aria-hidden="true" />
+      <h1 className="titulo-hero t-xl relative text-5xl sm:text-6xl">{titulo}</h1>
+      <div className="filete relative mt-3 w-24" aria-hidden="true" />
+      {legenda && <p className="relative mt-3 text-base text-text-2">{legenda}</p>}
     </div>
   );
 }
 
 export function Secao({ titulo, children, acao }: { titulo: string; children: React.ReactNode; acao?: React.ReactNode }) {
   return (
-    <section className="hud-card relative p-4 sm:p-5">
-      <div className="mb-4 flex items-center justify-between gap-3">
-        <h2 className="titulo-hero t-sm text-xl">{titulo}</h2>
+    <section className="hud-card hud-clip modulo relative p-4 sm:p-5">
+      <div className="mb-4 flex items-center justify-between gap-3 border-b border-hud pb-3">
+        <h2 className="titulo-hero t-sm text-2xl">{titulo}</h2>
         {acao}
       </div>
       {children}
@@ -64,13 +67,13 @@ const ROTULO_STATUS: Record<Partida['status'], string> = {
 export function SeloStatus({ status }: { status: Partida['status'] }) {
   const estilo =
     status === 'ao-vivo'
-      ? { background: 'var(--error-bg)', color: 'var(--error-text)' }
+      ? { background: 'var(--vermelho)', color: '#ffffff' }
       : status === 'encerrada'
         ? { background: 'var(--surface2)', color: 'var(--text2)' }
         : { background: 'transparent', color: 'var(--text3)', boxShadow: 'inset 0 0 0 1px var(--border-visible)' };
   return (
-    <span className="hud-label inline-flex items-center gap-1.5 rounded-pill px-2 py-0.5 text-[10px]" style={estilo}>
-      {status === 'ao-vivo' && <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-error" />}
+    <span className="hud-label inline-flex items-center gap-1.5 px-2 py-0.5 !text-[11px]" style={estilo}>
+      {status === 'ao-vivo' && <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white" />}
       {ROTULO_STATUS[status]}
     </span>
   );
@@ -91,32 +94,32 @@ export function CardPartida({
   const mostraPlacar = partida.status !== 'agendada';
   const penaltis = partida.penaltisMandante !== undefined || partida.penaltisVisitante !== undefined;
   const conteudo = (
-    <div className="hud-card relative px-3 py-3 transition-colors duration-200 hover:bg-[var(--row-hover)]">
+    <div className="hud-card hud-clip modulo relative px-3 pb-4 pt-3 transition-colors duration-200 hover:bg-[var(--row-hover)]">
       <div className="mb-2 flex items-center justify-between gap-2">
-        <span className="hud-label truncate text-[10px]">{partida.rotulo ?? ''}</span>
+        <span className="hud-label truncate !text-[11px]">{partida.rotulo ?? ''}</span>
         <SeloStatus status={partida.status} />
       </div>
       <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
         <div className="flex min-w-0 flex-col items-center gap-1 text-center">
           <Escudo equipe={mandante} tamanho={40} />
-          <span className="w-full truncate text-xs font-semibold">{mandante?.nome ?? '?'}</span>
+          <span className="w-full truncate font-mono text-sm font-bold uppercase tracking-wide">{mandante?.nome ?? '?'}</span>
         </div>
         <div className="text-center">
-          <p className="font-mono text-3xl font-bold tabular-nums">
+          <p className="numero text-4xl">
             {mostraPlacar ? `${partida.golsMandante} : ${partida.golsVisitante}` : 'x'}
           </p>
           {mostraPlacar && penaltis && (
-            <p className="font-mono text-[11px] text-text-3">
+            <p className="font-mono text-xs font-semibold" style={{ color: 'var(--error-text)' }}>
               pên. {partida.penaltisMandante ?? 0}–{partida.penaltisVisitante ?? 0}
             </p>
           )}
         </div>
         <div className="flex min-w-0 flex-col items-center gap-1 text-center">
           <Escudo equipe={visitante} tamanho={40} />
-          <span className="w-full truncate text-xs font-semibold">{visitante?.nome ?? '?'}</span>
+          <span className="w-full truncate font-mono text-sm font-bold uppercase tracking-wide">{visitante?.nome ?? '?'}</span>
         </div>
       </div>
-      <p className="mt-2 text-center font-mono text-[11px] text-text-3">
+      <p className="mt-2 text-center font-mono text-[13px] font-semibold uppercase tracking-wide text-text-3">
         {formatarDataHora(partida.dataHora)}
         {partida.local ? ` · ${partida.local}` : ''}
       </p>
@@ -129,8 +132,22 @@ export function CardPartida({
 export function Numero({ valor, rotulo }: { valor: string | number; rotulo: string }) {
   return (
     <div className="text-center">
-      <p className="font-mono text-2xl font-bold tabular-nums">{valor}</p>
-      <p className="hud-label text-[10px]">{rotulo}</p>
+      <p className="numero text-4xl text-text-1">{valor}</p>
+      <p className="hud-label mt-1 !text-[11px]">{rotulo}</p>
     </div>
+  );
+}
+
+/** Cartão de arbitragem desenhado (sem emoji): amarelo ou vermelho. */
+export function Cartao({ cor, quantidade }: { cor: 'amarelo' | 'vermelho'; quantidade?: number }) {
+  return (
+    <span className="inline-flex items-center gap-1" aria-label={`${quantidade ?? 1} ${cor === 'amarelo' ? 'amarelo' : 'vermelho'}`}>
+      <span
+        className="inline-block h-[18px] w-[13px] rounded-[2px]"
+        style={{ background: cor === 'amarelo' ? '#F2CB57' : '#E4002B', transform: 'rotate(8deg)' }}
+        aria-hidden="true"
+      />
+      {quantidade !== undefined && <span className="numero text-2xl">{quantidade}</span>}
+    </span>
   );
 }

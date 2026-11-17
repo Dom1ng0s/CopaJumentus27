@@ -159,18 +159,21 @@ A lógica de sorteio em `lib/domain` precisa ser testável sem renderizar nada. 
 
 ## 5. Frontend e design
 
-O visual é definido pela skill **`leonida-design`**, em `~/.claude/skills/leonida-design/`. **Invoque `/leonida-design` e leia o `SKILL.md` e os três arquivos em `references/` antes de escrever qualquer CSS ou componente.** Ela é normativa, não inspiracional.
+O visual segue o **Manual de Marca da Copa Jumentus 2027** ([docs/marca/manual-de-marca.md](docs/marca/manual-de-marca.md)), adaptado para tela. Decisão do operador em 17/11/2026: o site usa a mesma identidade das artes do Instagram. Ele substitui o design system `leonida-design` usado na primeira versão.
 
-A skill foi gerada a partir de duas fontes: o spec original de key art ([gta_vi_frontend_design_system_agent_guidelines.md](gta_vi_frontend_design_system_agent_guidelines.md), mantido como referência histórica) e os estilos computados medidos na página oficial `rockstargames.com/VI`. **Onde os dois divergirem, a skill vence**, porque os neutros, o raio pilula e a rampa de superfícies dela são medidos, não estimados.
+A identidade é **híbrida**: a estrutura MLS organiza a informação, Vice City dá o clima. As telas do sistema são "peças de jogo" no manual: marinho e dourado, com Vice City só como luz âmbar no topo. A cerimônia e o banner da home são "peças de evento": céu Vice City forte.
 
-Pontos em que a skill corrige o spec original:
-- O campo é `#0C0D1B` (dusk roxo-marinho medido), não `#0B0716`.
-- O display é **Bowlby One** e o corpo é **Manrope**, não Anton e Inter.
-- Controles são **pílula** (`999px`); painéis **recortam** o canto e não arredondam. Nada entre 5 e 11px.
-- O neon é racionado: **um elemento gritante por tela**.
-- Texto de status tem token próprio (`--success-text` e irmãos), porque o passo 500 falha contraste sobre o próprio tint em fundo claro.
+Tokens em `src/app/globals.css` (fonte única; o Tailwind só aponta para eles):
+- **Cores:** fundo marinho profundo `#06122A`, superfícies marinho Jumentus `#0B1F3F` em diante, texto off-white `#F4F2EC` e cinza concreto `#C9CCD1`, acento dourado `#D4A12A`, vermelho destaque `#E4002B` só para "ao vivo", erro e eliminado. Paleta Vice City (`#1E0838` e o céu) só em atmosfera.
+- **Dourado metálico** (`--gradient-leonida`, nome mantido por compatibilidade): `#9C6F14 → #F2CB57 → #D4A12A` a 45°. Exclusivo da Copa: botão principal, filetes, item ativo.
+- **Fontes (Google Fonts, via `next/font`):** títulos em **Anton** (`.titulo-hero`), números e placar em **Big Shoulders Display Black** (`.numero`, `font-numero`), rótulos em **Barlow Condensed** (`.hud-label`, `font-mono`), texto em **Barlow** (`font-sans`).
+- **Forma:** módulos de transmissão retos, com canto cortado a 45° (`.hud-clip`) e filete dourado na base (`.modulo`). Botões retos com a ponta direita cortada a 45°. Nada de pílula.
+- **Diagonais** (`.faixas`): grupo marinho, vermelho e dourado a 45°, subindo da esquerda para a direita, só no canto do cabeçalho de tela. Nunca atrás de título, número ou escudo.
+- **Cores dos times:** vêm de `src/lib/campeonato/marcas.ts`, iguais ao manual. Nos cards de equipe, a faixa larga usa a secundária e a fina é dourada, no canto.
+- **Brasão oficial** (`public/imagens/logo/copa-jumentus-logo.png`) na barra de navegação, nunca redesenhado. Escudos só dos arquivos oficiais.
+- **Sem emojis na interface** (manual, "Proibido"): cartões e gol são ícones desenhados (`Cartao`, `Sumula`).
 
-Este app é **dark-only de propósito** — a cerimônia acontece à noite. A skill define modo claro; o projeto não o usa.
+Este app é **dark-only de propósito** — a cerimônia acontece à noite.
 
 ### Wordmark: Pricedown vetorizada
 
@@ -182,7 +185,7 @@ Três regras que vêm da licença, e não são negociáveis:
 2. **Nunca sirva a Pricedown como webfont.** Isso exige uma licença de embedding, que o projeto não tem. O que a licença grátis cobre é "logos, wordmarks" e "outlined SVG" — arte fixa.
 3. **Para mudar o texto de um wordmark**, gere um SVG novo a partir da fonte, numa máquina com ela instalada. Não dá para editar o texto no código.
 
-Por isso **só títulos de marca** usam wordmark. Todo texto dinâmico — nome de jogador, nome de time, rótulo de botão — continua em **Bowlby One**, que é livre e vem do Google Fonts.
+Por isso **só títulos de marca** usam wordmark. Todo texto dinâmico — nome de jogador, nome de time, rótulo de botão — usa as fontes livres do manual (Anton, Big Shoulders Display, Barlow Condensed e Barlow).
 
 ### Key art do hero
 
@@ -199,25 +202,25 @@ Ficam em `public/imagens/` (logo oficial, kits, escudos, artes), descritas em `p
 A página de resultado **não** usa o banner: ela é consumida no celular, onde 4:1 fica pequeno demais. Lá o título é o wordmark SVG, que escala melhor em retrato.
 
 Pontos de amarração entre domínio e design:
-- **Nível do jogador → Wanted System de 6 estrelas.** Mesma escala, sem conversão.
-- **Cards de jogador e de time → HUD Cards**, com a barra segmentada inferior (health / armor / orange).
-- **Botão de sortear e de revelar próximo → Primary CTA** com `--gradient-leonida`, o skew e o raio pílula.
+- **Nível do jogador → 6 estrelas.** Mesma escala do domínio, sem conversão. Estrelas só em telas de admin.
+- **Cards de jogador e de time → módulos de transmissão** (`.hud-card`), com canto cortado e filete dourado na base.
+- **Botão de sortear e de revelar próximo → botão principal** dourado metálico, com a ponta cortada a 45°.
 - **Cerimônia de revelação** usa as transições snappy (140–320ms, `cubic-bezier(0.16, 1, 0.3, 1)`) e o selection flash. O suspense vem do **ritmo controlado pelo operador**, não de animação lenta: cada revelação é rápida; quem controla a pausa é o clique.
 
 ### Comportamento
 
-A seção de movimento da skill (`references/tokens.md`) carrega as regras de interação. As quatro que mais pegam no dia a dia:
+Regras de interação que valem em todas as telas:
 
 1. **Retorno nasce no pointer-down**, nunca na soltura. Todo controle tem `:active`, `touch-action: manipulation` e tap-highlight do sistema desligado.
 2. **Tracking é específico de tamanho.** Use `.t-xl` acima de 2,2rem e `.t-sm` abaixo de 1,5rem junto de `.titulo-hero`. Um valor único numa escala que vai de 1,1rem a 6rem está errado em alguma ponta.
 3. **Painel de vidro materializa**, não aparece: a entrada anima `blur` e escala junto com opacidade.
 4. **Três preferências do sistema**, não uma: `prefers-reduced-motion`, `prefers-reduced-transparency` e `prefers-contrast` têm todas tratamento próprio.
 
-A curva mecânica fixa vale porque **nada aqui é dirigido por gesto**. Se um dia entrar superfície arrastável — card que desliza, bottom sheet, slider que se arremessa —, a curva deixa de valer e o caso passa a pedir mola com entrega de velocidade. A skill descreve o que muda.
+A curva mecânica fixa vale porque **nada aqui é dirigido por gesto**. Se um dia entrar superfície arrastável — card que desliza, bottom sheet, slider que se arremessa —, a curva deixa de valer e o caso passa a pedir mola com entrega de velocidade.
 - **Tela de cerimônia é projetada/compartilhada** — dimensione tipografia para ser legível de longe. Prioridade visual: nome do jogador, estrelas, time que recebeu.
 - **Página de resultado é consumida no celular** — mobile-first, sem scroll horizontal.
 
-Nunca introduza visual corporativo/SaaS genérico, biblioteca de componentes com tema próprio (shadcn default, MUI, Chakra) ou paleta fora dos tokens.
+Nunca introduza visual corporativo/SaaS genérico, biblioteca de componentes com tema próprio (shadcn default, MUI, Chakra) ou paleta fora do manual de marca.
 
 ---
 

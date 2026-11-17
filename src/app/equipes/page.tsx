@@ -23,10 +23,17 @@ export default async function Equipes() {
             .filter((j) => j.equipeId === e.id)
             .sort((a, b) => ORDEM_POSICAO[a.posicao] - ORDEM_POSICAO[b.posicao] || (a.numero ?? 99) - (b.numero ?? 99));
           return (
-            <section key={e.id} className="hud-card relative overflow-hidden">
-              <div className="flex items-center gap-3 px-4 py-3" style={{ background: e.corPrimaria, color: e.corTexto }}>
-                <Escudo equipe={e} tamanho={44} />
-                <h2 className="titulo-hero t-sm text-lg" style={{ color: e.corTexto }}>
+            <section key={e.id} className="hud-card hud-clip modulo relative overflow-hidden">
+              {/* Faixa larga na secundária e fina dourada, a 45° (manual, Diagonais) */}
+              <div
+                className="flex items-center gap-3 px-4 py-4"
+                style={{
+                  color: e.corTexto,
+                  backgroundImage: `linear-gradient(135deg, ${e.corPrimaria} 0 82%, ${e.corSecundaria} 82% 91%, ${e.corPrimaria} 91% 93%, #D4A12A 93% 95%, ${e.corPrimaria} 95%)`,
+                }}
+              >
+                <Escudo equipe={e} tamanho={52} />
+                <h2 className="titulo-hero t-sm mr-12 text-2xl" style={{ color: e.corTexto }}>
                   {e.nome}
                 </h2>
               </div>
@@ -34,15 +41,15 @@ export default async function Equipes() {
                 {elenco.length === 0 && <li className="py-2 text-sm text-text-3">Elenco a definir.</li>}
                 {elenco.map((j) => (
                   <li key={j.id} className="flex items-center gap-2 py-1.5 text-sm">
-                    <span className="w-7 font-mono text-xs text-text-3">{j.numero ?? ''}</span>
-                    <span className="min-w-0 flex-1 truncate font-semibold">{j.nome}</span>
+                    <span className="numero w-8 text-xl" style={{ color: 'var(--accent)' }}>{j.numero ?? ''}</span>
+                    <span className="min-w-0 flex-1 truncate font-mono text-base font-bold uppercase tracking-wide">{j.nome}</span>
                     {situacao.get(j.id)?.suspenso && (
                       <span className="hud-label rounded-pill px-1.5 text-[9px]" style={{ background: 'var(--error-bg)', color: 'var(--error-text)' }}>
                         Suspenso
                       </span>
                     )}
                     {e.capitaoId === j.id && (
-                      <span className="flex h-5 w-5 items-center justify-center rounded-full bg-warning font-mono text-[10px] font-bold text-black" title="Capitão">
+                      <span className="numero flex h-6 w-6 items-center justify-center rounded-full text-sm" style={{ background: 'var(--gradient-leonida)', color: '#06122a' }} title="Capitão">
                         C
                       </span>
                     )}

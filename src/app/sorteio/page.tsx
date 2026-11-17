@@ -205,7 +205,7 @@ function Metrica({ rotulo, valor, cor }: { rotulo: string; valor: string; cor: s
   return (
     <HudCard className="px-3 py-3 text-left">
       <p className="hud-label text-[10px]">{rotulo}</p>
-      <p className="font-mono text-2xl font-bold" style={{ color: cor }}>
+      <p className="numero text-3xl" style={{ color: cor }}>
         {valor}
       </p>
     </HudCard>

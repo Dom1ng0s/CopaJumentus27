@@ -74,7 +74,7 @@ export default async function ControlePartida({
 
         <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4">
           <LadoTime equipe={mandante} />
-          <p className="font-mono text-6xl font-bold tabular-nums sm:text-7xl">
+          <p className="numero text-7xl sm:text-8xl">
             {p.golsMandante}:{p.golsVisitante}
           </p>
           <LadoTime equipe={visitante} />
@@ -88,7 +88,7 @@ export default async function ControlePartida({
             <Placar lado="mandante" penaltis />
             <p className="text-center">
               <span className="hud-label block text-[10px]">Pênaltis</span>
-              <span className="font-mono text-2xl font-bold">
+              <span className="numero text-3xl">
                 {p.penaltisMandante ?? 0}:{p.penaltisVisitante ?? 0}
               </span>
             </p>
