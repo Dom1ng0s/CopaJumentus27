@@ -4,3 +4,4 @@ dados/*
 !dados/*.example.*
 next-env.d.ts
 *.tsbuildinfo
+docs/skill-gemini/*.zip

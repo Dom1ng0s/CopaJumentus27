@@ -196,7 +196,7 @@ A home usa `public/banner-copa-jumentus.webp` (2000×504), arte da comissão com
 
 ### Imagens da marca
 
-Ficam em `public/imagens/` (logo oficial, kits, escudos, artes), descritas em `public/imagens/README.md`. A logo oficial não é redesenhada. Escudo de time (`Time.escudo`, fase 2) usa `public/imagens/escudos/<slug-do-time>.webp`.
+Ficam em `public/imagens/` (logo oficial, kits, escudos, artes), descritas em `public/imagens/README.md`. Documentação de marca, a skill do Gemini e o guia das planilhas ficam em `docs/` (índice em `docs/README.md`). A logo oficial não é redesenhada. Escudo de time (`Time.escudo`, fase 2) usa `public/imagens/escudos/<slug-do-time>.webp`.
 
 A página de resultado **não** usa o banner: ela é consumida no celular, onde 4:1 fica pequeno demais. Lá o título é o wordmark SVG, que escala melhor em retrato.
 

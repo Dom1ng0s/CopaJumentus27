@@ -68,7 +68,7 @@ Formato de referência: [`dados/inscritos.example.csv`](dados/inscritos.example.
 
 ## Depois do sorteio
 
-Cole os elencos finais em **TIMES › Times Definidos** na planilha de sorteio. A planilha de uniformes puxa os nomes dali automaticamente.
+Cole os elencos finais em **TIMES › Times Definidos** na planilha de sorteio. A planilha de uniformes puxa os nomes dali automaticamente. Detalhes em [`docs/planilhas.md`](docs/planilhas.md).
 
 ## Estrutura
 
@@ -87,13 +87,16 @@ public/
   banner-copa-jumentus.webp
   imagens/           # logo, uniformes, escudos, artes — ver public/imagens/README.md
 docs/
-  marca/             # manual de marca e skill do Gemini
+  marca/             # manual de marca
+  skill-gemini/      # skill copa-jumentus-design do Gemini
+  planilhas.md       # planilhas oficiais e fluxo com o sistema
+  referencias/       # artes da edição passada
 dados/               # inscritos.csv local (fora do Git)
 ```
 
 ## Identidade visual
 
-- Identidade híbrida: estrutura MLS com atmosfera Vice City. Regras em [`docs/marca/`](docs/marca/) (manual de marca e skill do Gemini).
+- Identidade híbrida: estrutura MLS com atmosfera Vice City. Manual em [`docs/marca/`](docs/marca/) e skill do Gemini em [`docs/skill-gemini/`](docs/skill-gemini/). Índice geral em [`docs/`](docs/).
 - A logo oficial fica em [`public/imagens/logo/`](public/imagens/logo/) e não deve ser redesenhada.
 - O visual do site segue o design system descrito em CLAUDE.md §5.
 - O wordmark "COPA JUMENTUS / VICE CITY" é SVG vetorizado. **A fonte Pricedown nunca entra no repositório** (restrição de licença).
