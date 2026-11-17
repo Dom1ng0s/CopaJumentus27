@@ -3,81 +3,90 @@
 @tailwind utilities;
 
 /* ============================================================
-   LEONIDA - tokens
-   Fonte normativa: ~/.claude/skills/leonida-design (SKILL.md + references/).
-   Os neutros, o raio pilula e a rampa de superficies foram medidos na pagina
-   rockstargames.com/VI; o trio de sunset vem da key art.
-   Este app e dark-only de proposito: a cerimonia acontece a noite.
+   MARCA COPA JUMENTUS 2027 - tokens
+   Fonte: docs/marca/manual-de-marca.md (identidade híbrida).
+   Estrutura MLS: marinho e dourado, letras condensadas, números grandes,
+   módulos de transmissão com cantos cortados a 45°.
+   Atmosfera Vice City: só como luz no topo (noite roxa e âmbar), porque as
+   telas do sistema são "peças de jogo" no manual.
+   Dark-only de propósito: a cerimônia acontece à noite.
    ============================================================ */
 :root {
-  /* Campo e superficies (dusk roxo-marinho medido) */
-  --background: #0c0d1b;
+  /* Campo e superfícies: marinho profundo e marinho Jumentus */
+  --background: #06122a;
   --bg: var(--background);
-  --surface1: #18182d;
-  --surface2: #252644;
-  --surface3: #38365d;
-  --border: #252644;
-  --border-visible: #38365d;
+  --surface1: #0b1f3f;
+  --surface2: #13284d;
+  --surface3: #1c3561;
+  --border: #1c3561;
+  --border-visible: #2b4a7e;
 
-  /* Texto */
-  --text1: #fdfbff;
-  --text2: #c0b5d9;
-  --text3: #9488ba;
-  --text4: #706ba6;
+  /* Texto: off-white e cinza concreto */
+  --text1: #f4f2ec;
+  --text2: #c9ccd1;
+  --text3: #94a2bd;
+  --text4: #6b7c9c;
 
-  /* Acento */
-  --accent: #f143a2;
-  --accent-subtle: #2b0819;
+  /* Acento: dourado Jumentus */
+  --accent: #d4a12a;
+  --accent-subtle: #2e2408;
+  --dourado-claro: #f2cb57;
+  --dourado-escuro: #9c6f14;
+  --vermelho: #e4002b;
 
-  /* Status */
-  --success: #4ade80;
-  --success-bg: #0f3d24;
-  --success-text: var(--success);
-  --warning: #facc15;
-  --warning-bg: #4a3508;
-  --warning-text: var(--warning);
-  --error: #fb7185;
-  --error-bg: #4e1020;
-  --error-text: var(--error);
+  /* Status (o vermelho de "ao vivo" e "eliminado" vem do manual) */
+  --success: #3ddc84;
+  --success-bg: #0d3524;
+  --success-text: #5be89a;
+  --warning: #f2cb57;
+  --warning-bg: #2e2408;
+  --warning-text: #f2cb57;
+  --error: #e4002b;
+  --error-bg: #3b0812;
+  --error-text: #ff5a73;
 
-  /* Trio de sunset - sinal, nunca preenchimento de superficie */
-  --accent-orange: #ff9347;
-  --accent-violet: #8b3dff;
-  --accent-armor: #38bdf8;
+  /* Vice City: sinais pontuais, nunca preenchimento de superfície */
+  --accent-orange: #ffb458;
+  --accent-violet: #7b208f;
+  --accent-armor: #6aa8e8;
+  --noite-vice: #1e0838;
 
-  /* Gradientes assinatura */
-  --gradient-leonida: linear-gradient(135deg, #ff9347 0%, #f143a2 45%, #8b3dff 100%);
-  --gradient-dusk: linear-gradient(189deg, #1f1f38 0%, #18182d 30%, #111222 65%, #0c0d1b 100%);
-  --gradient-glow: radial-gradient(circle at center, rgba(241, 67, 162, 0.25) 0%, transparent 70%);
+  /* Gradientes: dourado metálico a 45° e noite Vice descendo para o marinho */
+  --gradient-leonida: linear-gradient(45deg, #9c6f14 0%, #f2cb57 55%, #d4a12a 100%);
+  --gradient-dusk: linear-gradient(180deg, #1e0838 0%, #0b1f3f 38%, #06122a 75%);
+  --gradient-glow: radial-gradient(circle at center, rgba(212, 161, 42, 0.22) 0%, transparent 70%);
 
-  /* Painel HUD */
-  --panel-fill: rgba(24, 24, 45, 0.72);
-  --panel-stroke: rgba(255, 255, 255, 0.14);
-  --row-hover: rgba(255, 255, 255, 0.04);
+  /* Módulo de transmissão: vidro marinho fosco */
+  --panel-fill: rgba(11, 31, 63, 0.82);
+  --panel-stroke: rgba(201, 204, 209, 0.16);
+  --row-hover: rgba(242, 203, 87, 0.06);
 
-  /* Fontes - carregadas via next/font no <html> */
-  --font-display: var(--font-bowlby), Impact, 'Arial Narrow', sans-serif;
-  --font-sans: var(--font-manrope), system-ui, -apple-system, sans-serif;
-  --font-mono: var(--font-jetbrains), ui-monospace, 'SF Mono', monospace;
+  /* Fontes do manual (Google Fonts, carregadas via next/font no <html>):
+     títulos Anton, números Big Shoulders Display, rótulos Barlow Condensed, texto Barlow. */
+  --font-display: var(--font-anton), 'Bebas Neue', Impact, 'Arial Narrow', sans-serif;
+  --font-sans: var(--font-barlow), system-ui, -apple-system, sans-serif;
+  --font-mono: var(--font-barlow-condensed), 'Arial Narrow', sans-serif;
+  --font-numero: var(--font-big-shoulders), var(--font-anton), Impact, sans-serif;
 
-  /* Raios: paineis cortam, controles viram pilula. Nada entre 5 e 11px. */
+  /* Raios: módulos de TV são retos e cortam o canto a 45°; nada de pílula */
   --radius-hud: 0px;
-  --radius-element: 4px;
-  --radius-component: 12px;
-  --radius-container: 26px;
-  --radius-control: 999px;
+  --radius-element: 2px;
+  --radius-component: 2px;
+  --radius-container: 4px;
+  --radius-control: 2px;
   --radius-pill: 999px;
+  --corte: 12px;
 
-  /* Movimento mecanico - uma curva so no sistema inteiro */
+  /* Movimento mecânico - uma curva só no sistema inteiro */
   --ease: cubic-bezier(0.16, 1, 0.3, 1);
   --duration-fast: 140ms;
   --duration-medium: 200ms;
   --duration-slow: 320ms;
 
-  /* Elevacao por glow, nunca por desfoque cinza */
-  --shadow-1: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
-  --shadow-2: 0 0 24px rgba(241, 67, 162, 0.18);
-  --shadow-3: 0 0 40px rgba(241, 67, 162, 0.3);
+  /* Elevação por brilho dourado curto, nunca sombra longa */
+  --shadow-1: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  --shadow-2: 0 0 0 1px rgba(212, 161, 42, 0.35), 0 6px 18px rgba(0, 0, 0, 0.35);
+  --shadow-3: 0 0 36px rgba(255, 180, 88, 0.28);
 }
 
 html {
@@ -98,7 +107,10 @@ summary {
 
 body {
   background-color: var(--background);
-  background-image: var(--gradient-dusk);
+  /* Luz âmbar sutil no topo (Vice City) sobre a noite que desce ao marinho */
+  background-image:
+    radial-gradient(ellipse 70% 38% at 50% 0%, rgba(255, 180, 88, 0.14) 0%, transparent 70%),
+    var(--gradient-dusk);
   background-attachment: fixed;
   color: var(--text1);
   font-family: var(--font-sans);
@@ -132,7 +144,7 @@ body {
 
 /* ---------- Halftone / spray accent ---------- */
 .halftone {
-  background-image: radial-gradient(rgba(241, 67, 162, 0.2) 1px, transparent 1px);
+  background-image: radial-gradient(rgba(212, 161, 42, 0.22) 1px, transparent 1px);
   background-size: 8px 8px;
 }
 
@@ -140,24 +152,58 @@ body {
 /* Tracking e leading sao especificos de tamanho, nunca um valor so.
    Texto grande le com as letras longe demais e pede tracking negativo;
    texto pequeno pede tracking proximo de zero para nao fechar. */
+/* Anton: caixa alta, entrelinha 90-95%, espaçamento 0 (manual, Tipografia) */
 .titulo-hero {
   font-family: var(--font-display);
+  font-weight: 400;
   text-transform: uppercase;
-  /* padrao = faixa media; use .t-xl ou .t-sm para as pontas */
-  letter-spacing: -0.02em;
-  line-height: 0.98;
+  letter-spacing: 0.005em;
+  line-height: 0.95;
 }
-
-/* 2.2rem para cima: display, revelacao, titulos de tela */
 .titulo-hero.t-xl {
-  letter-spacing: -0.035em;
+  letter-spacing: 0;
   line-height: 0.92;
 }
-
-/* abaixo de 1.5rem: wordmark da nav, rotulos compactos */
 .titulo-hero.t-sm {
-  letter-spacing: -0.005em;
-  line-height: 1.05;
+  letter-spacing: 0.01em;
+  line-height: 1.02;
+}
+
+/* Números e placar: Big Shoulders Display Black, sempre o maior elemento */
+.numero {
+  font-family: var(--font-numero);
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
+  line-height: 0.9;
+}
+
+/* Faixas diagonais da liga (marinho, vermelho, dourado) a 45°, subindo da
+   esquerda para a direita. Decoração de cabeçalho: nunca atrás de título. */
+.faixas {
+  position: absolute;
+  top: -40px;
+  right: -20px;
+  width: 260px;
+  height: 200px;
+  pointer-events: none;
+  background-image: linear-gradient(
+    135deg,
+    transparent 0 46%,
+    var(--surface3) 46% 58%,
+    transparent 58% 61%,
+    var(--vermelho) 61% 64.5%,
+    transparent 64.5% 67%,
+    var(--accent) 67% 68.4%,
+    transparent 68.4%
+  );
+  opacity: 0.9;
+}
+
+/* Filete dourado de rodapé de peça */
+.filete {
+  height: 4px;
+  background-image: var(--gradient-leonida);
 }
 
 /* ---------- Wordmark vetorizado (Pricedown) ---------- */
@@ -203,17 +249,19 @@ body {
 }
 
 .texto-gradiente {
-  background-image: var(--gradient-leonida);
+  background-image: linear-gradient(180deg, #f2cb57 0%, #d4a12a 60%, #9c6f14 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
 }
 
+/* Rótulos: Barlow Condensed, caixa alta, +5 a +8% */
 .hud-label {
-  font-size: 0.6875rem;
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.07em;
   color: var(--text2);
 }
 
@@ -223,7 +271,7 @@ body {
   background: var(--panel-fill);
   backdrop-filter: blur(12px);
   border: 1px solid var(--panel-stroke);
-  border-radius: var(--radius-component);
+  border-radius: var(--radius-hud);
   box-shadow: var(--shadow-1);
   transition:
     border-color var(--duration-medium) var(--ease),
@@ -242,7 +290,20 @@ body {
   clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 0 100%);
 }
 
-/* Barra segmentada inferior: motivo fixo 50/25/25, nunca reflete dados */
+/* Módulo de transmissão: canto cortado a 45° e filete dourado na base */
+.modulo::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: var(--corte);
+  bottom: 0;
+  height: 3px;
+  background-image: var(--gradient-leonida);
+  pointer-events: none;
+}
+
+/* Base do módulo: filete dourado com um toque de vermelho e marinho,
+   as três cores das faixas da liga. Motivo fixo, nunca reflete dados. */
 .hud-minimap-bar {
   display: flex;
   height: 3px;
@@ -250,45 +311,49 @@ body {
   overflow: hidden;
 }
 .hud-minimap-bar > span:nth-child(1) {
-  width: 50%;
-  background: var(--success);
+  width: 78%;
+  background-image: var(--gradient-leonida);
 }
 .hud-minimap-bar > span:nth-child(2) {
-  width: 25%;
-  background: var(--accent-armor);
+  width: 12%;
+  background: var(--vermelho);
 }
 .hud-minimap-bar > span:nth-child(3) {
-  width: 25%;
-  background: var(--accent-orange);
+  width: 10%;
+  background: var(--surface3);
 }
 
-/* ---------- Botoes: controles sao pilula ---------- */
+/* ---------- Botões: retos, ponta cortada a 45° (pontas de barra do manual) ---------- */
 .btn-cta {
   display: inline-block;
   background-image: var(--gradient-leonida);
-  color: #ffffff;
+  color: #06122a;
   font-family: var(--font-display);
   text-transform: uppercase;
   font-size: 1.125rem;
-  letter-spacing: 0.05em;
-  padding: 0.875rem 2rem;
-  border: 2px solid transparent;
-  border-radius: var(--radius-control);
-  transform: skewX(-6deg);
+  letter-spacing: 0.02em;
+  padding: 0.8rem 2.1rem 0.8rem 1.75rem;
+  border: 0;
+  border-radius: 0;
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - var(--corte)), calc(100% - var(--corte)) 100%, 0 100%);
   transition: all var(--duration-medium) var(--ease);
 }
 .btn-cta > span {
   display: inline-block;
-  transform: skewX(6deg);
 }
 .btn-cta:hover:not(:disabled),
 .btn-cta:focus-visible:not(:disabled) {
-  border-color: #ffffff;
-  transform: skewX(-6deg) scale(1.03);
+  filter: brightness(1.08);
+  box-shadow: var(--shadow-3);
   outline: none;
 }
+.btn-cta:focus-visible {
+  outline: 2px solid #f4f2ec;
+  outline-offset: 2px;
+}
 .btn-cta:active:not(:disabled) {
-  transform: skewX(-6deg) scale(0.98);
+  transform: scale(0.98);
+  transition-duration: var(--duration-fast);
 }
 .btn-cta:disabled {
   opacity: 0.35;
@@ -297,21 +362,24 @@ body {
 
 .btn-hud {
   display: inline-block;
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--surface1);
   border: 1px solid var(--border-visible);
+  border-bottom-color: var(--accent);
   color: var(--text1);
-  font-family: var(--font-display);
+  font-family: var(--font-mono);
+  font-weight: 700;
   text-transform: uppercase;
-  font-size: 0.9375rem;
-  letter-spacing: 0.05em;
-  padding: 0.625rem 1.5rem;
+  font-size: 1rem;
+  letter-spacing: 0.06em;
+  padding: 0.6rem 1.4rem;
   border-radius: var(--radius-control);
   transition: all var(--duration-medium) var(--ease);
 }
 .btn-hud:hover:not(:disabled),
-.btn-hud:focus-visible:not(:disabled) {
-  border-color: #ffffff;
-  box-shadow: inset 0 0 12px rgba(255, 255, 255, 0.25);
+.btn-hud:focus-visible:not(:disabled),
+.btn-hud[aria-current='page'] {
+  border-color: var(--accent);
+  color: var(--dourado-claro);
   outline: none;
 }
 /* Feedback nasce na pressao, nao na soltura */
@@ -322,6 +390,81 @@ body {
 .btn-hud:disabled {
   opacity: 0.35;
   cursor: not-allowed;
+}
+
+/* ---------- Formulários do admin ---------- */
+.campo {
+  width: 100%;
+  min-height: 2.5rem;
+  background: var(--surface1);
+  border: 1px solid var(--border-visible);
+  border-radius: var(--radius-element);
+  color: var(--text1);
+  font-size: 0.9375rem;
+  padding: 0.5rem 0.75rem;
+  transition: border-color var(--duration-fast) var(--ease);
+  touch-action: manipulation;
+}
+.campo:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+select.campo option {
+  background: var(--surface1);
+}
+.rotulo-campo {
+  display: block;
+  margin-bottom: 0.25rem;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--text3);
+}
+/* Botão compacto para ações de linha (+1, remover, mover). */
+.btn-mini {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2.25rem;
+  min-height: 2.25rem;
+  padding: 0 0.75rem;
+  border-radius: var(--radius-control);
+  border: 1px solid var(--border-visible);
+  background: var(--surface1);
+  color: var(--text1);
+  font-family: var(--font-mono);
+  font-size: 0.9375rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition: all var(--duration-fast) var(--ease);
+}
+.btn-mini:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+.btn-mini:active:not(:disabled) {
+  transform: scale(0.96);
+}
+.btn-mini:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+.btn-mini[data-perigo] {
+  color: var(--error-text);
+}
+.btn-mini[aria-pressed='true'] {
+  background: var(--success-bg);
+  border-color: var(--success);
+  color: var(--success-text);
+}
+/* Item ativo de navegação: dourado */
+.btn-mini[aria-current='page'] {
+  border-color: var(--accent);
+  color: var(--dourado-claro);
 }
 
 /* ---------- Animacoes ---------- */

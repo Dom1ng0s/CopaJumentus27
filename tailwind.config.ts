@@ -1,7 +1,6 @@
 import type { Config } from 'tailwindcss';
 
-// Tokens do design system Leonida.
-// Fonte normativa: ~/.claude/skills/leonida-design/references/platform-mapping.md
+// Tokens da marca Copa Jumentus 2027 (docs/marca/manual-de-marca.md), definidos em globals.css.
 const config: Config = {
   content: ['./src/**/*.{ts,tsx}'],
   theme: {
@@ -51,6 +50,7 @@ const config: Config = {
         display: 'var(--font-display)',
         sans: 'var(--font-sans)',
         mono: 'var(--font-mono)',
+        numero: 'var(--font-numero)',
       },
       fontSize: {
         display: ['56px', { lineHeight: '0.92', letterSpacing: '0.01em' }],

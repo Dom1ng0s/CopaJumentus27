@@ -1,15 +1,15 @@
 import type { Metadata } from 'next';
-import { Bowlby_One, JetBrains_Mono, Manrope } from 'next/font/google';
+import { Anton, Barlow, Barlow_Condensed, Big_Shoulders_Display } from 'next/font/google';
 import { Navbar } from '@/components/Navbar';
 import { NOME_COMPETICAO, SUBTITULO_COMPETICAO } from '@/lib/config';
 import './globals.css';
 
-// Fontes do design system Leonida (~/.claude/skills/leonida-design).
-// Bowlby One substitui o wordmark Pricedown do GTA, que e proprietario:
-// gorda, condensada, terminais arredondados. Ver SKILL.md secao 6.
-const bowlby = Bowlby_One({ subsets: ['latin'], weight: '400', variable: '--font-bowlby' });
-const manrope = Manrope({ subsets: ['latin'], variable: '--font-manrope' });
-const jetbrains = JetBrains_Mono({ subsets: ['latin'], variable: '--font-jetbrains' });
+// Fontes do manual de marca (docs/marca/manual-de-marca.md, Tipografia):
+// títulos Anton, números Big Shoulders Display, rótulos Barlow Condensed, texto Barlow.
+const anton = Anton({ subsets: ['latin'], weight: '400', variable: '--font-anton' });
+const bigShoulders = Big_Shoulders_Display({ subsets: ['latin'], weight: ['800', '900'], variable: '--font-big-shoulders' });
+const barlowCondensed = Barlow_Condensed({ subsets: ['latin'], weight: ['500', '600', '700'], variable: '--font-barlow-condensed' });
+const barlow = Barlow({ subsets: ['latin'], weight: ['400', '500', '600', '700'], variable: '--font-barlow' });
 
 export const metadata: Metadata = {
   title: `${NOME_COMPETICAO} — ${SUBTITULO_COMPETICAO}`,
@@ -20,7 +20,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     // As variaveis de fonte ficam no <html> para existirem no :root, onde
     // globals.css compoe --font-display / --font-sans / --font-mono.
-    <html lang="pt-BR" className={`${bowlby.variable} ${manrope.variable} ${jetbrains.variable}`}>
+    <html lang="pt-BR" className={`${anton.variable} ${bigShoulders.variable} ${barlowCondensed.variable} ${barlow.variable}`}>
       <body>
         <div className="grain-overlay" aria-hidden="true" />
         <div className="scroll-edge" aria-hidden="true" />

@@ -13,7 +13,7 @@ Este arquivo é a fonte de verdade do projeto. Ao implementar qualquer coisa, si
 | **Operador** | o dono do projeto (única pessoa com acesso de escrita) | cadastra jogadores e capitães, dispara o sorteio, conduz a cerimônia na própria tela |
 | **Plateia** | a galera da pelada | abre o **link de resultado** no celular depois da cerimônia e vê os elencos |
 
-Não há login, não há contas, não há permissões. O operador roda a aplicação localmente (ou num deploy que só ele usa para operar); a plateia só consome resultado.
+Não há contas de usuário. Os **admins** (operador e quem ele autorizar) entram com uma senha única (`ADMIN_SENHA`) e são os únicos que editam qualquer coisa. A plateia vê o campeonato (tabela, jogos, rankings, elencos) sem login e nunca vê estrelas.
 
 ---
 
@@ -27,14 +27,11 @@ Não há login, não há contas, não há permissões. O operador roda a aplica�
 5. **Cerimônia de revelação**: um jogador por vez, com animação e suspense, controlada pelo operador.
 6. **Link de resultado estático**: ao fim, gerar uma URL compartilhável que renderiza os elencos finais sem precisar de backend.
 
-### Fase 2 — Páginas de time (planejada, não implementar sem pedido)
-Página por time com escudo, elenco em cards HUD, soma de estrelas, goleiro destacado.
-
-### Fase 3 — Tabela e resultados (planejada, não implementar sem pedido)
-Rodadas, placares, classificação, artilharia.
+### Fase 2 — Campeonato simples (implementada, ver §8)
+Um campeonato por instalação: equipes, elencos vindos do sorteio, fases e grupos editáveis, partidas com data/hora editáveis, súmula ao vivo, classificação, rankings e controle de pagamento. Pedido do operador em 17/11/2026: "só o simples do campeonato, apenas os admins editam".
 
 ### Fora de escopo (não construir, nem "preparar terreno" com abstração especulativa)
-Autenticação, sincronização ao vivo entre dispositivos, histórico de temporadas, app mobile nativo, notificações.
+Contas de usuário, seguidores, comentários, enquetes, mídia enviada pelo público, vários campeonatos por instalação, histórico de temporadas, app mobile nativo, notificações, impressão de súmula e carteirinhas.
 
 ---
 
@@ -108,7 +105,8 @@ Número de times e tamanho de elenco são **derivados do cadastro**, nunca hardc
 
 ### 4.1 Stack
 - **Next.js (App Router) + TypeScript (strict) + Tailwind CSS**
-- Sem backend na fase 1. Sem ORM, sem banco.
+- Sem ORM e sem banco: o campeonato é um documento JSON (`dados/campeonato.json`) gravado pelo servidor (§8.4).
+- Admin por senha única em `ADMIN_SENHA` (`.env.local`), cookie httpOnly derivado da senha; `src/middleware.ts` protege `/admin`, `/sorteio` e `/cerimonia`, e cada server action confere o cookie de novo.
 - Testes: **Vitest** — obrigatórios para a camada de domínio (§4.3).
 
 ### 4.2 Camada de dados — trocável de propósito
@@ -161,18 +159,21 @@ A lógica de sorteio em `lib/domain` precisa ser testável sem renderizar nada. 
 
 ## 5. Frontend e design
 
-O visual é definido pela skill **`leonida-design`**, em `~/.claude/skills/leonida-design/`. **Invoque `/leonida-design` e leia o `SKILL.md` e os três arquivos em `references/` antes de escrever qualquer CSS ou componente.** Ela é normativa, não inspiracional.
+O visual segue o **Manual de Marca da Copa Jumentus 2027** ([docs/marca/manual-de-marca.md](docs/marca/manual-de-marca.md)), adaptado para tela. Decisão do operador em 17/11/2026: o site usa a mesma identidade das artes do Instagram. Ele substitui o design system `leonida-design` usado na primeira versão.
 
-A skill foi gerada a partir de duas fontes: o spec original de key art ([gta_vi_frontend_design_system_agent_guidelines.md](gta_vi_frontend_design_system_agent_guidelines.md), mantido como referência histórica) e os estilos computados medidos na página oficial `rockstargames.com/VI`. **Onde os dois divergirem, a skill vence**, porque os neutros, o raio pilula e a rampa de superfícies dela são medidos, não estimados.
+A identidade é **híbrida**: a estrutura MLS organiza a informação, Vice City dá o clima. As telas do sistema são "peças de jogo" no manual: marinho e dourado, com Vice City só como luz âmbar no topo. A cerimônia e o banner da home são "peças de evento": céu Vice City forte.
 
-Pontos em que a skill corrige o spec original:
-- O campo é `#0C0D1B` (dusk roxo-marinho medido), não `#0B0716`.
-- O display é **Bowlby One** e o corpo é **Manrope**, não Anton e Inter.
-- Controles são **pílula** (`999px`); painéis **recortam** o canto e não arredondam. Nada entre 5 e 11px.
-- O neon é racionado: **um elemento gritante por tela**.
-- Texto de status tem token próprio (`--success-text` e irmãos), porque o passo 500 falha contraste sobre o próprio tint em fundo claro.
+Tokens em `src/app/globals.css` (fonte única; o Tailwind só aponta para eles):
+- **Cores:** fundo marinho profundo `#06122A`, superfícies marinho Jumentus `#0B1F3F` em diante, texto off-white `#F4F2EC` e cinza concreto `#C9CCD1`, acento dourado `#D4A12A`, vermelho destaque `#E4002B` só para "ao vivo", erro e eliminado. Paleta Vice City (`#1E0838` e o céu) só em atmosfera.
+- **Dourado metálico** (`--gradient-leonida`, nome mantido por compatibilidade): `#9C6F14 → #F2CB57 → #D4A12A` a 45°. Exclusivo da Copa: botão principal, filetes, item ativo.
+- **Fontes (Google Fonts, via `next/font`):** títulos em **Anton** (`.titulo-hero`), números e placar em **Big Shoulders Display Black** (`.numero`, `font-numero`), rótulos em **Barlow Condensed** (`.hud-label`, `font-mono`), texto em **Barlow** (`font-sans`).
+- **Forma:** módulos de transmissão retos, com canto cortado a 45° (`.hud-clip`) e filete dourado na base (`.modulo`). Botões retos com a ponta direita cortada a 45°. Nada de pílula.
+- **Diagonais** (`.faixas`): grupo marinho, vermelho e dourado a 45°, subindo da esquerda para a direita, só no canto do cabeçalho de tela. Nunca atrás de título, número ou escudo.
+- **Cores dos times:** vêm de `src/lib/campeonato/marcas.ts`, iguais ao manual. Nos cards de equipe, a faixa larga usa a secundária e a fina é dourada, no canto.
+- **Brasão oficial** (`public/imagens/logo/copa-jumentus-logo.png`) na barra de navegação, nunca redesenhado. Escudos só dos arquivos oficiais.
+- **Sem emojis na interface** (manual, "Proibido"): cartões e gol são ícones desenhados (`Cartao`, `Sumula`).
 
-Este app é **dark-only de propósito** — a cerimônia acontece à noite. A skill define modo claro; o projeto não o usa.
+Este app é **dark-only de propósito** — a cerimônia acontece à noite.
 
 ### Wordmark: Pricedown vetorizada
 
@@ -184,7 +185,7 @@ Três regras que vêm da licença, e não são negociáveis:
 2. **Nunca sirva a Pricedown como webfont.** Isso exige uma licença de embedding, que o projeto não tem. O que a licença grátis cobre é "logos, wordmarks" e "outlined SVG" — arte fixa.
 3. **Para mudar o texto de um wordmark**, gere um SVG novo a partir da fonte, numa máquina com ela instalada. Não dá para editar o texto no código.
 
-Por isso **só títulos de marca** usam wordmark. Todo texto dinâmico — nome de jogador, nome de time, rótulo de botão — continua em **Bowlby One**, que é livre e vem do Google Fonts.
+Por isso **só títulos de marca** usam wordmark. Todo texto dinâmico — nome de jogador, nome de time, rótulo de botão — usa as fontes livres do manual (Anton, Big Shoulders Display, Barlow Condensed e Barlow).
 
 ### Key art do hero
 
@@ -196,30 +197,30 @@ A home usa `public/banner-copa-jumentus.webp` (2000×504), arte da comissão com
 
 ### Imagens da marca
 
-Ficam em `public/imagens/` (logo oficial, kits, escudos, artes), descritas em `public/imagens/README.md`. A logo oficial não é redesenhada. Escudo de time (`Time.escudo`, fase 2) usa `public/imagens/escudos/<slug-do-time>.webp`.
+Ficam em `public/imagens/` (logo oficial, kits, escudos, artes), descritas em `public/imagens/README.md`. Documentação de marca, a skill do Gemini e o guia das planilhas ficam em `docs/` (índice em `docs/README.md`). A logo oficial não é redesenhada. Escudo de time (`Time.escudo`, fase 2) usa `public/imagens/escudos/<slug-do-time>.webp`.
 
 A página de resultado **não** usa o banner: ela é consumida no celular, onde 4:1 fica pequeno demais. Lá o título é o wordmark SVG, que escala melhor em retrato.
 
 Pontos de amarração entre domínio e design:
-- **Nível do jogador → Wanted System de 6 estrelas.** Mesma escala, sem conversão.
-- **Cards de jogador e de time → HUD Cards**, com a barra segmentada inferior (health / armor / orange).
-- **Botão de sortear e de revelar próximo → Primary CTA** com `--gradient-leonida`, o skew e o raio pílula.
+- **Nível do jogador → 6 estrelas.** Mesma escala do domínio, sem conversão. Estrelas só em telas de admin.
+- **Cards de jogador e de time → módulos de transmissão** (`.hud-card`), com canto cortado e filete dourado na base.
+- **Botão de sortear e de revelar próximo → botão principal** dourado metálico, com a ponta cortada a 45°.
 - **Cerimônia de revelação** usa as transições snappy (140–320ms, `cubic-bezier(0.16, 1, 0.3, 1)`) e o selection flash. O suspense vem do **ritmo controlado pelo operador**, não de animação lenta: cada revelação é rápida; quem controla a pausa é o clique.
 
 ### Comportamento
 
-A seção de movimento da skill (`references/tokens.md`) carrega as regras de interação. As quatro que mais pegam no dia a dia:
+Regras de interação que valem em todas as telas:
 
 1. **Retorno nasce no pointer-down**, nunca na soltura. Todo controle tem `:active`, `touch-action: manipulation` e tap-highlight do sistema desligado.
 2. **Tracking é específico de tamanho.** Use `.t-xl` acima de 2,2rem e `.t-sm` abaixo de 1,5rem junto de `.titulo-hero`. Um valor único numa escala que vai de 1,1rem a 6rem está errado em alguma ponta.
 3. **Painel de vidro materializa**, não aparece: a entrada anima `blur` e escala junto com opacidade.
 4. **Três preferências do sistema**, não uma: `prefers-reduced-motion`, `prefers-reduced-transparency` e `prefers-contrast` têm todas tratamento próprio.
 
-A curva mecânica fixa vale porque **nada aqui é dirigido por gesto**. Se um dia entrar superfície arrastável — card que desliza, bottom sheet, slider que se arremessa —, a curva deixa de valer e o caso passa a pedir mola com entrega de velocidade. A skill descreve o que muda.
+A curva mecânica fixa vale porque **nada aqui é dirigido por gesto**. Se um dia entrar superfície arrastável — card que desliza, bottom sheet, slider que se arremessa —, a curva deixa de valer e o caso passa a pedir mola com entrega de velocidade.
 - **Tela de cerimônia é projetada/compartilhada** — dimensione tipografia para ser legível de longe. Prioridade visual: nome do jogador, estrelas, time que recebeu.
 - **Página de resultado é consumida no celular** — mobile-first, sem scroll horizontal.
 
-Nunca introduza visual corporativo/SaaS genérico, biblioteca de componentes com tema próprio (shadcn default, MUI, Chakra) ou paleta fora dos tokens.
+Nunca introduza visual corporativo/SaaS genérico, biblioteca de componentes com tema próprio (shadcn default, MUI, Chakra) ou paleta fora do manual de marca.
 
 ---
 
@@ -241,3 +242,39 @@ Nunca introduza visual corporativo/SaaS genérico, biblioteca de componentes com
 3. **Não amplie o escopo.** Fases 2 e 3 estão documentadas para dar contexto, não para serem implementadas.
 4. **Não especule na abstração.** A única abstração deliberada é `CopaRepo` (§4.2), porque a decisão de dados foi adiada de propósito. Fora dela, código direto.
 5. **Mantenha este arquivo vivo.** Decisão nova de regra, stack ou escopo → atualize o CLAUDE.md na mesma mudança.
+
+---
+
+## 8. Campeonato
+
+### 8.1 Regras de disputa (decididas pelo operador)
+- **Pontuação:** vitória 3, empate 1, derrota 0 por padrão, editável em Admin › Campeonato.
+- **Desempate:** pontos, vitórias, saldo, gols marcados, gols sofridos, confronto direto. A ordem é editável.
+- **Formato:** livre e editável. O admin cria as fases na ordem; cada fase é `grupos` (pontos corridos) ou `mata-mata`. O formato desta edição ainda está sendo definido; não fixe um formato no código.
+- **Grupos:** o admin escolhe a quantidade e sorteia aleatoriamente (via `random.ts`) ou define à mão. "Gerar jogos dos grupos" cria o todos contra todos que falta.
+- **Mata-mata:** confrontos criados à mão em Admin › Partidas. Empate decide nos pênaltis, lançados no controle da partida.
+- **Datas, horários e local** de cada partida são editáveis a qualquer momento.
+
+### 8.2 Cartões e suspensão
+- 3 amarelos acumulados: suspenso no jogo seguinte da equipe; a contagem zera.
+- Vermelho: suspenso no jogo seguinte da equipe.
+- A suspensão é cumprida quando esse jogo seguinte é encerrado. Cartões contam em jogos ao vivo e encerrados.
+- Cálculo em `lib/domain/campeonato/suspensoes.ts`, derivado das súmulas; nada é gravado.
+
+### 8.3 Súmula e placar
+- Os admins editam o resultado durante o jogo em `/admin/partidas/[id]`.
+- Gol registrado na súmula soma no placar (gol contra soma para o adversário); remover o evento desconta.
+- Os botões + e − ajustam gols sem autor e pênaltis.
+- Classificação e rankings são calculados das partidas (`lib/domain/campeonato/`); só jogos **encerrados** entram na tabela.
+
+### 8.4 Dados e integração com o sorteio
+- `lib/repo/campeonato-repo.ts` lê e grava `dados/campeonato.json` com fila de escrita. Sem o arquivo, parte do `campeonatoPadrao()` (8 equipes do manual de marca, fases "Fase de grupos" e "Mata-mata").
+- Para hospedar onde o disco não persiste (ex.: Vercel), troque só esse módulo por um banco; as telas não mudam.
+- No fim da cerimônia, **"Oficializar no campeonato"** grava equipes, jogadores e capitães. É bloqueado se já houver súmula preenchida. O pagamento de quem já estava cadastrado (pelo nome) é preservado.
+- **Pagamentos** (pago/pendente por jogador, valor da inscrição) só aparecem em `/admin/pagamentos`.
+- **Estrelas nunca aparecem em página pública.** O pote foi para `/sorteio`, protegido.
+
+### 8.5 Rotas
+- Públicas: `/`, `/classificacao`, `/jogos`, `/jogos/[id]`, `/rankings`, `/equipes`, `/resultado/[payload]`.
+- Admin: `/admin`, `/admin/campeonato`, `/admin/fases`, `/admin/partidas`, `/admin/partidas/[id]`, `/admin/equipes`, `/admin/pagamentos`, `/sorteio`, `/cerimonia`. Login em `/admin/entrar`.
+

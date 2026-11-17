@@ -8,6 +8,7 @@ import { TOLERANCIA_ESTRELAS } from '@/lib/config';
 import { montarElencos, sortear, type ResultadoSorteio } from '@/lib/domain/sorteio';
 import type { Jogador, Time } from '@/lib/domain/tipos';
 import { codificarResultado, LIMITE_URL } from '@/lib/share/codec';
+import { oficializarSorteio } from '@/app/admin/acoes';
 
 type Fase = 'pronto' | 'linha' | 'goleiros' | 'fim';
 
@@ -26,6 +27,7 @@ export function CerimoniaCliente({ jogadores, times, problemas = [] }: Props) {
   const [fase, setFase] = useState<Fase>('pronto');
   const [link, setLink] = useState<string | null>(null);
   const [copiado, setCopiado] = useState(false);
+  const [oficial, setOficial] = useState<{ estado: 'ocioso' | 'enviando' | 'ok' | 'erro'; msg?: string }>({ estado: 'ocioso' });
 
   const porId = useMemo(() => new Map(jogadores.map((j) => [j.id, j])), [jogadores]);
   const timePorId = useMemo(() => new Map(times.map((t) => [t.id, t])), [times]);
@@ -102,6 +104,23 @@ export function CerimoniaCliente({ jogadores, times, problemas = [] }: Props) {
     setLink(url);
     setCopiado(false);
   }, [resultado, elencos]);
+
+  /** Leva os elencos revelados para o campeonato (equipes, jogadores, capitães). */
+  const oficializar = useCallback(async () => {
+    if (!resultado || fase !== 'fim') return;
+    if (!window.confirm('Oficializar este sorteio? Os elencos do campeonato serão substituídos por estes.')) return;
+    setOficial({ estado: 'enviando' });
+    const nome = (j: Jogador) => j.apelido ?? j.nome;
+    const r = await oficializarSorteio(
+      elencos.map((e) => ({
+        time: e.time.nome,
+        capitao: { nome: nome(e.capitao), posicao: e.capitao.posicao },
+        goleiro: e.goleiro ? { nome: nome(e.goleiro) } : null,
+        linha: e.linha.map((j) => ({ nome: nome(j), posicao: j.posicao })),
+      })),
+    );
+    setOficial(r.ok ? { estado: 'ok' } : { estado: 'erro', msg: r.erro });
+  }, [resultado, fase, elencos]);
 
   const copiar = useCallback(async () => {
     if (!link) return;
@@ -223,6 +242,9 @@ export function CerimoniaCliente({ jogadores, times, problemas = [] }: Props) {
                     <button onClick={gerarLink} className="btn-cta">
                       <span>Gerar link do resultado</span>
                     </button>
+                    <button onClick={oficializar} className="btn-hud" disabled={oficial.estado === 'enviando' || oficial.estado === 'ok'}>
+                      {oficial.estado === 'ok' ? 'Oficializado' : oficial.estado === 'enviando' ? 'Enviando…' : 'Oficializar no campeonato'}
+                    </button>
                     <button onClick={iniciar} className="btn-hud">
                       Sortear de novo
                     </button>
@@ -284,6 +306,17 @@ export function CerimoniaCliente({ jogadores, times, problemas = [] }: Props) {
                         .map((id) => porId.get(id)?.apelido ?? porId.get(id)?.nome ?? id)
                         .join(', ')}{' '}
                       — ficaram de fora, não voltam ao pote de linha.
+                    </Aviso>
+                  )}
+
+                  {oficial.estado === 'ok' && (
+                    <Aviso cor="var(--success)" titulo="Elencos oficializados">
+                      As equipes do campeonato já estão com estes jogadores. Ajuste números e capitães em Admin › Equipes.
+                    </Aviso>
+                  )}
+                  {oficial.estado === 'erro' && (
+                    <Aviso cor="var(--error)" titulo="Não deu para oficializar">
+                      {oficial.msg}
                     </Aviso>
                   )}
 
