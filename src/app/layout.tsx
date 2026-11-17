@@ -1,13 +1,13 @@
 import type { Metadata } from 'next';
-import { Anton, Barlow, Barlow_Condensed, Big_Shoulders_Display } from 'next/font/google';
+import { Anton, Barlow, Barlow_Condensed, Big_Shoulders } from 'next/font/google';
 import { Navbar } from '@/components/Navbar';
 import { NOME_COMPETICAO, SUBTITULO_COMPETICAO } from '@/lib/config';
 import './globals.css';
 
 // Fontes do manual de marca (docs/marca/manual-de-marca.md, Tipografia):
-// títulos Anton, números Big Shoulders Display, rótulos Barlow Condensed, texto Barlow.
+// títulos Anton, números Big Shoulders (antiga Display), rótulos Barlow Condensed, texto Barlow.
 const anton = Anton({ subsets: ['latin'], weight: '400', variable: '--font-anton' });
-const bigShoulders = Big_Shoulders_Display({ subsets: ['latin'], weight: ['800', '900'], variable: '--font-big-shoulders' });
+const bigShoulders = Big_Shoulders({ subsets: ['latin'], weight: ['800', '900'], variable: '--font-big-shoulders' });
 const barlowCondensed = Barlow_Condensed({ subsets: ['latin'], weight: ['500', '600', '700'], variable: '--font-barlow-condensed' });
 const barlow = Barlow({ subsets: ['latin'], weight: ['400', '500', '600', '700'], variable: '--font-barlow' });
 

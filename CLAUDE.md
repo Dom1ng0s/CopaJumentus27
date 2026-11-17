@@ -166,7 +166,7 @@ A identidade é **híbrida**: a estrutura MLS organiza a informação, Vice City
 Tokens em `src/app/globals.css` (fonte única; o Tailwind só aponta para eles):
 - **Cores:** fundo marinho profundo `#06122A`, superfícies marinho Jumentus `#0B1F3F` em diante, texto off-white `#F4F2EC` e cinza concreto `#C9CCD1`, acento dourado `#D4A12A`, vermelho destaque `#E4002B` só para "ao vivo", erro e eliminado. Paleta Vice City (`#1E0838` e o céu) só em atmosfera.
 - **Dourado metálico** (`--gradient-leonida`, nome mantido por compatibilidade): `#9C6F14 → #F2CB57 → #D4A12A` a 45°. Exclusivo da Copa: botão principal, filetes, item ativo.
-- **Fontes (Google Fonts, via `next/font`):** títulos em **Anton** (`.titulo-hero`), números e placar em **Big Shoulders Display Black** (`.numero`, `font-numero`), rótulos em **Barlow Condensed** (`.hud-label`, `font-mono`), texto em **Barlow** (`font-sans`).
+- **Fontes (Google Fonts, via `next/font`):** títulos em **Anton** (`.titulo-hero`), números e placar em **Big Shoulders Black** (a antiga Big Shoulders Display; no Google Fonts e no `next/font` agora se chama `Big_Shoulders`) (`.numero`, `font-numero`), rótulos em **Barlow Condensed** (`.hud-label`, `font-mono`), texto em **Barlow** (`font-sans`).
 - **Forma:** módulos de transmissão retos, com canto cortado a 45° (`.hud-clip`) e filete dourado na base (`.modulo`). Botões retos com a ponta direita cortada a 45°. Nada de pílula.
 - **Diagonais** (`.faixas`): grupo marinho, vermelho e dourado a 45°, subindo da esquerda para a direita, só no canto do cabeçalho de tela. Nunca atrás de título, número ou escudo.
 - **Cores dos times:** vêm de `src/lib/campeonato/marcas.ts`, iguais ao manual. Nos cards de equipe, a faixa larga usa a secundária e a fina é dourada, no canto.
@@ -281,7 +281,7 @@ Nunca introduza visual corporativo/SaaS genérico, biblioteca de componentes com
 
 ## 9. Banco de dados
 
-- **Produção:** Postgres no **Neon**, app na **Vercel**. `DATABASE_URL` (connection string *pooled* do Neon) nas variáveis de ambiente da Vercel. O cliente usa `postgres` 3.x com `prepare: false` (exigido pelo pooler).
+- **Produção:** Postgres no **Neon** (São Paulo, `sa-east-1`), app na **Vercel** com funções em São Paulo (`vercel.json`, `gru1`) para ficar perto do banco. Repositório na organização `copa-jumentus` do GitHub (a Vercel não publica repo de conta pessoal de outra pessoa). `DATABASE_URL` (connection string *pooled* do Neon) nas variáveis de ambiente da Vercel. O cliente usa `postgres` 3.x com `prepare: false` (exigido pelo pooler).
 - **Desenvolvimento:** sem `DATABASE_URL`, `src/lib/db/cliente.ts` abre um **PGlite** em `dados/pglite` e aplica as migrações sozinho. Para começar do zero, apague a pasta. Testes usam PGlite em memória (`bancoDeTeste()`).
 - **Esquema:** `src/lib/db/schema.ts`. Tabelas: `campeonato` (linha única, id 1), `inscricao`, `equipe`, `jogador`, `fase`, `grupo`, `grupo_equipe`, `partida`, `evento`. As restrições do domínio que o banco consegue garantir (estrelas 1–6, mandante ≠ visitante, FKs) estão em `check` e `foreign key`.
 - **Migrações:** SQL em `drizzle/`, geradas com `npm run db:gerar` depois de mudar o esquema (revise o SQL e versione). `npm run build` roda `scripts/migrar.mjs` antes do `next build`, então o deploy na Vercel atualiza o Neon sozinho. Nunca edite uma migração já aplicada; gere outra.
