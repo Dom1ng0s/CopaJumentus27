@@ -194,6 +194,10 @@ A home usa `public/banner-copa-jumentus.webp` (2000×504), arte da comissão com
 - O `<h1>` é `sr-only`, porque o título ali é pixel, não texto.
 - **Trocar a arte**: mantenha a proporção próxima de 4:1 e atualize `width`/`height` no `next/image`. Proporções muito diferentes quebram a moldura do celular.
 
+### Imagens da marca
+
+Ficam em `public/imagens/` (logo oficial, kits, escudos, artes), descritas em `public/imagens/README.md`. A logo oficial não é redesenhada. Escudo de time (`Time.escudo`, fase 2) usa `public/imagens/escudos/<slug-do-time>.webp`.
+
 A página de resultado **não** usa o banner: ela é consumida no celular, onde 4:1 fica pequeno demais. Lá o título é o wordmark SVG, que escala melhor em retrato.
 
 Pontos de amarração entre domínio e design:
