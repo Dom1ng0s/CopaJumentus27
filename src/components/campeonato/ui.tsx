@@ -72,7 +72,7 @@ export function SeloStatus({ status }: { status: Partida['status'] }) {
         ? { background: 'var(--surface2)', color: 'var(--text2)' }
         : { background: 'transparent', color: 'var(--text3)', boxShadow: 'inset 0 0 0 1px var(--border-visible)' };
   return (
-    <span className="hud-label inline-flex items-center gap-1.5 px-2 py-0.5 !text-[11px]" style={estilo}>
+    <span className="selo-status hud-label inline-flex items-center gap-1.5 px-2 py-0.5 !text-[11px]" style={estilo}>
       {status === 'ao-vivo' && <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white" />}
       {ROTULO_STATUS[status]}
     </span>
@@ -84,25 +84,34 @@ export function CardPartida({
   partida,
   mandante,
   visitante,
+  rotuloMandante,
+  rotuloVisitante,
   href,
 }: {
   partida: Partida;
   mandante?: Equipe;
   visitante?: Equipe;
+  /** Texto quando a equipe ainda não está definida (ex.: "3º do Grupo Único"). */
+  rotuloMandante?: string;
+  rotuloVisitante?: string;
   href?: string;
 }) {
   const mostraPlacar = partida.status !== 'agendada';
-  const penaltis = partida.penaltisMandante !== undefined || partida.penaltisVisitante !== undefined;
+  // Pênaltis só valem (e só aparecem) com empate no tempo normal.
+  const penaltis = partida.golsMandante === partida.golsVisitante && (partida.penaltisMandante !== undefined || partida.penaltisVisitante !== undefined);
   const conteudo = (
     <div className="hud-card hud-clip modulo relative px-3 pb-4 pt-3 transition-colors duration-200 hover:bg-[var(--row-hover)]">
       <div className="mb-2 flex items-center justify-between gap-2">
-        <span className="hud-label truncate !text-[11px]">{partida.rotulo ?? ''}</span>
+        <span className="hud-label truncate !text-[11px]">
+          {partida.numero !== undefined && <span style={{ color: 'var(--accent)' }}>J{partida.numero} · </span>}
+          {partida.rotulo ?? ''}
+        </span>
         <SeloStatus status={partida.status} />
       </div>
       <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
         <div className="flex min-w-0 flex-col items-center gap-1 text-center">
           <Escudo equipe={mandante} tamanho={40} />
-          <span className="w-full truncate font-mono text-sm font-bold uppercase tracking-wide">{mandante?.nome ?? '?'}</span>
+          <span className={`w-full truncate font-mono text-sm font-bold uppercase tracking-wide ${mandante ? '' : 'text-text-3'}`}>{mandante?.nome ?? rotuloMandante ?? 'A definir'}</span>
         </div>
         <div className="text-center">
           <p className="numero text-4xl">
@@ -116,11 +125,12 @@ export function CardPartida({
         </div>
         <div className="flex min-w-0 flex-col items-center gap-1 text-center">
           <Escudo equipe={visitante} tamanho={40} />
-          <span className="w-full truncate font-mono text-sm font-bold uppercase tracking-wide">{visitante?.nome ?? '?'}</span>
+          <span className={`w-full truncate font-mono text-sm font-bold uppercase tracking-wide ${visitante ? '' : 'text-text-3'}`}>{visitante?.nome ?? rotuloVisitante ?? 'A definir'}</span>
         </div>
       </div>
       <p className="mt-2 text-center font-mono text-[13px] font-semibold uppercase tracking-wide text-text-3">
-        {formatarDataHora(partida.dataHora)}
+        {partida.dataHora ? formatarDataHora(partida.dataHora) : partida.dia !== undefined ? `Dia ${partida.dia}` : formatarDataHora()}
+        {partida.campo ? ` · ${partida.campo}` : ''}
         {partida.local ? ` · ${partida.local}` : ''}
       </p>
     </div>

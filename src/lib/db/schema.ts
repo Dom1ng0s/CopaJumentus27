@@ -18,12 +18,20 @@ import {
 } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 
-/** Configuração do campeonato: uma linha só (id = 1). */
+/** Um campeonato (edição) por linha. Vários por instalação (CLAUDE.md §8.6). */
 export const campeonato = pgTable(
   'campeonato',
   {
-    id: smallint('id').primaryKey().default(1),
+    id: smallint('id').primaryKey().generatedByDefaultAsIdentity(),
+    /** Default só para o código antigo (que não conhece a coluna) conseguir gravar. */
+    slug: text('slug').notNull().unique().default(sql`gen_random_uuid()::text`),
     nome: text('nome').notNull(),
+    edicao: text('edicao'),
+    status: text('status', { enum: ['rascunho', 'inscricoes', 'andamento', 'encerrado'] }).notNull().default('rascunho'),
+    modelo: text('modelo', { enum: ['copa-jumentus-8', 'livre'] }).notNull().default('livre'),
+    banner: text('banner'),
+    escudo: text('escudo'),
+    duplicadoDe: smallint('duplicado_de'),
     subtitulo: text('subtitulo'),
     inicio: text('inicio'),
     fim: text('fim'),
@@ -37,8 +45,19 @@ export const campeonato = pgTable(
     sorteioOficializadoEm: timestamp('sorteio_oficializado_em', { withTimezone: true }),
     atualizadoEm: timestamp('atualizado_em', { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [check('campeonato_unico', sql`${t.id} = 1`)],
+  (t) => [
+    check('campeonato_status', sql`${t.status} in ('rascunho', 'inscricoes', 'andamento', 'encerrado')`),
+    check('campeonato_modelo', sql`${t.modelo} in ('copa-jumentus-8', 'livre')`),
+  ],
 );
+
+// campeonato_id nas tabelas filhas: default 1 só para a transição (o código
+// antigo, de campeonato único, grava sem a coluna). O código atual sempre informa.
+const doCampeonato = () =>
+  smallint('campeonato_id')
+    .notNull()
+    .default(1)
+    .references(() => campeonato.id, { onDelete: 'restrict' });
 
 /**
  * Inscrições: o cadastro do sorteio (substitui a aba INSCRITOS da planilha).
@@ -48,6 +67,7 @@ export const inscricao = pgTable(
   'inscricao',
   {
     id: text('id').primaryKey(),
+    campeonatoId: doCampeonato(),
     nome: text('nome').notNull(),
     apelido: text('apelido'),
     posicao: text('posicao', { enum: ['GOL', 'ZAG', 'MEI', 'ATA'] }),
@@ -57,11 +77,14 @@ export const inscricao = pgTable(
     status: text('status', { enum: ['confirmado', 'espera'] }).notNull().default('confirmado'),
     criadoEm: timestamp('criado_em', { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [check('inscricao_estrelas', sql`${t.estrelas} is null or ${t.estrelas} between 1 and 6`)],
+  (t) => [check('inscricao_estrelas', sql`${t.estrelas} is null or ${t.estrelas} between 1 and 6`), index('inscricao_campeonato').on(t.campeonatoId)],
 );
 
-export const equipe = pgTable('equipe', {
+export const equipe = pgTable(
+  'equipe',
+  {
   id: text('id').primaryKey(),
+  campeonatoId: doCampeonato(),
   nome: text('nome').notNull(),
   sigla: text('sigla').notNull(),
   escudo: text('escudo'),
@@ -69,8 +92,15 @@ export const equipe = pgTable('equipe', {
   corSecundaria: text('cor_secundaria').notNull(),
   corTexto: text('cor_texto').notNull(),
   capitaoId: text('capitao_id'),
+  /** T1 a T8 do modelo oficial (sorteado no admin). */
+  numeroTabela: smallint('numero_tabela'),
   ordem: smallint('ordem').notNull().default(0),
-});
+  },
+  (t) => [
+    index('equipe_campeonato').on(t.campeonatoId),
+    check('equipe_numero_tabela', sql`${t.numeroTabela} is null or ${t.numeroTabela} between 1 and 8`),
+  ],
+);
 
 /** Jogador do campeonato (elenco). Vem do sorteio oficializado ou do cadastro manual. */
 export const jogador = pgTable(
@@ -89,12 +119,26 @@ export const jogador = pgTable(
   (t) => [index('jogador_equipe').on(t.equipeId)],
 );
 
-export const fase = pgTable('fase', {
-  id: text('id').primaryKey(),
-  nome: text('nome').notNull(),
-  tipo: text('tipo', { enum: ['grupos', 'mata-mata'] }).notNull(),
-  ordem: smallint('ordem').notNull(),
-});
+export const fase = pgTable(
+  'fase',
+  {
+    id: text('id').primaryKey(),
+    campeonatoId: doCampeonato(),
+    nome: text('nome').notNull(),
+    tipo: text('tipo', { enum: ['grupos', 'mata-mata'] }).notNull(),
+    ordem: smallint('ordem').notNull(),
+    /** [{de, ate, zona: 'semifinal'|'repescagem'|'eliminado'}] */
+    zonas: jsonb('zonas').$type<Array<{ de: number; ate: number; zona: 'semifinal' | 'repescagem' | 'eliminado' }>>(),
+    /** Desempates decididos à mão: listas ordenadas de equipes totalmente empatadas. */
+    desempates: jsonb('desempates').$type<string[][]>(),
+  },
+  (t) => [index('fase_campeonato').on(t.campeonatoId)],
+);
+
+type OrigemJson =
+  | { tipo: 'tabela'; numero: number }
+  | { tipo: 'posicao'; faseId: string; posicao: number }
+  | { tipo: 'vencedor' | 'perdedor'; partidaNumero: number };
 
 export const grupo = pgTable('grupo', {
   id: text('id').primaryKey(),
@@ -128,12 +172,17 @@ export const partida = pgTable(
       .references(() => fase.id, { onDelete: 'restrict' }),
     grupoId: text('grupo_id').references(() => grupo.id, { onDelete: 'set null' }),
     rotulo: text('rotulo'),
-    mandanteId: text('mandante_id')
-      .notNull()
-      .references(() => equipe.id, { onDelete: 'restrict' }),
-    visitanteId: text('visitante_id')
-      .notNull()
-      .references(() => equipe.id, { onDelete: 'restrict' }),
+    numero: smallint('numero'),
+    rodada: smallint('rodada'),
+    dia: smallint('dia'),
+    campo: text('campo'),
+    /** Vazio em partida com origem: os participantes são calculados (chaveamento.ts). */
+    mandanteId: text('mandante_id').references(() => equipe.id, { onDelete: 'restrict' }),
+    visitanteId: text('visitante_id').references(() => equipe.id, { onDelete: 'restrict' }),
+    origemMandante: jsonb('origem_mandante').$type<OrigemJson>(),
+    origemVisitante: jsonb('origem_visitante').$type<OrigemJson>(),
+    goleiroMandanteId: text('goleiro_mandante_id').references(() => jogador.id, { onDelete: 'set null' }),
+    goleiroVisitanteId: text('goleiro_visitante_id').references(() => jogador.id, { onDelete: 'set null' }),
     /** Data e hora local, formato do input datetime-local (AAAA-MM-DDTHH:mm). */
     dataHora: text('data_hora'),
     local: text('local'),
@@ -155,7 +204,7 @@ export const evento = pgTable(
     partidaId: text('partida_id')
       .notNull()
       .references(() => partida.id, { onDelete: 'cascade' }),
-    tipo: text('tipo', { enum: ['gol', 'gol-contra', 'amarelo', 'vermelho'] }).notNull(),
+    tipo: text('tipo', { enum: ['gol', 'gol-contra', 'gol_penalti', 'penalti_perdido', 'amarelo', 'vermelho', 'defesa'] }).notNull(),
     jogadorId: text('jogador_id')
       .notNull()
       .references(() => jogador.id, { onDelete: 'restrict' }),

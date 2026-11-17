@@ -1,10 +1,14 @@
 import Link from 'next/link';
 import { GuardaAdmin } from '@/components/admin/GuardaAdmin';
 import { exigirAdmin } from '@/lib/auth/servidor';
+import { idDoCampeonatoDoAdmin } from '@/lib/campeonato/selecao';
+import { ROTULO_STATUS_CAMPEONATO } from '@/lib/domain/campeonato/tipos';
+import { listarCampeonatos } from '@/lib/repo/campeonato-repo';
 import { sair } from '../acoes-conta';
 
 const ITENS = [
   { href: '/admin', rotulo: 'Painel' },
+  { href: '/admin/campeonatos', rotulo: 'Campeonatos' },
   { href: '/admin/inscricoes', rotulo: 'Inscrições' },
   { href: '/admin/campeonato', rotulo: 'Campeonato' },
   { href: '/admin/fases', rotulo: 'Fases e grupos' },
@@ -17,6 +21,8 @@ const ITENS = [
 
 export default async function LayoutAdmin({ children }: { children: React.ReactNode }) {
   const conta = await exigirAdmin({ permitirTrocaPendente: true });
+  const [lista, idAtual] = await Promise.all([listarCampeonatos(), idDoCampeonatoDoAdmin()]);
+  const atual = lista.find((c) => c.id === idAtual);
   return (
     <GuardaAdmin>
       <div className="mx-auto max-w-6xl px-4 pb-20">
@@ -40,6 +46,21 @@ export default async function LayoutAdmin({ children }: { children: React.ReactN
             </form>
           </div>
         </div>
+        {atual && (
+          <p className="mb-6 flex flex-wrap items-center gap-2 text-sm text-text-2">
+            <span className="hud-label !text-[11px]">Editando</span>
+            <span className="font-semibold text-text-1">
+              {atual.nome}
+              {atual.edicao && !atual.nome.includes(atual.edicao) ? ` ${atual.edicao}` : ''}
+            </span>
+            <span className="text-text-3">· {ROTULO_STATUS_CAMPEONATO[atual.status]}</span>
+            {lista.length > 1 && (
+              <Link href="/admin/campeonatos" className="underline decoration-dotted underline-offset-4">
+                trocar
+              </Link>
+            )}
+          </p>
+        )}
         {children}
       </div>
     </GuardaAdmin>

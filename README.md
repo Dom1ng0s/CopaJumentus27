@@ -56,7 +56,7 @@ Além do sorteio, o site mostra o campeonato para a galera e tem uma área de ad
 
 | Público (sem login) | Admin (`/admin`, conta de admin) |
 |---|---|
-| Início, classificação por grupo, jogos e súmulas, rankings (artilharia, assistências, cartões), elencos | Dados e pontuação, critérios de desempate, fases e grupos (sorteio aleatório ou manual), partidas com data/hora editáveis, placar e súmula ao vivo, elencos e transferências, pagamentos, pote e cerimônia |
+| Início com pódio, classificação com zonas, jogos por rodada e súmulas, rankings (artilharia, assistências, penalidades, goleiros, cartões), elencos, histórico de edições, impressão de súmula, tabela e elencos | Campeonatos (criar pelo modelo oficial de 34 jogos ou livre, duplicar), dados e pontuação, critérios de desempate, fases e grupos, sorteio de T1 a T8, partidas, placar e súmula ao vivo (goleiros, pênaltis, defesas), elencos e transferências, pagamentos, pote e cerimônia, contas de admin |
 
 Para ver as telas com um campeonato de exemplo (nomes fictícios), rode `npm run demo` antes de `npm run dev`. Ele gera `dados/campeonato.json` e zera o banco local, que importa o arquivo na próxima abertura.
 
@@ -74,7 +74,7 @@ npm run admin:criar -- seu-usuario "Seu Nome"
 
 O comando mostra uma senha temporária uma vez; no primeiro acesso o sistema pede uma senha nova. As demais contas são criadas em **Admin › Admins**.
 
-Regras: vitória 3, empate 1, derrota 0 (editável); 3 amarelos ou 1 vermelho suspendem o jogo seguinte. Detalhes em [CLAUDE.md §8](CLAUDE.md).
+Regras: vitória 3, empate 1, derrota 0 (editável); 3 amarelos ou 1 vermelho suspendem o jogo seguinte. O modelo oficial (8 times, Grupo Único de 28 jogos e mata-mata com repescagem) está em [CLAUDE.md §8.6](CLAUDE.md).
 
 ## Publicar (Vercel + Neon)
 

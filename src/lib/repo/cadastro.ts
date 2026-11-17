@@ -14,8 +14,9 @@ export interface Cadastro {
   origem: 'banco' | 'exemplo';
 }
 
-export async function carregarCadastro(): Promise<Cadastro> {
-  const inscricoes = await listarInscricoes();
+/** Cadastro do sorteio do campeonato (cada campeonato tem as suas inscrições). */
+export async function carregarCadastro(campeonatoId: number): Promise<Cadastro> {
+  const inscricoes = await listarInscricoes(campeonatoId);
   if (inscricoes.length === 0) {
     return { jogadores: JOGADORES_EXEMPLO, times: TIMES_EXEMPLO, problemas: [], ignorados: 0, origem: 'exemplo' };
   }

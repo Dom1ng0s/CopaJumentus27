@@ -606,3 +606,67 @@ select.campo option {
     backdrop-filter: none;
   }
 }
+
+/* ---------- Impressão (súmula, classificação, elencos) ----------
+   Papel branco e tinta preta: sai a atmosfera (céu, vidro, sombras), ficam a
+   tipografia do manual, os filetes de zona e as cores dos times nos números. */
+@media print {
+  @page {
+    margin: 12mm;
+  }
+  html,
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+  nav,
+  .nao-imprimir,
+  .faixas,
+  .grain-overlay,
+  .scroll-edge,
+  button {
+    display: none !important;
+  }
+  body > * {
+    padding-top: 0 !important;
+  }
+  .hud-card {
+    background: #ffffff !important;
+    backdrop-filter: none !important;
+    box-shadow: none !important;
+    border-color: #999999 !important;
+    clip-path: none !important;
+  }
+  .modulo::after {
+    display: none;
+  }
+  .titulo-hero,
+  .numero,
+  .text-text-1,
+  .text-text-2,
+  .text-text-3,
+  .hud-label {
+    color: #000000 !important;
+  }
+  .imprimivel {
+    break-inside: avoid;
+  }
+  .selo-status {
+    background: transparent !important;
+    color: #000000 !important;
+    box-shadow: inset 0 0 0 1px #000000 !important;
+  }
+  .imprimivel h3 {
+    background: #eeeeee !important;
+  }
+  table {
+    min-width: 0 !important;
+  }
+  a {
+    text-decoration: none !important;
+  }
+  * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}

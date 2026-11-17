@@ -15,6 +15,13 @@
       "when": 1794941583784,
       "tag": "0001_contas_admin",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1794942784526,
+      "tag": "0002_multi_campeonato_modelo",
+      "breakpoints": true
     }
   ]
 }

@@ -1,0 +1,97 @@
+// Modelo oficial "Copa Jumentus · 8 times · 34 jogos" (CLAUDE.md §8.6).
+// Grupo Único em turno único (28 jogos, 7 rodadas, 2 dias, um campo) e mata-mata
+// com repescagem (jogos 29 a 34). Os participantes vêm das origens (chaveamento.ts).
+
+import { shuffle, fonteCrypto, type FonteAleatoria } from '@/lib/domain/random';
+import { partidaTravada } from './chaveamento';
+import type { Campeonato, Fase, Origem, Partida, Zona } from './tipos';
+
+/**
+ * Confrontos de Berger enviados pelo operador, reordenados dentro de cada rodada
+ * para nenhum time jogar duas partidas seguidas. [rodada, dia, mandante, visitante].
+ */
+export const TABELA_GRUPO_UNICO: ReadonlyArray<readonly [number, number, number, number]> = [
+  [1, 1, 1, 8], [1, 1, 2, 7], [1, 1, 3, 6], [1, 1, 4, 5],
+  [2, 1, 7, 3], [2, 1, 8, 5], [2, 1, 6, 4], [2, 1, 1, 2],
+  [3, 1, 4, 7], [3, 1, 2, 8], [3, 1, 3, 1], [3, 1, 5, 6],
+  [4, 1, 1, 4], [4, 1, 8, 6], [4, 1, 7, 5], [4, 1, 2, 3],
+  [5, 2, 5, 1], [5, 2, 3, 8], [5, 2, 4, 2], [5, 2, 6, 7],
+  [6, 2, 2, 5], [6, 2, 8, 7], [6, 2, 1, 6], [6, 2, 3, 4],
+  [7, 2, 6, 2], [7, 2, 4, 8], [7, 2, 5, 3], [7, 2, 7, 1],
+];
+
+export const ZONAS_GRUPO_UNICO: readonly Zona[] = [
+  { de: 1, ate: 2, zona: 'semifinal' },
+  { de: 3, ate: 6, zona: 'repescagem' },
+  { de: 7, ate: 8, zona: 'eliminado' },
+];
+
+/** Mata-mata do dia 2: [número, rótulo, origem do mandante, origem do visitante]. */
+function chaveMataMata(faseGrupo: string): Array<[number, string, Origem, Origem]> {
+  const pos = (posicao: number): Origem => ({ tipo: 'posicao', faseId: faseGrupo, posicao });
+  return [
+    [29, 'Repescagem 1', pos(3), pos(6)],
+    [30, 'Repescagem 2', pos(4), pos(5)],
+    [31, 'Semifinal 1', pos(1), { tipo: 'vencedor', partidaNumero: 30 }],
+    [32, 'Semifinal 2', pos(2), { tipo: 'vencedor', partidaNumero: 29 }],
+    [33, 'Disputa de 3º lugar', { tipo: 'perdedor', partidaNumero: 31 }, { tipo: 'perdedor', partidaNumero: 32 }],
+    [34, 'Final', { tipo: 'vencedor', partidaNumero: 31 }, { tipo: 'vencedor', partidaNumero: 32 }],
+  ];
+}
+
+export const TOTAL_EQUIPES_MODELO = 8;
+
+/**
+ * Troca fases, grupos e partidas do campeonato pelos do modelo. Só sem partidas
+ * (nunca apaga jogo). `novoId` gera os ids, para não colidir entre campeonatos.
+ */
+export function aplicarModelo(c: Campeonato, novoId: () => string): void {
+  if (c.partidas.length > 0) throw new Error('O modelo só pode ser aplicado a um campeonato sem partidas.');
+  if (c.equipes.length !== TOTAL_EQUIPES_MODELO) {
+    throw new Error(`O modelo oficial precisa de exatamente ${TOTAL_EQUIPES_MODELO} equipes (há ${c.equipes.length}).`);
+  }
+  const grupoUnico: Fase = { id: novoId(), nome: 'Grupo Único', tipo: 'grupos', zonas: ZONAS_GRUPO_UNICO.map((z) => ({ ...z })) };
+  const mataMata: Fase = { id: novoId(), nome: 'Mata-mata', tipo: 'mata-mata' };
+  const grupoId = novoId();
+  c.modelo = 'copa-jumentus-8';
+  c.fases = [grupoUnico, mataMata];
+  c.grupos = [{ id: grupoId, faseId: grupoUnico.id, nome: 'Grupo Único', equipeIds: c.equipes.map((e) => e.id) }];
+
+  const base = (numero: number, dia: number): Pick<Partida, 'id' | 'numero' | 'dia' | 'status' | 'golsMandante' | 'golsVisitante' | 'eventos'> => ({
+    id: novoId(),
+    numero,
+    dia,
+    status: 'agendada',
+    golsMandante: 0,
+    golsVisitante: 0,
+    eventos: [],
+  });
+
+  c.partidas = TABELA_GRUPO_UNICO.map(([rodada, dia, m, v], i) => ({
+    ...base(i + 1, dia),
+    faseId: grupoUnico.id,
+    grupoId,
+    rodada,
+    rotulo: `Rodada ${rodada}`,
+    origemMandante: { tipo: 'tabela', numero: m },
+    origemVisitante: { tipo: 'tabela', numero: v },
+  }));
+  for (const [numero, rotulo, om, ov] of chaveMataMata(grupoUnico.id)) {
+    c.partidas.push({ ...base(numero, 2), faseId: mataMata.id, rotulo, origemMandante: om, origemVisitante: ov });
+  }
+}
+
+/**
+ * Sorteia T1 a T8 entre as equipes (random.ts). Só antes de qualquer partida
+ * começar; refazer é permitido até lá.
+ */
+export function sortearNumerosTabela(c: Campeonato, fonte: FonteAleatoria = fonteCrypto): void {
+  if (c.modelo !== 'copa-jumentus-8') throw new Error('O sorteio de T1 a T8 é do modelo oficial.');
+  if (c.partidas.some(partidaTravada)) {
+    throw new Error('Alguma partida já começou: os números da tabela não podem mais ser sorteados.');
+  }
+  shuffle(c.equipes, fonte).forEach((e, i) => {
+    const equipe = c.equipes.find((x) => x.id === e.id)!;
+    equipe.numeroTabela = i + 1;
+  });
+}
