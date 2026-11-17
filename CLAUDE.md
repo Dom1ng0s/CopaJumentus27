@@ -127,7 +127,11 @@ interface CopaRepo {
 ```
 
 - Implementação da fase 1: **`JsonLocalRepo`** — elenco e times em JSON (`dados/elenco.json`, `dados/times.json`); resultado do sorteio em `localStorage`.
-- **`dados/` está no `.gitignore`.** Mantenha `dados/*.example.json` versionados como referência de formato.
+- **Fonte atual do cadastro: a planilha oficial (Google Sheets, aba `INSCRITOS`).** `npm run importar -- "<url do CSV>"` baixa a aba para `dados/inscritos.csv`; `src/lib/repo/planilha.ts` (função pura, testada) converte o CSV em `Jogador[]`/`Time[]` e lista pendências; `src/lib/repo/cadastro.ts` lê o arquivo no servidor e cai no seed de exemplo se ele não existir. As páginas usam só `carregarCadastro()` — é o ponto a trocar quando o `CopaRepo` existir.
+  - Colunas lidas (cabeçalho, sem acento/caixa): `Nome`, `Apelido`, `Posição` (GOL/ZAG/MEI/ATA), `Estrelas` (1–6), `Capitão do time` (nome do time; marca o capitão e cria o `Time`), `Status` (só `Confirmado` entra).
+  - Goleiro com `Estrelas` vazio recebe `ESTRELAS_MIN` (não conta no balanceamento, §3.2).
+  - Qualquer pendência (posição/estrelas vazias, nome repetido, time sem capitão ou com dois) **bloqueia** o botão de sorteio.
+- **`dados/` está no `.gitignore`** (exceto `dados/*.example.*`). Mantenha os exemplos versionados como referência de formato (`dados/inscritos.example.csv`).
 - Nenhum componente de UI importa `localStorage`, `fs` ou caminho de arquivo direto. Tudo pelo repo. Trocar por Postgres depois deve ser **uma implementação nova da interface, com zero mudança de UI**.
 
 ### 4.3 Separação obrigatória

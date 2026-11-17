@@ -14,9 +14,12 @@ type Fase = 'pronto' | 'linha' | 'goleiros' | 'fim';
 interface Props {
   jogadores: Jogador[];
   times: Time[];
+  /** Pendencias do cadastro. Com qualquer item aqui, o sorteio fica bloqueado. */
+  problemas?: string[];
 }
 
-export function CerimoniaCliente({ jogadores, times }: Props) {
+export function CerimoniaCliente({ jogadores, times, problemas = [] }: Props) {
+  const bloqueado = problemas.length > 0;
   const [resultado, setResultado] = useState<ResultadoSorteio | null>(null);
   const [reveladasLinha, setReveladasLinha] = useState(0);
   const [reveladasGol, setReveladasGol] = useState(0);
@@ -33,13 +36,14 @@ export function CerimoniaCliente({ jogadores, times }: Props) {
   }, [resultado, jogadores, times, reveladasLinha, reveladasGol]);
 
   const iniciar = useCallback(() => {
+    if (bloqueado) return;
     const r = sortear({ jogadores, times });
     setResultado(r);
     setReveladasLinha(0);
     setReveladasGol(0);
     setLink(null);
     setFase('linha');
-  }, [jogadores, times]);
+  }, [jogadores, times, bloqueado]);
 
   const revelarProximo = useCallback(() => {
     if (!resultado) return;
@@ -119,18 +123,35 @@ export function CerimoniaCliente({ jogadores, times }: Props) {
           {fase === 'pronto' ? (
             <div className="py-16 text-center">
               <p className="hud-label mb-4">Cerimônia do sorteio</p>
-              <h1 className="titulo-hero t-xl sticker text-[clamp(2.5rem,9vw,6rem)]">Tudo pronto</h1>
+              <h1 className="titulo-hero t-xl sticker text-[clamp(2.5rem,9vw,6rem)]">
+                {bloqueado ? 'Cadastro pendente' : 'Tudo pronto'}
+              </h1>
               <p className="mx-auto mt-5 max-w-lg text-sm text-text-2 sm:text-base">
                 {totalRevelacoes || resultado === null
                   ? 'Ao iniciar, o sistema calcula a distribuição equilibrada e revela um jogador por vez. Você controla o ritmo.'
                   : ''}
               </p>
-              <button onClick={iniciar} className="btn-cta mt-8">
-                <span>Sortear agora</span>
-              </button>
-              <p className="hud-label mt-4 text-[10px]">
-                ou pressione <span className="text-white">espaço</span>
-              </p>
+              {bloqueado ? (
+                <HudCard className="mx-auto mt-8 max-w-xl px-4 py-3 text-left">
+                  <p className="hud-label mb-2 text-[10px]">
+                    Corrija na planilha e rode npm run importar ({problemas.length})
+                  </p>
+                  <ul className="max-h-64 space-y-1 overflow-y-auto font-mono text-xs text-text-2">
+                    {problemas.map((p) => (
+                      <li key={p}>{p}</li>
+                    ))}
+                  </ul>
+                </HudCard>
+              ) : (
+                <>
+                  <button onClick={iniciar} className="btn-cta mt-8">
+                    <span>Sortear agora</span>
+                  </button>
+                  <p className="hud-label mt-4 text-[10px]">
+                    ou pressione <span className="text-white">espaço</span>
+                  </p>
+                </>
+              )}
             </div>
           ) : (
             <>
