@@ -1,12 +1,13 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { Sumula } from '@/components/campeonato/Sumula';
+import { Sumula, TEXTO_EVENTO } from '@/components/campeonato/Sumula';
 import { Aviso, Escudo, Secao, SeloStatus } from '@/components/campeonato/ui';
-import { formatarDataHora, indices } from '@/lib/campeonato/consultas';
+import { formatarDataHora, indices, lados } from '@/lib/campeonato/consultas';
+import { goleiroDaPartida } from '@/lib/domain/campeonato/rankings';
 import { calcularSuspensoes, ordenarPartidas } from '@/lib/domain/campeonato/suspensoes';
-import type { Equipe, JogadorCampeonato, StatusPartida } from '@/lib/domain/campeonato/tipos';
-import { carregarCampeonato } from '@/lib/repo/campeonato-repo';
-import { adicionarEvento, ajustarPlacar, definirStatus, removerEvento } from '../../../acoes';
+import { TIPOS_EVENTO, type Equipe, type JogadorCampeonato, type Partida, type StatusPartida } from '@/lib/domain/campeonato/tipos';
+import { campeonatoDoAdmin } from '@/lib/campeonato/selecao';
+import { adicionarEvento, ajustarPlacar, definirGoleiro, definirStatus, removerEvento } from '../../../acoes';
 
 export const dynamic = 'force-dynamic';
 
@@ -24,14 +25,16 @@ export default async function ControlePartida({
   searchParams: Promise<{ erro?: string }>;
 }) {
   const [{ id }, { erro }] = await Promise.all([params, searchParams]);
-  const c = await carregarCampeonato();
+  const c = await campeonatoDoAdmin();
   const p = c.partidas.find((x) => x.id === id);
   if (!p) notFound();
 
   const volta = `/admin/partidas/${p.id}`;
   const { equipe } = indices(c);
-  const mandante = equipe.get(p.mandanteId);
-  const visitante = equipe.get(p.visitanteId);
+  const l = lados(c, p, equipe);
+  const mandante = l.mandante;
+  const visitante = l.visitante;
+  const definida = !!mandante && !!visitante;
   const ehMataMata = c.fases.find((f) => f.id === p.faseId)?.tipo === 'mata-mata';
 
   // Suspensos para ESTE jogo: cartões das partidas anteriores a ele.
@@ -67,21 +70,26 @@ export default async function ControlePartida({
       <section className="hud-card relative p-5">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
           <span className="hud-label">
-            {p.rotulo ?? ''} · {formatarDataHora(p.dataHora)}
+            {p.numero !== undefined ? `Jogo ${p.numero} · ` : ''}
+            {p.rotulo ?? ''} · {p.dataHora ? formatarDataHora(p.dataHora) : p.dia !== undefined ? `Dia ${p.dia}` : formatarDataHora()}
           </span>
           <SeloStatus status={p.status} />
         </div>
 
         <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4">
-          <LadoTime equipe={mandante} />
+          <LadoTime equipe={mandante} rotulo={l.rotuloMandante} />
           <p className="numero text-7xl sm:text-8xl">
             {p.golsMandante}:{p.golsVisitante}
           </p>
-          <LadoTime equipe={visitante} />
+          <LadoTime equipe={visitante} rotulo={l.rotuloVisitante} />
           <Placar lado="mandante" />
           <span />
           <Placar lado="visitante" />
         </div>
+
+        {!definida && (
+          <Aviso tipo="info" texto="Os participantes deste jogo ainda não estão definidos: ele não pode começar." />
+        )}
 
         {ehMataMata && (
           <div className="mt-5 grid grid-cols-[1fr_auto_1fr] items-center gap-4 border-t border-hud pt-4">
@@ -110,22 +118,26 @@ export default async function ControlePartida({
         </div>
         <p className="mt-3 text-center text-xs text-text-3">
           Gol registrado na súmula já soma no placar. Use + e − só para gols sem autor.
+          {ehMataMata && ' Jogo eliminatório empatado só encerra com placar de pênaltis.'}
         </p>
       </section>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        {[mandante, visitante].map((e) =>
-          e ? (
+        {(['mandante', 'visitante'] as const).map((lado) => {
+          const e = lado === 'mandante' ? mandante : visitante;
+          return e ? (
             <FormEvento
               key={e.id}
               equipe={e}
+              lado={lado}
+              partida={p}
+              goleiro={goleiroDaPartida(p, lado, c.jogadores)}
               jogadores={c.jogadores.filter((j) => j.equipeId === e.id)}
               suspensos={suspensos}
-              partidaId={p.id}
               volta={volta}
             />
-          ) : null,
-        )}
+          ) : null;
+        })}
       </div>
 
       <Secao titulo="Súmula">
@@ -148,34 +160,62 @@ export default async function ControlePartida({
   );
 }
 
-function LadoTime({ equipe }: { equipe?: Equipe }) {
+function LadoTime({ equipe, rotulo }: { equipe?: Equipe; rotulo?: string }) {
   return (
     <div className="flex flex-col items-center gap-2 text-center">
       <Escudo equipe={equipe} tamanho={64} />
-      <span className="titulo-hero t-sm text-base">{equipe?.nome ?? '?'}</span>
+      <span className={`titulo-hero t-sm text-base ${equipe ? '' : 'text-text-3'}`}>{equipe?.nome ?? rotulo ?? 'A definir'}</span>
+      {equipe && rotulo && <span className="hud-label !text-[10px]">{rotulo}</span>}
     </div>
   );
 }
 
 function FormEvento({
   equipe,
+  lado,
+  partida,
+  goleiro,
   jogadores,
   suspensos,
-  partidaId,
   volta,
 }: {
   equipe: Equipe;
+  lado: 'mandante' | 'visitante';
+  partida: Partida;
+  /** Goleiro registrado ou, na falta, o único goleiro do elenco. */
+  goleiro?: string;
   jogadores: JogadorCampeonato[];
   suspensos: Set<string>;
-  partidaId: string;
   volta: string;
 }) {
+  const partidaId = partida.id;
   const fora = jogadores.filter((j) => suspensos.has(j.id));
+  const registrado = lado === 'mandante' ? partida.goleiroMandanteId : partida.goleiroVisitanteId;
   return (
     <Secao titulo={equipe.nome}>
       {fora.length > 0 && (
         <Aviso tipo="info" texto={`Suspensos neste jogo: ${fora.map((j) => j.nome).join(', ')}.`} />
       )}
+      <form action={definirGoleiro} className="mb-4 flex items-end gap-2 border-b border-hud pb-4">
+        <input type="hidden" name="volta" value={volta} />
+        <input type="hidden" name="partidaId" value={partidaId} />
+        <input type="hidden" name="lado" value={lado} />
+        <label className="flex-1">
+          <span className="rotulo-campo">Goleiro nesta partida{!registrado && goleiro ? ' (do elenco, não registrado)' : ''}</span>
+          <select name="jogadorId" className="campo" defaultValue={registrado ?? ''}>
+            <option value="">{goleiro && !registrado ? `Automático: ${jogadores.find((j) => j.id === goleiro)?.nome}` : 'Não definido'}</option>
+            {jogadores.map((j) => (
+              <option key={j.id} value={j.id}>
+                {j.nome}
+                {j.posicao === 'GOL' ? ' (GOL)' : ''}
+              </option>
+            ))}
+          </select>
+        </label>
+        <button type="submit" className="btn-mini">
+          Salvar
+        </button>
+      </form>
       {jogadores.length === 0 ? (
         <p className="text-sm text-text-3">Sem jogadores cadastrados nesta equipe.</p>
       ) : (
@@ -197,10 +237,11 @@ function FormEvento({
           <label>
             <span className="rotulo-campo">Evento</span>
             <select name="tipo" className="campo">
-              <option value="gol">⚽ Gol</option>
-              <option value="gol-contra">⚽ Gol contra</option>
-              <option value="amarelo">🟨 Amarelo</option>
-              <option value="vermelho">🟥 Vermelho</option>
+              {TIPOS_EVENTO.map((t) => (
+                <option key={t} value={t}>
+                  {TEXTO_EVENTO[t]}
+                </option>
+              ))}
             </select>
           </label>
           <label>

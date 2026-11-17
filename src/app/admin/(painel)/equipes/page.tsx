@@ -1,6 +1,6 @@
 import { Aviso, Escudo, Secao } from '@/components/campeonato/ui';
 import { suspensoes } from '@/lib/campeonato/consultas';
-import { carregarCampeonato } from '@/lib/repo/campeonato-repo';
+import { campeonatoDoAdmin } from '@/lib/campeonato/selecao';
 import { adicionarJogador, editarEquipe, editarJogador, removerJogador } from '../../acoes';
 
 export const dynamic = 'force-dynamic';
@@ -9,7 +9,7 @@ const POSICOES = ['GOL', 'ZAG', 'MEI', 'ATA'] as const;
 
 export default async function EquipesAdmin({ searchParams }: { searchParams: Promise<{ erro?: string }> }) {
   const { erro } = await searchParams;
-  const c = await carregarCampeonato();
+  const c = await campeonatoDoAdmin();
   const situacao = suspensoes(c);
 
   return (

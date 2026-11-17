@@ -17,6 +17,9 @@ const LINKS: Array<{ href: string; rotulo: string; curto?: string }> = [
 
 export function Navbar() {
   const pathname = usePathname();
+  // Dentro do histórico (/edicoes/<slug>/...), os links ficam na mesma edição.
+  const edicao = /^\/edicoes\/[^/]+/.exec(pathname)?.[0] ?? '';
+  const caminho = edicao ? pathname.slice(edicao.length) || '/' : pathname;
 
   return (
     <nav className="fixed inset-x-0 top-0 z-50">
@@ -35,11 +38,12 @@ export function Navbar() {
 
         <div className="ml-auto flex items-stretch self-stretch">
           {LINKS.map((l) => {
-            const ativo = l.href === '/' ? pathname === '/' : pathname.startsWith(l.href);
+            const href = edicao && l.href !== '/admin' ? (l.href === '/' ? edicao : edicao + l.href) : l.href;
+            const ativo = l.href === '/' ? caminho === '/' : caminho.startsWith(l.href);
             return (
               <Link
                 key={l.href}
-                href={l.href}
+                href={href}
                 aria-current={ativo ? 'page' : undefined}
                 className="relative flex items-center px-[6px] font-mono text-[13px] font-bold uppercase tracking-[0.04em] transition-colors duration-200 ease-hud sm:px-3 sm:text-[15px] sm:tracking-[0.07em]"
                 style={{ color: ativo ? 'var(--text1)' : 'var(--text2)' }}

@@ -1,8 +1,11 @@
 import { Aviso, Escudo, Secao } from '@/components/campeonato/ui';
-import { indices } from '@/lib/campeonato/consultas';
-import { carregarCampeonato } from '@/lib/repo/campeonato-repo';
+import { ZONA } from '@/components/campeonato/TabelaClassificacao';
+import { grupoEncerrado, indices } from '@/lib/campeonato/consultas';
+import { campeonatoDoAdmin } from '@/lib/campeonato/selecao';
+import { calcularClassificacao, empatesPendentes } from '@/lib/domain/campeonato/classificacao';
 import {
   criarFase,
+  decidirDesempate,
   definirGruposManual,
   editarFase,
   excluirFase,
@@ -20,13 +23,18 @@ function Volta() {
 
 export default async function Fases({ searchParams }: { searchParams: Promise<{ erro?: string }> }) {
   const { erro } = await searchParams;
-  const c = await carregarCampeonato();
+  const c = await campeonatoDoAdmin();
   const { equipe } = indices(c);
 
   return (
     <div className="space-y-6">
       <h1 className="titulo-hero t-xl text-4xl">Fases e grupos</h1>
       <p className="text-sm text-text-2">
+        {c.modelo === 'copa-jumentus-8'
+          ? 'Modelo oficial: o Grupo Único e os 34 jogos vêm prontos e as equipes de cada jogo saem do sorteio de T1 a T8 (Partidas). Aqui ficam as zonas e as decisões de empate.'
+          : null}
+      </p>
+      <p className="text-sm text-text-2" hidden={c.modelo === 'copa-jumentus-8'}>
         O formato é livre: crie as fases na ordem em que acontecem. Fases de grupos geram os jogos de todos contra todos; no
         mata-mata, os confrontos são criados em Partidas.
       </p>
@@ -37,8 +45,50 @@ export default async function Fases({ searchParams }: { searchParams: Promise<{ 
         const jogos = c.partidas.filter((p) => p.faseId === fase.id).length;
         const grupoDe = new Map(grupos.flatMap((g, gi) => g.equipeIds.map((id) => [id, gi])));
         const quantidade = grupos.length || 2;
+        const pendentes = grupos.filter((g) => grupoEncerrado(c, g.id)).flatMap((g) =>
+          empatesPendentes(
+            calcularClassificacao(g.equipeIds, c.partidas.filter((p) => p.grupoId === g.id), c.pontuacao, c.criterios, { desempates: fase.desempates }),
+          ).map((ids) => ({ grupo: g.nome, ids })),
+        );
         return (
           <Secao key={fase.id} titulo={fase.nome} acao={<span className="hud-label text-[10px]">{jogos} jogos</span>}>
+            {fase.zonas && fase.zonas.length > 0 && (
+              <p className="mb-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-text-2">
+                {fase.zonas.map((z) => (
+                  <span key={`${z.de}-${z.ate}`} className="flex items-center gap-1.5">
+                    <span className="inline-block h-3 w-[3px]" style={{ background: ZONA[z.zona].cor }} aria-hidden="true" />
+                    {ZONA[z.zona].rotulo}: {z.de}º a {z.ate}º
+                  </span>
+                ))}
+              </p>
+            )}
+            {pendentes.map(({ grupo, ids }) => (
+              <form key={ids.join()} action={decidirDesempate} className="mb-4 rounded-component p-3" style={{ background: 'var(--warning-bg)', color: 'var(--warning-text)' }}>
+                <Volta />
+                <input type="hidden" name="faseId" value={fase.id} />
+                <input type="hidden" name="equipes" value={ids.join(',')} />
+                <p className="mb-2 text-sm font-semibold">
+                  {grupo}: empate em todos os critérios entre {ids.map((id) => equipe.get(id)?.nome ?? id).join(', ')}. O sistema não sorteia: defina a ordem.
+                </p>
+                <div className="flex flex-wrap items-end gap-2">
+                  {ids.map((id, k) => (
+                    <label key={id} className="flex items-center gap-2">
+                      <span className="text-sm">{equipe.get(id)?.nome ?? id}</span>
+                      <select name={`ordem_${id}`} defaultValue={k + 1} className="campo !w-auto" aria-label={`Posição de ${equipe.get(id)?.nome ?? id} no desempate`}>
+                        {ids.map((_, n) => (
+                          <option key={n} value={n + 1}>
+                            {n + 1}º
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  ))}
+                  <button type="submit" className="btn-mini">
+                    Decidir
+                  </button>
+                </div>
+              </form>
+            ))}
             <div className="flex flex-wrap items-end gap-2">
               <form action={editarFase} className="flex flex-1 flex-wrap items-end gap-2">
                 <Volta />
@@ -77,7 +127,7 @@ export default async function Fases({ searchParams }: { searchParams: Promise<{ 
               </form>
             </div>
 
-            {fase.tipo === 'grupos' && (
+            {fase.tipo === 'grupos' && c.modelo !== 'copa-jumentus-8' && (
               <div className="mt-5 space-y-4 border-t border-hud pt-4">
                 <form action={sortearGruposDaFase} className="flex flex-wrap items-end gap-2">
                   <Volta />

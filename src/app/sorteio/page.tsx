@@ -5,6 +5,7 @@ import { HudCard } from '@/components/HudCard';
 import { NOME_COMPETICAO, SUBTITULO_COMPETICAO, TOLERANCIA_ESTRELAS } from '@/lib/config';
 import { poteDeGoleiros, poteDeLinha } from '@/lib/domain/validacao';
 import { carregarCadastro } from '@/lib/repo/cadastro';
+import { idDoCampeonatoDoAdmin } from '@/lib/campeonato/selecao';
 import type { Estrelas as NivelEstrelas, Jogador } from '@/lib/domain/tipos';
 
 export const dynamic = 'force-dynamic';
@@ -12,7 +13,7 @@ export const dynamic = 'force-dynamic';
 export const metadata = { title: "Pote do sorteio — Copa Jumentus" };
 
 export default async function PaginaPote() {
-  const { jogadores, times, problemas, ignorados, origem } = await carregarCadastro();
+  const { jogadores, times, problemas, ignorados, origem } = await carregarCadastro(await idDoCampeonatoDoAdmin());
   const pote = poteDeLinha(jogadores);
   const goleiros = poteDeGoleiros(jogadores);
   const capitaoPorId = new Map(

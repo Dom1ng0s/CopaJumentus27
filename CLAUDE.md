@@ -27,11 +27,17 @@ Há **contas de admin**, só para a organização (decisão do operador em 17/11
 5. **Cerimônia de revelação**: um jogador por vez, com animação e suspense, controlada pelo operador.
 6. **Link de resultado estático**: ao fim, gerar uma URL compartilhável que renderiza os elencos finais sem precisar de backend.
 
-### Fase 2 — Campeonato simples (implementada, ver §8)
-Um campeonato por instalação: equipes, elencos vindos do sorteio, fases e grupos editáveis, partidas com data/hora editáveis, súmula ao vivo, classificação, rankings e controle de pagamento. Pedido do operador em 17/11/2026: "só o simples do campeonato, apenas os admins editam".
+### Fase 2 — Campeonato (implementada, ver §8)
+Equipes, elencos vindos do sorteio, fases e grupos editáveis, partidas com data/hora editáveis, súmula ao vivo, classificação, rankings e controle de pagamento. Pedido do operador em 17/11/2026: "só o simples do campeonato, apenas os admins editam".
+
+Decisões do operador em 17/11/2026 que ampliaram esta fase (§8.6):
+- **Vários campeonatos por instalação**, com painel de listagem, criação e **duplicação** de campeonato.
+- **Histórico de edições**: cada campeonato encerrado continua consultável em `/edicoes/[slug]`.
+- **Exportação/impressão limpa** de súmula, classificação e elencos (CSS de impressão; sem biblioteca de PDF).
+- **Modelo oficial "Copa Jumentus · 8 times · 34 jogos"**, aplicado com um clique ao criar o campeonato. O formato livre (§8.1) continua existindo para outras edições.
 
 ### Fora de escopo (não construir, nem "preparar terreno" com abstração especulativa)
-Contas de usuário para a plateia (só os admins têm conta, §4.5), seguidores, comentários, enquetes, mídia enviada pelo público, vários campeonatos por instalação, histórico de temporadas, app mobile nativo, notificações, impressão de súmula e carteirinhas.
+Contas de usuário para a plateia (só os admins têm conta, §4.5), seguidores, comentários, enquetes, mídia enviada pelo público, app mobile nativo, notificações, carteirinhas, geração de PDF por biblioteca (a impressão é pelo navegador).
 
 ---
 
@@ -249,7 +255,7 @@ Nunca introduza visual corporativo/SaaS genérico, biblioteca de componentes com
 
 1. **Regra de sorteio é sagrada.** Mudança em §3 é decisão do operador. Se o código divergir deste arquivo, aponte a divergência antes de "consertar" qualquer lado.
 2. **Teste o domínio antes da UI.** Sorteio sem teste não está pronto.
-3. **Não amplie o escopo.** Fases 2 e 3 estão documentadas para dar contexto, não para serem implementadas.
+3. **Não amplie o escopo.** Construa só o que está no §2; o resto é decisão do operador.
 4. **Não especule na abstração.** A única abstração deliberada é `CopaRepo` (§4.2), porque a decisão de dados foi adiada de propósito. Fora dela, código direto.
 5. **Mantenha este arquivo vivo.** Decisão nova de regra, stack ou escopo → atualize o CLAUDE.md na mesma mudança.
 
@@ -259,33 +265,52 @@ Nunca introduza visual corporativo/SaaS genérico, biblioteca de componentes com
 
 ### 8.1 Regras de disputa (decididas pelo operador)
 - **Pontuação:** vitória 3, empate 1, derrota 0 por padrão, editável em Admin › Campeonato.
-- **Desempate:** pontos, vitórias, saldo, gols marcados, gols sofridos, confronto direto. A ordem é editável.
-- **Formato:** livre e editável. O admin cria as fases na ordem; cada fase é `grupos` (pontos corridos) ou `mata-mata`. O formato desta edição ainda está sendo definido; não fixe um formato no código.
-- **Grupos:** o admin escolhe a quantidade e sorteia aleatoriamente (via `random.ts`) ou define à mão. "Gerar jogos dos grupos" cria o todos contra todos que falta.
-- **Mata-mata:** confrontos criados à mão em Admin › Partidas. Empate decide nos pênaltis, lançados no controle da partida.
+- **Desempate** (`classificacao.ts`): pontos, vitórias, saldo, gols marcados, gols sofridos (menos é melhor), confronto direto, cartões. A ordem é editável (botões ↑/↓; arrastar só se o operador pedir). Cada critério só é aplicado entre as equipes que continuam empatadas.
+  - **Confronto direto:** minitabela só com os jogos entre as empatadas (pontos, depois saldo); com 2 equipes é o confronto simples. Se ela separa só parte do grupo, as que seguem empatadas refazem a minitabela entre si. (A comparação par a par antiga não era transitiva.)
+  - **Cartões** (último): menos vermelhos; persistindo, menos amarelos. Contam os jogos encerrados da fase.
+  - **Empate em tudo:** a posição fica **empatada** e, com o grupo encerrado, o admin vê uma pendência em Fases e grupos para decidir a ordem à mão (`fase.desempates`). O sistema nunca sorteia sozinho. Com o grupo em andamento, a tabela só mostra a ordem.
+- **Formato:** modelo oficial (§8.6) ou livre. No livre, o admin cria as fases na ordem; cada fase é `grupos` (pontos corridos) ou `mata-mata`.
+- **Grupos (formato livre):** o admin escolhe a quantidade e sorteia aleatoriamente (via `random.ts`) ou define à mão. "Gerar jogos dos grupos" cria o todos contra todos que falta. No modelo oficial isso fica bloqueado.
+- **Mata-mata:** no livre, confrontos criados à mão em Admin › Partidas. Empate decide nos pênaltis, lançados no controle da partida. Jogo eliminatório empatado **não encerra** sem placar de pênaltis com vencedor (erro visível). Pênaltis só valem e só aparecem com empate no tempo normal.
 - **Datas, horários e local** de cada partida são editáveis a qualquer momento.
 
 ### 8.2 Cartões e suspensão
-- 3 amarelos acumulados: suspenso no jogo seguinte da equipe; a contagem zera.
+- 3 amarelos acumulados: suspenso no jogo seguinte da equipe; a contagem zera. Os amarelos **não** zeram entre as fases (confirmado pelo operador em 17/11/2026).
 - Vermelho: suspenso no jogo seguinte da equipe.
 - A suspensão é cumprida quando esse jogo seguinte é encerrado. Cartões contam em jogos ao vivo e encerrados.
-- Cálculo em `lib/domain/campeonato/suspensoes.ts`, derivado das súmulas; nada é gravado.
+- Cálculo em `lib/domain/campeonato/suspensoes.ts`, derivado das súmulas; nada é gravado. "Jogo seguinte" segue o número do jogo quando todas as partidas têm número (modelo oficial: um campo, um jogo por vez); senão, data/hora.
 
 ### 8.3 Súmula e placar
 - Os admins editam o resultado durante o jogo em `/admin/partidas/[id]`.
 - Gol registrado na súmula soma no placar (gol contra soma para o adversário); remover o evento desconta.
 - Os botões + e − ajustam gols sem autor e pênaltis.
+- Eventos: `gol`, `gol_penalti` (pênalti convertido durante o jogo, soma no placar e na artilharia), `gol-contra`, `penalti_perdido`, `amarelo`, `vermelho`, `defesa` (só do goleiro registrado na partida). A disputa de pênaltis é só placar (`penaltis_mandante/visitante`).
+- **Goleiro de cada lado** (`partida.goleiro_mandante_id`/`goleiro_visitante_id`), escolhido na súmula; sem registro, vale o único GOL do elenco, se houver um só.
 - Classificação e rankings são calculados das partidas (`lib/domain/campeonato/`); só jogos **encerrados** entram na tabela.
+- **Rankings** (com filtro por fase): artilharia, assistências, penalidades (convertidos/perdidos), goleiros (gols sofridos, média, jogos sem sofrer gol, defesas; só jogos encerrados) e cartões.
 
 ### 8.4 Dados e integração com o sorteio
-- `lib/repo/campeonato-repo.ts` monta o documento `Campeonato` a partir das tabelas (§9) e o grava inteiro numa transação. Banco vazio: importa `dados/campeonato.json` se existir (legado e `npm run demo`), senão parte do `campeonatoPadrao()` (8 equipes do manual de marca, fases "Fase de grupos" e "Mata-mata").
-- No fim da cerimônia, **"Oficializar no campeonato"** grava equipes, jogadores e capitães. É bloqueado se já houver súmula preenchida. O pagamento de quem já estava cadastrado (pelo nome) é preservado.
+- `lib/repo/campeonato-repo.ts` monta o documento `Campeonato` de um campeonato a partir das tabelas (§9), já com os participantes derivados (§8.6), e o grava inteiro numa transação, só nas linhas daquele campeonato. Toda gravação passa pela **trava** e pelas **regras de consistência** (§8.6). Banco vazio: importa `dados/campeonato.json` se existir (legado e `npm run demo`), senão parte do `campeonatoPadrao()` (8 equipes do manual de marca, fases "Fase de grupos" e "Mata-mata").
+- **Campeonato em edição** (`lib/campeonato/selecao.ts`): cada admin escolhe em Admin › Campeonatos; fica num cookie do navegador. Todas as telas e ações do admin, as inscrições, o pote e a cerimônia usam esse campeonato. Sem escolha, vale o atual do site público.
+- **Inscrições** são de cada campeonato (`inscricao.campeonato_id`).
+- No fim da cerimônia, **"Oficializar no campeonato"** grava equipes, jogadores e capitães no campeonato em edição. É bloqueado se já houver súmula preenchida. O pagamento de quem já estava cadastrado (pelo nome) é preservado.
 - **Pagamentos** (pago/pendente por jogador, valor da inscrição) só aparecem em `/admin/pagamentos`.
 - **Estrelas nunca aparecem em página pública.** O pote foi para `/sorteio`, protegido.
 
 ### 8.5 Rotas
-- Públicas: `/`, `/classificacao`, `/jogos`, `/jogos/[id]`, `/rankings`, `/equipes`, `/resultado/[payload]`.
-- Admin: `/admin`, `/admin/inscricoes`, `/admin/campeonato`, `/admin/fases`, `/admin/partidas`, `/admin/partidas/[id]`, `/admin/equipes`, `/admin/pagamentos`, `/admin/admins`, `/admin/conta`, `/sorteio`, `/cerimonia`. Login em `/admin/entrar`.
+- Públicas: `/`, `/classificacao`, `/jogos`, `/jogos/[id]`, `/rankings`, `/equipes` mostram o **campeonato atual**: o mais recente em andamento; senão em inscrições; senão o último encerrado. Rascunho nunca é público. Histórico: `/edicoes` e `/edicoes/[slug]/…` (as mesmas telas, componentes em `src/components/paginas/`). Mais `/resultado/[payload]`.
+- Admin: `/admin`, `/admin/campeonatos`, `/admin/inscricoes`, `/admin/campeonato`, `/admin/fases`, `/admin/partidas`, `/admin/partidas/[id]`, `/admin/equipes`, `/admin/pagamentos`, `/admin/admins`, `/admin/conta`, `/sorteio`, `/cerimonia`. Login em `/admin/entrar`.
+
+### 8.6 Modelo oficial "Copa Jumentus · 8 times · 34 jogos"
+Decisão do operador em 17/11/2026. Código em `lib/domain/campeonato/modelo.ts` (tabela e aplicação) e `chaveamento.ts` (participantes, trava e consistência), puro e testado.
+- **Criar:** Admin › Campeonatos cria o campeonato com as 8 equipes do manual e, no modelo, já com os 34 jogos. "Aplicar modelo oficial" (Admin › Campeonato) faz o mesmo num campeonato sem partidas. Nasce em rascunho.
+- **1ª fase — Grupo Único:** 28 jogos, 7 rodadas, turno único, um campo, um jogo por vez; rodadas 1–4 no dia 1 e 5–7 no dia 2. A ordem (`TABELA_GRUPO_UNICO`) mantém os confrontos de Berger enviados pelo operador, reordenados dentro de cada rodada para **nenhum time jogar duas partidas seguidas** (testado). Zonas: 1º–2º semifinal, 3º–6º repescagem, 7º–8º eliminados (`fase.zonas`).
+- **T1 a T8** são sorteados (`random.ts`) num botão em Admin › Partidas, depois de oficializar os elencos, e gravados em `equipe.numero_tabela`. Refazer é permitido enquanto nenhuma partida tiver começado.
+- **Mata-mata (dia 2):** J29 Repescagem 1 (3º x 6º), J30 Repescagem 2 (4º x 5º), J31 Semifinal 1 (1º x vencedor J30), J32 Semifinal 2 (2º x vencedor J29), J33 3º lugar (perdedores de J31 e J32), J34 Final (vencedores de J31 e J32). Sem vantagem de empate: empate no tempo normal vai para os pênaltis.
+- **Participantes derivados, nunca gravados** (`resolverChaveamento`, como as suspensões): cada partida do modelo tem `origem_mandante`/`origem_visitante` (`{tipo:'tabela',numero}` | `{tipo:'posicao',faseId,posicao}` | `{tipo:'vencedor'|'perdedor',partidaNumero}`); `mandante_id`/`visitante_id` ficam vazios no banco. Origem por posição só resolve com todos os jogos da fase encerrados e sem empate pendente na posição; vencedor/perdedor, com o jogo de origem encerrado. Sem participante, a tela mostra a origem ("3º do Grupo Único", "Vencedor J30") e o jogo não pode começar.
+- **Trava:** nenhuma mudança (correção de placar, súmula, T1–T8, desempate manual) pode alterar os participantes de uma partida já iniciada, com súmula ou com goleiro registrado; a mensagem diz qual jogo seria afetado. Antes disso, corrigir um resultado recalcula o chaveamento sozinho.
+- **Pódio:** J34 (1º e 2º) e J33 (3º), mostrado no Início quando a final encerra.
+- **Limite conhecido:** o intervalo de um jogo entre partidas do mesmo time vale no Grupo Único; do jogo 28 para o 29 o mesmo time pode jogar em seguida (depende da classificação).
 
 ---
 
@@ -293,9 +318,11 @@ Nunca introduza visual corporativo/SaaS genérico, biblioteca de componentes com
 
 - **Produção:** Postgres no **Neon** (São Paulo, `sa-east-1`), app na **Vercel** com funções em São Paulo (`vercel.json`, `gru1`) para ficar perto do banco. Repositório na organização `copa-jumentus` do GitHub (a Vercel não publica repo de conta pessoal de outra pessoa). `DATABASE_URL` (connection string *pooled* do Neon) nas variáveis de ambiente da Vercel. O cliente usa `postgres` 3.x com `prepare: false` (exigido pelo pooler).
 - **Desenvolvimento:** sem `DATABASE_URL`, `src/lib/db/cliente.ts` abre um **PGlite** em `dados/pglite` e aplica as migrações sozinho. Para começar do zero, apague a pasta. Testes usam PGlite em memória (`bancoDeTeste()`).
-- **Esquema:** `src/lib/db/schema.ts`. Tabelas: `admin` (contas, §4.5), `campeonato` (linha única, id 1), `inscricao`, `equipe`, `jogador`, `fase`, `grupo`, `grupo_equipe`, `partida`, `evento`. As restrições do domínio que o banco consegue garantir (estrelas 1–6, mandante ≠ visitante, FKs) estão em `check` e `foreign key`.
+- **Esquema:** `src/lib/db/schema.ts`. Tabelas: `admin` (contas, §4.5), `campeonato` (um por edição: `slug` único, `edicao`, `status` rascunho|inscricoes|andamento|encerrado, `modelo` copa-jumentus-8|livre, `banner`, `escudo`, `duplicado_de`), `inscricao`, `equipe`, `jogador`, `fase`, `grupo`, `grupo_equipe`, `partida`, `evento`. As restrições do domínio que o banco consegue garantir (estrelas 1–6, mandante ≠ visitante, FKs) estão em `check` e `foreign key`.
 - **Migrações:** SQL em `drizzle/`, geradas com `npm run db:gerar` depois de mudar o esquema (revise o SQL e versione). `npm run build` roda `scripts/migrar.mjs` antes do `next build`, então o deploy na Vercel atualiza o Neon sozinho. Nunca edite uma migração já aplicada; gere outra.
-- **Escrita:** `atualizarCampeonato(alterar)` trava a linha do campeonato (`select … for update`), relê, aplica a mudança e regrava as tabelas filhas numa transação. Ações concorrentes de dois admins são serializadas; erro em qualquer passo desfaz tudo. Volume esperado (~64 jogadores, ~20 partidas) torna a regravação inteira barata; se crescer muito, troque por escritas pontuais.
+- **Vários campeonatos:** `inscricao`, `equipe` e `fase` têm `campeonato_id`; jogador, grupo, partida e evento pertencem pelo pai. Ids de texto novos (`novoId()`, 12 hex) são únicos entre campeonatos. `campeonato_id` tem default 1 só por compatibilidade com o código anterior (campeonato único) durante a transição; o código atual sempre informa.
+- **Duplicar** copia configuração, fases, zonas, grupos e equipes (ids novos); elencos opcionais (pagamento zerado); nunca partidas, súmulas, pagamentos nem inscrições. Nasce em rascunho, com `duplicado_de`.
+- **Escrita:** `atualizarCampeonato(id, alterar)` trava a linha do campeonato (`select … for update`), relê, aplica a mudança, recalcula o chaveamento, confere trava e consistência e regrava as tabelas filhas daquele campeonato numa transação. Ações concorrentes de dois admins são serializadas; erro em qualquer passo desfaz tudo. Volume esperado (~64 jogadores, ~20 partidas) torna a regravação inteira barata; se crescer muito, troque por escritas pontuais.
 - **Segredos:** `DATABASE_URL` e `SESSAO_SEGREDO` só em `.env.local` e nas variáveis da Vercel. Nunca no Git, nem hashes de senha de contas reais (as contas iniciais foram inseridas uma vez no Neon por SQL fora do repositório).
 - **Preview usa o banco de produção:** na Vercel, `DATABASE_URL` vale para production e preview, então o build de qualquer PR aplica as migrações dele no Neon de produção antes do merge. Toda migração precisa ser compatível com o código que está na `main`.
 

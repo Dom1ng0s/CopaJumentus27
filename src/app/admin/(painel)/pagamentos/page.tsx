@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { Aviso, Escudo, Numero, Secao } from '@/components/campeonato/ui';
 import { formatarReais } from '@/lib/campeonato/consultas';
-import { carregarCampeonato } from '@/lib/repo/campeonato-repo';
+import { campeonatoDoAdmin } from '@/lib/campeonato/selecao';
 import { alternarPagamento } from '../../acoes';
 
 export const dynamic = 'force-dynamic';
@@ -9,7 +9,7 @@ const VOLTA = '/admin/pagamentos';
 
 export default async function Pagamentos({ searchParams }: { searchParams: Promise<{ erro?: string; filtro?: string }> }) {
   const { erro, filtro } = await searchParams;
-  const c = await carregarCampeonato();
+  const c = await campeonatoDoAdmin();
   const pagos = c.jogadores.filter((j) => j.pago).length;
   const pendentes = c.jogadores.length - pagos;
 

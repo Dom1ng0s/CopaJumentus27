@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { Aviso, Numero, Secao } from '@/components/campeonato/ui';
 import { MARCAS } from '@/lib/campeonato/marcas';
+import { idDoCampeonatoDoAdmin } from '@/lib/campeonato/selecao';
 import { listarInscricoes, paraLinhas } from '@/lib/repo/inscricoes-repo';
 import { interpretarInscricoes } from '@/lib/repo/planilha';
 import {
@@ -21,7 +22,7 @@ function Volta() {
 
 export default async function Inscricoes({ searchParams }: { searchParams: Promise<{ erro?: string; ok?: string }> }) {
   const { erro, ok } = await searchParams;
-  const inscricoes = await listarInscricoes();
+  const inscricoes = await listarInscricoes(await idDoCampeonatoDoAdmin());
   const cadastro = interpretarInscricoes(paraLinhas(inscricoes));
   const confirmados = inscricoes.filter((i) => i.status === 'confirmado');
   const goleiros = confirmados.filter((i) => i.posicao === 'GOL').length;

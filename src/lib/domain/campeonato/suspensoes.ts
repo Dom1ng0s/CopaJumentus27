@@ -15,8 +15,15 @@ export interface SituacaoDisciplinar {
   cumpridas: string[];
 }
 
-/** Ordem cronológica: data/hora quando houver; sem data vai para o fim, mantendo a ordem de cadastro. */
+/**
+ * Ordem cronológica. Quando todas têm número de jogo (modelo oficial: um campo,
+ * um jogo por vez), vale o número. Senão: data/hora quando houver; sem data vai
+ * para o fim, mantendo a ordem de cadastro.
+ */
 export function ordenarPartidas(partidas: readonly Partida[]): Partida[] {
+  if (partidas.length > 0 && partidas.every((p) => p.numero !== undefined)) {
+    return [...partidas].sort((a, b) => a.numero! - b.numero!);
+  }
   return partidas
     .map((p, i) => ({ p, i }))
     .sort((x, y) => {

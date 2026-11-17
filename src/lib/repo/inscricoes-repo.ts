@@ -1,6 +1,7 @@
 // Inscrições do sorteio no banco (substituem a aba INSCRITOS da planilha).
+// Cada campeonato tem as suas.
 
-import { asc, eq } from 'drizzle-orm';
+import { and, asc, eq } from 'drizzle-orm';
 import { banco, type Banco } from '@/lib/db/cliente';
 import { inscricao } from '@/lib/db/schema';
 import type { Posicao } from '@/lib/domain/tipos';
@@ -39,17 +40,18 @@ function novoId(): string {
   return `i${crypto.randomUUID().slice(0, 8)}`;
 }
 
-export async function listarInscricoes(db?: Banco): Promise<Inscricao[]> {
+export async function listarInscricoes(campeonatoId: number, db?: Banco): Promise<Inscricao[]> {
   const c = db ?? (await banco());
-  return c.select().from(inscricao).orderBy(asc(inscricao.criadoEm), asc(inscricao.id));
+  return c.select().from(inscricao).where(eq(inscricao.campeonatoId, campeonatoId)).orderBy(asc(inscricao.criadoEm), asc(inscricao.id));
 }
 
-export async function criarInscricao(dados: DadosInscricao, db?: Banco): Promise<Inscricao> {
+export async function criarInscricao(campeonatoId: number, dados: DadosInscricao, db?: Banco): Promise<Inscricao> {
   const c = db ?? (await banco());
   const [nova] = await c
     .insert(inscricao)
     .values({
       id: novoId(),
+      campeonatoId,
       nome: dados.nome.trim(),
       apelido: dados.apelido?.trim() || null,
       posicao: dados.posicao ?? null,
@@ -61,7 +63,7 @@ export async function criarInscricao(dados: DadosInscricao, db?: Banco): Promise
   return nova;
 }
 
-export async function atualizarInscricao(id: string, dados: DadosInscricao, db?: Banco): Promise<void> {
+export async function atualizarInscricao(campeonatoId: number, id: string, dados: DadosInscricao, db?: Banco): Promise<void> {
   const c = db ?? (await banco());
   await c
     .update(inscricao)
@@ -73,12 +75,12 @@ export async function atualizarInscricao(id: string, dados: DadosInscricao, db?:
       capitaoDe: dados.capitaoDe?.trim() || null,
       status: dados.status ?? 'confirmado',
     })
-    .where(eq(inscricao.id, id));
+    .where(and(eq(inscricao.id, id), eq(inscricao.campeonatoId, campeonatoId)));
 }
 
-export async function removerInscricao(id: string, db?: Banco): Promise<void> {
+export async function removerInscricao(campeonatoId: number, id: string, db?: Banco): Promise<void> {
   const c = db ?? (await banco());
-  await c.delete(inscricao).where(eq(inscricao.id, id));
+  await c.delete(inscricao).where(and(eq(inscricao.id, id), eq(inscricao.campeonatoId, campeonatoId)));
 }
 
 /**
@@ -86,6 +88,7 @@ export async function removerInscricao(id: string, db?: Banco): Promise<void> {
  * (comparando o nome sem acento e sem caixa); não altera quem já existe.
  */
 export async function importarCsv(
+  campeonatoId: number,
   csv: string,
   db?: Banco,
 ): Promise<{ importadas: number; puladas: number; erro?: string }> {
@@ -93,7 +96,7 @@ export async function importarCsv(
   const { linhas, erro } = linhasDoCsv(csv);
   if (erro) return { importadas: 0, puladas: 0, erro };
 
-  const existentes = new Set((await listarInscricoes(c)).map((i) => normalizar(i.nome)));
+  const existentes = new Set((await listarInscricoes(campeonatoId, c)).map((i) => normalizar(i.nome)));
   const novas = linhas.filter((l) => !existentes.has(normalizar(l.nome)));
   if (novas.length) {
     // criado_em crescente preserva a ordem da planilha.
@@ -101,6 +104,7 @@ export async function importarCsv(
     await c.insert(inscricao).values(
       novas.map((l, i) => ({
         id: novoId(),
+        campeonatoId,
         nome: l.nome.trim(),
         apelido: l.apelido?.trim() || null,
         posicao: lerPosicao(l.posicao),

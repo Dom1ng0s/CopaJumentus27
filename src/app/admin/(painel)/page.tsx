@@ -1,24 +1,37 @@
 import Link from 'next/link';
 import { Aviso, CardPartida, Numero, Secao } from '@/components/campeonato/ui';
-import { formatarReais, indices } from '@/lib/campeonato/consultas';
+import { formatarReais, grupoEncerrado, indices, lados } from '@/lib/campeonato/consultas';
+import { calcularClassificacao, empatesPendentes } from '@/lib/domain/campeonato/classificacao';
 import { ordenarPartidas } from '@/lib/domain/campeonato/suspensoes';
-import { carregarCampeonato } from '@/lib/repo/campeonato-repo';
+import { campeonatoDoAdmin } from '@/lib/campeonato/selecao';
 
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Admin — Copa Jumentus' };
 
 export default async function Painel({ searchParams }: { searchParams: Promise<{ ok?: string; erro?: string }> }) {
   const { ok, erro } = await searchParams;
-  const c = await carregarCampeonato();
+  const c = await campeonatoDoAdmin();
   const { equipe } = indices(c);
   const pagos = c.jogadores.filter((j) => j.pago).length;
   const proximas = ordenarPartidas(c.partidas).filter((p) => p.status !== 'encerrada').slice(0, 4);
+  const semTabela = c.modelo === 'copa-jumentus-8' && c.equipes.some((e) => e.numeroTabela === undefined);
+  const empates = c.fases.flatMap((f) =>
+    c.grupos
+      .filter((g) => g.faseId === f.id && grupoEncerrado(c, g.id))
+      .flatMap((g) => empatesPendentes(calcularClassificacao(g.equipeIds, c.partidas.filter((p) => p.grupoId === g.id), c.pontuacao, c.criterios, { desempates: f.desempates }))),
+  );
 
   return (
     <div className="space-y-6">
       <h1 className="titulo-hero t-xl text-4xl">{c.nome}</h1>
       <Aviso texto={ok} tipo="ok" />
       <Aviso texto={erro} />
+      {semTabela && c.sorteioOficializadoEm && (
+        <Aviso tipo="info" texto="Elencos oficializados: falta sortear T1 a T8 (Partidas) para os 28 jogos do Grupo Único terem equipes." />
+      )}
+      {empates.length > 0 && (
+        <Aviso tipo="info" texto={`Há ${empates.length} empate(s) em todos os critérios esperando decisão em Fases e grupos.`} />
+      )}
 
       {!c.sorteioOficializadoEm && (
         <Aviso
@@ -48,7 +61,7 @@ export default async function Painel({ searchParams }: { searchParams: Promise<{
         ) : (
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {proximas.map((p) => (
-              <CardPartida key={p.id} partida={p} mandante={equipe.get(p.mandanteId)} visitante={equipe.get(p.visitanteId)} href={`/admin/partidas/${p.id}`} />
+              <CardPartida key={p.id} partida={p} {...lados(c, p, equipe)} href={`/admin/partidas/${p.id}`} />
             ))}
           </div>
         )}

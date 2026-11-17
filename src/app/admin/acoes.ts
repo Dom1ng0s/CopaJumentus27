@@ -6,10 +6,32 @@
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { exigirAdmin } from '@/lib/auth/servidor';
+import { cookies } from 'next/headers';
+import { COOKIE_CAMPEONATO, idDoCampeonatoDoAdmin } from '@/lib/campeonato/selecao';
 import { gerarRodadas, nomeGrupo, sortearGrupos } from '@/lib/domain/campeonato/grupos';
-import type { Campeonato, Criterio, Partida, StatusPartida, TipoEvento, TipoFase } from '@/lib/domain/campeonato/tipos';
+import { sortearNumerosTabela } from '@/lib/domain/campeonato/modelo';
+import {
+  ehGol,
+  TIPOS_EVENTO,
+  type Campeonato,
+  type Criterio,
+  type Partida,
+  type StatusCampeonato,
+  type StatusPartida,
+  type TipoEvento,
+  type TipoFase,
+} from '@/lib/domain/campeonato/tipos';
 import type { Posicao } from '@/lib/domain/tipos';
-import { atualizarCampeonato, novoId } from '@/lib/repo/campeonato-repo';
+import {
+  ErroCampeonato,
+  aplicarModeloOficial,
+  atualizarCampeonato,
+  criarCampeonato,
+  duplicarCampeonato,
+  listarCampeonatos,
+  novoId,
+  slugDe,
+} from '@/lib/repo/campeonato-repo';
 import {
   atualizarInscricao,
   criarInscricao,
@@ -24,6 +46,20 @@ import {
 // ---------- utilitários ----------
 
 class ErroRegra extends Error {}
+
+/** Erros de regra de qualquer camada que devem aparecer para o admin. */
+function ehErroDeRegra(e: unknown): e is Error {
+  return e instanceof ErroRegra || e instanceof ErroCampeonato;
+}
+
+/** Funções do domínio lançam Error comum; aqui viram erro de regra visível. */
+function noDominio(f: () => void): void {
+  try {
+    f();
+  } catch (e) {
+    throw new ErroRegra(e instanceof Error ? e.message : String(e));
+  }
+}
 
 function texto(f: FormData, campo: string): string {
   const v = f.get(campo);
@@ -45,15 +81,18 @@ function posicao(f: FormData): Posicao {
   return POSICOES.find((x) => x === p) ?? 'MEI';
 }
 
-/** Executa a alteração; erro de regra volta para a página com a mensagem. */
+/**
+ * Executa a alteração no campeonato em edição; erro de regra (inclusive a trava
+ * do chaveamento e as regras de consistência) volta para a página com a mensagem.
+ */
 async function alterar(f: FormData, mudanca: (c: Campeonato) => void): Promise<void> {
   await exigirAdmin();
   const volta = texto(f, 'volta') || '/admin';
   let erro: string | null = null;
   try {
-    await atualizarCampeonato(mudanca);
+    await atualizarCampeonato(await idDoCampeonatoDoAdmin(), mudanca);
   } catch (e) {
-    if (e instanceof ErroRegra) erro = e.message;
+    if (ehErroDeRegra(e)) erro = e.message;
     else throw e;
   }
   revalidatePath('/', 'layout');
@@ -69,7 +108,7 @@ async function executar(f: FormData, operacao: () => Promise<string | void>): Pr
   try {
     mensagem = (await operacao()) ?? null;
   } catch (e) {
-    if (e instanceof ErroRegra) erro = e.message;
+    if (ehErroDeRegra(e)) erro = e.message;
     else throw e;
   }
   revalidatePath('/', 'layout');
@@ -94,6 +133,12 @@ export async function salvarCampeonato(f: FormData): Promise<void> {
     const nome = texto(f, 'nome');
     if (!nome) throw new ErroRegra('O campeonato precisa de um nome.');
     c.nome = nome;
+    c.edicao = opcional(f, 'edicao');
+    c.slug = slugDe(texto(f, 'slug') || [nome, c.edicao].filter(Boolean).join(' '));
+    const status = texto(f, 'status') as StatusCampeonato;
+    if (['rascunho', 'inscricoes', 'andamento', 'encerrado'].includes(status)) c.status = status;
+    c.banner = opcional(f, 'banner');
+    c.escudo = opcional(f, 'escudo');
     c.subtitulo = opcional(f, 'subtitulo');
     c.inicio = opcional(f, 'inicio');
     c.fim = opcional(f, 'fim');
@@ -162,7 +207,13 @@ export async function excluirFase(f: FormData): Promise<void> {
   });
 }
 
+/** No modelo oficial, grupo e jogos vêm prontos (T1–T8): nada de refazer grupos. */
+function exigirFormatoLivre(c: Campeonato): void {
+  if (c.modelo === 'copa-jumentus-8') throw new ErroRegra('No modelo oficial o Grupo Único e os 34 jogos já vêm prontos; use o sorteio de T1 a T8 em Partidas.');
+}
+
 function exigirFaseSemJogos(c: Campeonato, faseId: string): void {
+  exigirFormatoLivre(c);
   if (c.partidas.some((p) => p.faseId === faseId && p.grupoId)) {
     throw new ErroRegra('Esta fase já tem jogos de grupo. Exclua-os antes de refazer os grupos.');
   }
@@ -205,6 +256,7 @@ export async function definirGruposManual(f: FormData): Promise<void> {
 /** Cria os jogos de todos contra todos que ainda não existem em cada grupo da fase. */
 export async function gerarJogosDosGrupos(f: FormData): Promise<void> {
   await alterar(f, (c) => {
+    exigirFormatoLivre(c);
     const faseId = texto(f, 'faseId');
     const grupos = c.grupos.filter((g) => g.faseId === faseId);
     if (grupos.length === 0) throw new ErroRegra('Defina os grupos antes de gerar os jogos.');
@@ -270,9 +322,10 @@ export async function editarPartida(f: FormData): Promise<void> {
     p.rotulo = opcional(f, 'rotulo');
     p.dataHora = opcional(f, 'dataHora');
     p.local = opcional(f, 'local');
+    p.campo = opcional(f, 'campo');
     const m = opcional(f, 'mandanteId');
     const v = opcional(f, 'visitanteId');
-    if (m && v) {
+    if (m && v && !p.origemMandante && !p.origemVisitante) {
       if (m === v) throw new ErroRegra('Escolha duas equipes diferentes.');
       if ((m !== p.mandanteId || v !== p.visitanteId) && p.eventos.length > 0) {
         throw new ErroRegra('A súmula já tem eventos; não dá para trocar as equipes.');
@@ -286,6 +339,10 @@ export async function editarPartida(f: FormData): Promise<void> {
 export async function excluirPartida(f: FormData): Promise<void> {
   await alterar(f, (c) => {
     const id = texto(f, 'partidaId');
+    const p = c.partidas.find((x) => x.id === id);
+    if (p && p.numero !== undefined && c.modelo === 'copa-jumentus-8') {
+      throw new ErroRegra('Os 34 jogos do modelo oficial não podem ser excluídos.');
+    }
     c.partidas = c.partidas.filter((p) => p.id !== id);
   });
 }
@@ -313,9 +370,9 @@ export async function ajustarPlacar(f: FormData): Promise<void> {
 
 /** Lado do placar que um evento de gol altera. */
 function ladoDoGol(p: Partida, tipo: TipoEvento, equipeId: string): 'mandante' | 'visitante' | null {
-  if (tipo !== 'gol' && tipo !== 'gol-contra') return null;
+  if (!ehGol(tipo)) return null;
   const doMandante = equipeId === p.mandanteId;
-  const marcaMandante = tipo === 'gol' ? doMandante : !doMandante;
+  const marcaMandante = tipo === 'gol-contra' ? !doMandante : doMandante;
   return marcaMandante ? 'mandante' : 'visitante';
 }
 
@@ -323,11 +380,16 @@ export async function adicionarEvento(f: FormData): Promise<void> {
   await alterar(f, (c) => {
     const p = acharPartida(c, texto(f, 'partidaId'));
     const tipo = texto(f, 'tipo') as TipoEvento;
-    if (!['gol', 'gol-contra', 'amarelo', 'vermelho'].includes(tipo)) throw new ErroRegra('Tipo de evento inválido.');
+    if (!TIPOS_EVENTO.includes(tipo)) throw new ErroRegra('Tipo de evento inválido.');
+    if (!p.mandanteId || !p.visitanteId) throw new ErroRegra('Esta partida ainda não tem os dois participantes definidos.');
     const jogador = c.jogadores.find((j) => j.id === texto(f, 'jogadorId'));
     if (!jogador) throw new ErroRegra('Escolha o jogador.');
     if (jogador.equipeId !== p.mandanteId && jogador.equipeId !== p.visitanteId) {
       throw new ErroRegra('Esse jogador não é de nenhuma das duas equipes.');
+    }
+    if (tipo === 'defesa') {
+      const goleiro = jogador.equipeId === p.mandanteId ? p.goleiroMandanteId : p.goleiroVisitanteId;
+      if (goleiro && goleiro !== jogador.id) throw new ErroRegra('Defesa é do goleiro registrado nesta partida.');
     }
     const assistente = c.jogadores.find((j) => j.id === texto(f, 'assistenciaId'));
     const minuto = inteiro(f, 'minuto', 0);
@@ -402,7 +464,9 @@ export async function editarJogador(f: FormData): Promise<void> {
 export async function removerJogador(f: FormData): Promise<void> {
   await alterar(f, (c) => {
     const id = texto(f, 'jogadorId');
-    const usado = c.partidas.some((p) => p.eventos.some((e) => e.jogadorId === id || e.assistenciaId === id));
+    const usado = c.partidas.some(
+      (p) => p.goleiroMandanteId === id || p.goleiroVisitanteId === id || p.eventos.some((e) => e.jogadorId === id || e.assistenciaId === id),
+    );
     if (usado) throw new ErroRegra('Esse jogador já aparece em súmulas; transfira em vez de remover.');
     c.jogadores = c.jogadores.filter((j) => j.id !== id);
     for (const e of c.equipes) if (e.capitaoId === id) e.capitaoId = undefined;
@@ -432,7 +496,7 @@ export interface ElencoParaOficializar {
 export async function oficializarSorteio(elencos: ElencoParaOficializar[]): Promise<{ ok: boolean; erro?: string }> {
   await exigirAdmin();
   try {
-    await atualizarCampeonato((c) => {
+    await atualizarCampeonato(await idDoCampeonatoDoAdmin(), (c) => {
       if (c.partidas.some((p) => p.eventos.length > 0)) {
         throw new ErroRegra('O campeonato já tem súmulas preenchidas; o sorteio não pode mais ser oficializado.');
       }
@@ -456,7 +520,7 @@ export async function oficializarSorteio(elencos: ElencoParaOficializar[]): Prom
       c.sorteioOficializadoEm = new Date().toISOString();
     });
   } catch (e) {
-    if (e instanceof ErroRegra) return { ok: false, erro: e.message };
+    if (ehErroDeRegra(e)) return { ok: false, erro: e.message };
     throw e;
   }
   revalidatePath('/', 'layout');
@@ -480,19 +544,19 @@ function dadosInscricao(f: FormData): DadosInscricao {
 
 export async function criarInscricaoAcao(f: FormData): Promise<void> {
   await executar(f, async () => {
-    await criarInscricao(dadosInscricao(f));
+    await criarInscricao(await idDoCampeonatoDoAdmin(), dadosInscricao(f));
   });
 }
 
 export async function editarInscricaoAcao(f: FormData): Promise<void> {
   await executar(f, async () => {
-    await atualizarInscricao(texto(f, 'inscricaoId'), dadosInscricao(f));
+    await atualizarInscricao(await idDoCampeonatoDoAdmin(), texto(f, 'inscricaoId'), dadosInscricao(f));
   });
 }
 
 export async function removerInscricaoAcao(f: FormData): Promise<void> {
   await executar(f, async () => {
-    await removerInscricao(texto(f, 'inscricaoId'));
+    await removerInscricao(await idDoCampeonatoDoAdmin(), texto(f, 'inscricaoId'));
   });
 }
 
@@ -502,8 +566,83 @@ export async function importarInscricoesAcao(f: FormData): Promise<void> {
     const arquivo = f.get('arquivo');
     if (!(arquivo instanceof File) || arquivo.size === 0) throw new ErroRegra('Escolha o arquivo CSV.');
     if (arquivo.size > 1_000_000) throw new ErroRegra('Arquivo grande demais para uma lista de inscritos.');
-    const r = await importarCsv(await arquivo.text());
+    const r = await importarCsv(await idDoCampeonatoDoAdmin(), await arquivo.text());
     if (r.erro) throw new ErroRegra(r.erro);
     return `${r.importadas} importada(s)${r.puladas ? `, ${r.puladas} já estavam cadastradas` : ''}.`;
+  });
+}
+
+// ---------- súmula: goleiros ----------
+
+/** Goleiro de cada lado da partida (vale para o ranking de goleiros). */
+export async function definirGoleiro(f: FormData): Promise<void> {
+  await alterar(f, (c) => {
+    const p = acharPartida(c, texto(f, 'partidaId'));
+    const lado = texto(f, 'lado') === 'visitante' ? 'visitante' : 'mandante';
+    const equipeId = lado === 'mandante' ? p.mandanteId : p.visitanteId;
+    if (!equipeId) throw new ErroRegra('Esta partida ainda não tem os dois participantes definidos.');
+    const id = texto(f, 'jogadorId');
+    if (id && !c.jogadores.some((j) => j.id === id && j.equipeId === equipeId)) throw new ErroRegra('Esse jogador não é desta equipe.');
+    if (lado === 'mandante') p.goleiroMandanteId = id || undefined;
+    else p.goleiroVisitanteId = id || undefined;
+  });
+}
+
+// ---------- vários campeonatos e modelo oficial ----------
+
+/** Escolhe o campeonato em edição deste admin (cookie do navegador). */
+export async function selecionarCampeonato(f: FormData): Promise<void> {
+  await exigirAdmin();
+  const id = inteiro(f, 'campeonatoId', -1);
+  if (!(await listarCampeonatos()).some((c) => c.id === id)) redirect('/admin/campeonatos?erro=Campeonato%20n%C3%A3o%20encontrado.');
+  (await cookies()).set(COOKIE_CAMPEONATO, String(id), { httpOnly: true, secure: true, sameSite: 'lax', path: '/', maxAge: 60 * 60 * 24 * 365 });
+  revalidatePath('/', 'layout');
+  redirect(texto(f, 'volta') === '/admin/campeonatos' ? '/admin/campeonatos' : '/admin');
+}
+
+export async function criarCampeonatoAcao(f: FormData): Promise<void> {
+  await executar(f, async () => {
+    const modelo = texto(f, 'modelo') === 'livre' ? 'livre' : 'copa-jumentus-8';
+    const id = await criarCampeonato({ nome: texto(f, 'nome'), edicao: opcional(f, 'edicao'), modelo, inicio: opcional(f, 'inicio'), fim: opcional(f, 'fim'), local: opcional(f, 'local') });
+    (await cookies()).set(COOKIE_CAMPEONATO, String(id), { httpOnly: true, secure: true, sameSite: 'lax', path: '/', maxAge: 60 * 60 * 24 * 365 });
+    return modelo === 'livre' ? 'Campeonato criado e selecionado.' : 'Campeonato criado com os 34 jogos do modelo oficial e selecionado.';
+  });
+}
+
+export async function duplicarCampeonatoAcao(f: FormData): Promise<void> {
+  await executar(f, async () => {
+    await duplicarCampeonato(inteiro(f, 'origemId', -1), { nome: texto(f, 'nome'), edicao: opcional(f, 'edicao'), comElencos: texto(f, 'comElencos') === '1' });
+    return 'Campeonato duplicado, em rascunho.';
+  });
+}
+
+/** Aplica o modelo oficial ao campeonato em edição (só sem partidas). */
+export async function aplicarModeloAcao(f: FormData): Promise<void> {
+  await executar(f, async () => {
+    await aplicarModeloOficial(await idDoCampeonatoDoAdmin());
+    return 'Modelo oficial aplicado: Grupo Único com 28 jogos e mata-mata com 6.';
+  });
+}
+
+/** Sorteio de T1 a T8 (random.ts), depois de oficializar os elencos. */
+export async function sortearTabelaAcao(f: FormData): Promise<void> {
+  await alterar(f, (c) => {
+    if (!c.sorteioOficializadoEm) throw new ErroRegra('Oficialize os elencos (fim da cerimônia) antes de sortear T1 a T8.');
+    noDominio(() => sortearNumerosTabela(c));
+  });
+}
+
+/** Decisão manual de um empate total na classificação: a ordem vem do formulário. */
+export async function decidirDesempate(f: FormData): Promise<void> {
+  await alterar(f, (c) => {
+    const fase = c.fases.find((x) => x.id === texto(f, 'faseId'));
+    if (!fase) throw new ErroRegra('Fase não encontrada.');
+    const empatadas = texto(f, 'equipes').split(',').filter(Boolean);
+    const ordem = [...empatadas].sort((a, b) => inteiro(f, `ordem_${a}`, 99) - inteiro(f, `ordem_${b}`, 99));
+    if (new Set(empatadas.map((id) => inteiro(f, `ordem_${id}`, 0))).size !== empatadas.length) {
+      throw new ErroRegra('Dê uma posição diferente para cada equipe empatada.');
+    }
+    const mesmas = (d: string[]) => d.length === ordem.length && d.every((id) => ordem.includes(id));
+    fase.desempates = [...(fase.desempates ?? []).filter((d) => !mesmas(d)), ordem];
   });
 }
