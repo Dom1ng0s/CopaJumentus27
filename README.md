@@ -86,11 +86,14 @@ scripts/
 public/
   banner-copa-jumentus.webp
   imagens/           # logo, uniformes, escudos, artes — ver public/imagens/README.md
+docs/
+  marca/             # manual de marca e skill do Gemini
 dados/               # inscritos.csv local (fora do Git)
 ```
 
 ## Identidade visual
 
+- Identidade híbrida: estrutura MLS com atmosfera Vice City. Regras em [`docs/marca/`](docs/marca/) (manual de marca e skill do Gemini).
 - A logo oficial fica em [`public/imagens/logo/`](public/imagens/logo/) e não deve ser redesenhada.
 - O visual do site segue o design system descrito em CLAUDE.md §5.
 - O wordmark "COPA JUMENTUS / VICE CITY" é SVG vetorizado. **A fonte Pricedown nunca entra no repositório** (restrição de licença).
