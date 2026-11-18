@@ -1,6 +1,8 @@
 // Tipos do campeonato (gestão simples: equipes, fases, grupos, partidas, súmula).
 // Fonte: CLAUDE.md §8.
 
+import type { Programacao } from './programacao';
+
 import type { Posicao } from '@/lib/domain/tipos';
 
 export interface Pontuacao {
@@ -186,4 +188,6 @@ export interface Campeonato {
   partidas: Partida[];
   /** Quando o resultado do sorteio virou elenco oficial. */
   sorteioOficializadoEm?: string;
+  /** Horário de início de cada dia, duração e intervalo dos jogos (modelo oficial). */
+  programacao?: Programacao;
 }

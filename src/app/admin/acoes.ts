@@ -9,7 +9,8 @@ import { exigirAdmin } from '@/lib/auth/servidor';
 import { cookies } from 'next/headers';
 import { COOKIE_CAMPEONATO, idDoCampeonatoDoAdmin } from '@/lib/campeonato/selecao';
 import { gerarRodadas, nomeGrupo, sortearGrupos } from '@/lib/domain/campeonato/grupos';
-import { sortearNumerosTabela } from '@/lib/domain/campeonato/modelo';
+import { DIAS_DO_MODELO, sortearNumerosTabela } from '@/lib/domain/campeonato/modelo';
+import { aplicarProgramacao, problemaNaProgramacao, remarcarPartida, type Programacao } from '@/lib/domain/campeonato/programacao';
 import {
   ehGol,
   TIPOS_EVENTO,
@@ -85,18 +86,24 @@ function posicao(f: FormData): Posicao {
  * Executa a alteração no campeonato em edição; erro de regra (inclusive a trava
  * do chaveamento e as regras de consistência) volta para a página com a mensagem.
  */
-async function alterar(f: FormData, mudanca: (c: Campeonato) => void): Promise<void> {
+/** Se `mudanca` devolve um texto, ele aparece como confirmação depois de gravar. */
+async function alterar(f: FormData, mudanca: (c: Campeonato) => string | void): Promise<void> {
   await exigirAdmin();
   const volta = texto(f, 'volta') || '/admin';
   let erro: string | null = null;
+  let mensagem: string | null = null;
   try {
-    await atualizarCampeonato(await idDoCampeonatoDoAdmin(), mudanca);
+    await atualizarCampeonato(await idDoCampeonatoDoAdmin(), (c) => {
+      mensagem = mudanca(c) ?? null;
+    });
   } catch (e) {
     if (ehErroDeRegra(e)) erro = e.message;
     else throw e;
   }
   revalidatePath('/', 'layout');
-  if (erro) redirect(`${volta}${volta.includes('?') ? '&' : '?'}erro=${encodeURIComponent(erro)}`);
+  const sep = volta.includes('?') ? '&' : '?';
+  if (erro) redirect(`${volta}${sep}erro=${encodeURIComponent(erro)}`);
+  if (mensagem) redirect(`${volta}${sep}ok=${encodeURIComponent(mensagem)}`);
 }
 
 /** Igual a `alterar`, para operações fora do documento do campeonato. */
@@ -320,7 +327,8 @@ export async function editarPartida(f: FormData): Promise<void> {
   await alterar(f, (c) => {
     const p = acharPartida(c, texto(f, 'partidaId'));
     p.rotulo = opcional(f, 'rotulo');
-    p.dataHora = opcional(f, 'dataHora');
+    let empurrados = 0;
+    noDominio(() => (empurrados = remarcarPartida(c.partidas, p.id, opcional(f, 'dataHora'), texto(f, 'empurrar') === '1')));
     p.local = opcional(f, 'local');
     p.campo = opcional(f, 'campo');
     const m = opcional(f, 'mandanteId');
@@ -333,6 +341,7 @@ export async function editarPartida(f: FormData): Promise<void> {
       p.mandanteId = m;
       p.visitanteId = v;
     }
+    if (empurrados) return `Partida salva e ${empurrados} jogo${empurrados > 1 ? 's seguintes andaram' : ' seguinte andou'} junto.`;
   });
 }
 
@@ -625,6 +634,37 @@ export async function aplicarModeloAcao(f: FormData): Promise<void> {
 }
 
 /** Sorteio de T1 a T8 (random.ts), depois de oficializar os elencos. */
+/** Programação do modelo: início de cada dia, duração e intervalo; grava e gera os horários. */
+export async function programarJogosAcao(f: FormData): Promise<void> {
+  await alterar(f, (c) => {
+    const programacao: Programacao = {
+      dias: Array.from({ length: DIAS_DO_MODELO }, (_, i) => ({ data: texto(f, `data${i + 1}`), inicio: texto(f, `inicio${i + 1}`) })),
+      duracaoMin: inteiro(f, 'duracaoMin', -1),
+      intervaloMin: inteiro(f, 'intervaloMin', -1),
+    };
+    const problema = problemaNaProgramacao(programacao, DIAS_DO_MODELO);
+    if (problema) throw new ErroRegra(problema);
+    const fixos = c.partidas.filter((p) => p.dia !== undefined && p.status !== 'agendada' && p.dataHora).length;
+    noDominio(() => aplicarProgramacao(c.partidas, programacao));
+    c.programacao = programacao;
+    return fixos
+      ? `Horários gerados. ${fixos} jogo${fixos > 1 ? 's' : ''} já começado${fixos > 1 ? 's mantiveram' : ' manteve'} o horário.`
+      : 'Horários gerados para todos os jogos.';
+  });
+}
+
+/** Remarca uma partida pela tela da súmula; com "empurrar", os seguintes do dia andam junto. */
+export async function remarcarPartidaAcao(f: FormData): Promise<void> {
+  await alterar(f, (c) => {
+    const p = acharPartida(c, texto(f, 'partidaId'));
+    const nova = opcional(f, 'dataHora');
+    if (!nova) throw new ErroRegra('Informe a data e a hora.');
+    let empurrados = 0;
+    noDominio(() => (empurrados = remarcarPartida(c.partidas, p.id, nova, texto(f, 'empurrar') === '1')));
+    return empurrados ? `Jogo remarcado e ${empurrados} jogo${empurrados > 1 ? 's seguintes andaram' : ' seguinte andou'} junto.` : 'Jogo remarcado.';
+  });
+}
+
 export async function sortearTabelaAcao(f: FormData): Promise<void> {
   await alterar(f, (c) => {
     if (!c.sorteioOficializadoEm) throw new ErroRegra('Oficialize os elencos (fim da cerimônia) antes de sortear T1 a T8.');

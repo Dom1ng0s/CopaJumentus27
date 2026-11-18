@@ -131,6 +131,28 @@ describe('vários campeonatos', () => {
     expect(c.partidas.every((p) => !p.mandanteId)).toBe(true);
   });
 
+  it('modelo com período preenchido já nasce com horário em todos os jogos; programação é gravada', async () => {
+    await primeiro();
+    const id = await criarCampeonato({ nome: 'Copa', edicao: '2029', modelo: 'copa-jumentus-8', inicio: '2029-01-13', fim: '2029-01-14' }, db);
+    const c = await carregarCampeonato(id, db);
+    expect(c.programacao).toEqual({
+      dias: [
+        { data: '2029-01-13', inicio: '08:00' },
+        { data: '2029-01-14', inicio: '08:00' },
+      ],
+      duracaoMin: 30,
+      intervaloMin: 5,
+    });
+    expect(c.partidas.find((p) => p.numero === 1)?.dataHora).toBe('2029-01-13T08:00');
+    expect(c.partidas.find((p) => p.numero === 17)?.dataHora).toBe('2029-01-14T08:00');
+    expect(c.partidas.every((p) => p.dataHora)).toBe(true);
+
+    // Sem período, a programação fica sugerida e os jogos sem hora até o admin informar as datas.
+    const semData = await carregarCampeonato(await criarCampeonato({ nome: 'Sem data', modelo: 'copa-jumentus-8' }, db), db);
+    expect(semData.programacao?.dias.map((d) => d.data)).toEqual(['', '']);
+    expect(semData.partidas.some((p) => p.dataHora)).toBe(false);
+  });
+
   it('campeonatos não se misturam: gravar um não apaga o outro', async () => {
     const um = await primeiro();
     const dois = await criarCampeonato({ nome: 'Outra', modelo: 'copa-jumentus-8' }, db);

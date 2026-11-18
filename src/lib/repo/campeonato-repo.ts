@@ -12,7 +12,8 @@ import { escudoDe, MARCAS } from '@/lib/campeonato/marcas';
 import { banco, type Banco } from '@/lib/db/cliente';
 import * as t from '@/lib/db/schema';
 import { aplicarChaveamento, problemaDeConsistencia, violacaoDaTrava } from '@/lib/domain/campeonato/chaveamento';
-import { aplicarModelo } from '@/lib/domain/campeonato/modelo';
+import { aplicarModelo, DIAS_DO_MODELO } from '@/lib/domain/campeonato/modelo';
+import { aplicarProgramacao, problemaNaProgramacao, programacaoPadrao } from '@/lib/domain/campeonato/programacao';
 import {
   CRITERIOS_PADRAO,
   type Campeonato,
@@ -154,6 +155,7 @@ async function ler(db: Leitor, id: number): Promise<Campeonato | null> {
     criterios: criteriosCompletos(cfg.criterios),
     valorInscricao: Number(cfg.valorInscricao),
     sorteioOficializadoEm: cfg.sorteioOficializadoEm?.toISOString(),
+    programacao: cfg.programacao ?? undefined,
     equipes: equipes.map((e) => ({
       id: e.id,
       nome: e.nome,
@@ -234,6 +236,7 @@ function configuracao(c: Campeonato) {
     criterios: c.criterios,
     valorInscricao: c.valorInscricao.toFixed(2),
     sorteioOficializadoEm: c.sorteioOficializadoEm ? new Date(c.sorteioOficializadoEm) : null,
+    programacao: c.programacao ?? null,
     atualizadoEm: new Date(),
   };
 }
@@ -476,6 +479,15 @@ export interface DadosNovoCampeonato {
   local?: string;
 }
 
+/**
+ * Programação sugerida para o modelo (08:00, jogos de 30 min, 5 min entre eles).
+ * Com o período do campeonato preenchido, os 34 jogos já nascem com horário; o admin ajusta em Partidas.
+ */
+function programarModelo(c: Campeonato): void {
+  c.programacao ??= programacaoPadrao(c.inicio, c.fim, DIAS_DO_MODELO);
+  if (!problemaNaProgramacao(c.programacao, DIAS_DO_MODELO)) aplicarProgramacao(c.partidas, c.programacao);
+}
+
 /** Novo campeonato com as 8 equipes do manual; no modelo oficial, já com os 34 jogos. */
 export async function criarCampeonato(dados: DadosNovoCampeonato, db?: Banco): Promise<number> {
   const nome = dados.nome.trim();
@@ -497,7 +509,10 @@ export async function criarCampeonato(dados: DadosNovoCampeonato, db?: Banco): P
       { id: novoId(), nome: 'Mata-mata', tipo: 'mata-mata' },
     ],
   };
-  if (dados.modelo === 'copa-jumentus-8') aplicarModelo(c, novoId);
+  if (dados.modelo === 'copa-jumentus-8') {
+    aplicarModelo(c, novoId);
+    programarModelo(c);
+  }
   return inserir(db ?? (await banco()), c);
 }
 
@@ -529,6 +544,8 @@ export async function duplicarCampeonato(
     status: 'rascunho',
     duplicadoDe: o.id,
     sorteioOficializadoEm: undefined,
+    // Mesmos horários e duração; as datas são da edição nova.
+    programacao: o.programacao && { ...o.programacao, dias: o.programacao.dias.map((d) => ({ ...d, data: '' })) },
     equipes: o.equipes.map((e) => ({
       ...e,
       id: novo(e.id),
@@ -550,6 +567,7 @@ export async function aplicarModeloOficial(id: number, db?: Banco): Promise<Camp
     (c) => {
       try {
         aplicarModelo(c, novoId);
+        programarModelo(c);
       } catch (e) {
         throw new ErroCampeonato(e instanceof Error ? e.message : String(e));
       }

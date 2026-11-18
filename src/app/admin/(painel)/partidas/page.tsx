@@ -1,20 +1,24 @@
 import Link from 'next/link';
 import { Aviso, Escudo, Secao, SeloStatus } from '@/components/campeonato/ui';
-import { indices, lados, partidasDaFase } from '@/lib/campeonato/consultas';
+import { formatarData, indices, lados, partidasDaFase } from '@/lib/campeonato/consultas';
 import { campeonatoDoAdmin } from '@/lib/campeonato/selecao';
 import { partidaTravada } from '@/lib/domain/campeonato/chaveamento';
-import { criarPartida, editarPartida, excluirPartida, sortearTabelaAcao } from '../../acoes';
+import { DIAS_DO_MODELO } from '@/lib/domain/campeonato/modelo';
+import { problemaNaProgramacao, programacaoPadrao, resumirProgramacao } from '@/lib/domain/campeonato/programacao';
+import { criarPartida, editarPartida, excluirPartida, programarJogosAcao, sortearTabelaAcao } from '../../acoes';
 
 export const dynamic = 'force-dynamic';
 const VOLTA = '/admin/partidas';
 
-export default async function Partidas({ searchParams }: { searchParams: Promise<{ erro?: string }> }) {
-  const { erro } = await searchParams;
+export default async function Partidas({ searchParams }: { searchParams: Promise<{ erro?: string; ok?: string }> }) {
+  const { erro, ok } = await searchParams;
   const c = await campeonatoDoAdmin();
   const { equipe } = indices(c);
   const modelo = c.modelo === 'copa-jumentus-8';
   const tabela = [...c.equipes].filter((e) => e.numeroTabela !== undefined).sort((a, b) => a.numeroTabela! - b.numeroTabela!);
   const algumaComecou = c.partidas.some(partidaTravada);
+  const programacao = c.programacao ?? programacaoPadrao(c.inicio, c.fim, DIAS_DO_MODELO);
+  const resumo = problemaNaProgramacao(programacao, DIAS_DO_MODELO) ? [] : resumirProgramacao(c.partidas, programacao);
 
   const opcoesEquipes = c.equipes.map((e) => (
     <option key={e.id} value={e.id}>
@@ -26,6 +30,58 @@ export default async function Partidas({ searchParams }: { searchParams: Promise
     <div className="space-y-6">
       <h1 className="titulo-hero t-xl text-4xl">Partidas</h1>
       <Aviso texto={erro} />
+      <Aviso texto={ok} tipo="ok" />
+
+      {modelo && (
+        <Secao titulo="Programação dos jogos">
+          <p className="mb-4 text-sm text-text-2">
+            Um campo, um jogo por vez: cada jogo começa depois do anterior, somando a duração e o intervalo. Jogos que já começaram mantêm o horário.
+            Para um atraso no meio do dia, remarque o jogo e marque &ldquo;empurrar os seguintes&rdquo;.
+          </p>
+          <form action={programarJogosAcao} className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+            <input type="hidden" name="volta" value={VOLTA} />
+            {programacao.dias.map((d, i) => (
+              <fieldset key={i} className="contents">
+                <label>
+                  <span className="rotulo-campo">Dia {i + 1} · data</span>
+                  <input name={`data${i + 1}`} type="date" defaultValue={d.data} required className="campo" />
+                </label>
+                <label>
+                  <span className="rotulo-campo">Dia {i + 1} · primeiro jogo</span>
+                  <input name={`inicio${i + 1}`} type="time" step={300} defaultValue={d.inicio} required className="campo" />
+                </label>
+              </fieldset>
+            ))}
+            <label>
+              <span className="rotulo-campo">Duração do jogo (min)</span>
+              <input name="duracaoMin" type="number" inputMode="numeric" min={5} max={180} defaultValue={programacao.duracaoMin} required className="campo" />
+            </label>
+            <label>
+              <span className="rotulo-campo">Intervalo entre jogos (min)</span>
+              <input name="intervaloMin" type="number" inputMode="numeric" min={0} max={120} defaultValue={programacao.intervaloMin} required className="campo" />
+            </label>
+            <div className="col-span-2 flex items-end">
+              <button type="submit" className="btn-cta">
+                <span>Salvar e gerar horários</span>
+              </button>
+            </div>
+          </form>
+          {resumo.length > 0 && (
+            <ul className="mt-4 grid gap-2 sm:grid-cols-2">
+              {resumo.map((r) => (
+                <li key={r.dia} className="rounded-component bg-[var(--surface1)] px-3 py-2 text-sm">
+                  <span className="hud-label mr-2">Dia {r.dia}</span>
+                  {formatarData(r.data)} · {r.jogos} jogos · {r.primeiro} às {r.fim}
+                  {r.passaDaMeiaNoite && <span className="ml-2 font-semibold text-[var(--error-text)]">passa da meia-noite</span>}
+                </li>
+              ))}
+            </ul>
+          )}
+          {!c.programacao && (
+            <p className="mt-3 text-sm text-text-3">Valores sugeridos. Confira as datas e salve para gravar os horários.</p>
+          )}
+        </Secao>
+      )}
 
       {modelo && (
         <Secao titulo="Sorteio de T1 a T8">
@@ -145,6 +201,12 @@ export default async function Partidas({ searchParams }: { searchParams: Promise
                     <input type="hidden" name="partidaId" value={p.id} />
                     <input name="rotulo" defaultValue={p.rotulo ?? ''} placeholder="Rótulo" aria-label="Rótulo" className="campo" />
                     <input name="dataHora" type="datetime-local" defaultValue={p.dataHora ?? ''} aria-label="Data e hora" className="campo" />
+                    {p.numero !== undefined && p.dia !== undefined && (
+                      <label className="flex !min-w-0 !flex-none items-center gap-2 text-sm text-text-2">
+                        <input type="checkbox" name="empurrar" value="1" className="h-5 w-5 accent-[var(--accent)]" />
+                        Empurrar os seguintes do dia
+                      </label>
+                    )}
                     {!comOrigem && (
                       <>
                         <select name="mandanteId" defaultValue={p.mandanteId} aria-label="Mandante" className="campo">
