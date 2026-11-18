@@ -31,9 +31,9 @@ export interface Alocacao {
 export interface Sorteio {
   /** ISO timestamp de quando o sorteio foi gerado. */
   geradoEm: string;
-  /** Ordem de revelacao da etapa de linha. */
+  /** Ordem de revelacao da etapa de linha: aleatoria, nunca agrupada por estrelas. */
   linha: Alocacao[];
-  /** Ordem de revelacao da etapa de goleiros. */
+  /** Ordem de revelacao dos goleiros, revelados antes da linha na cerimonia. */
   goleiros: Alocacao[];
   /** Goleiros excedentes: ficam de fora, nao voltam ao pote (CLAUDE.md §3.4). */
   goleirosReservaIds: string[];

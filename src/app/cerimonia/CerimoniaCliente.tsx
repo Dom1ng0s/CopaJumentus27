@@ -4,12 +4,11 @@ import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { oficializarSorteio } from '@/app/admin/acoes';
 import { EscudoPorNome, IconeLuva, SeloCapitao } from '@/components/campeonato/ui';
-import { Estrelas } from '@/components/Estrelas';
 import { HudCard } from '@/components/HudCard';
 import { PalmBackdrop } from '@/components/PalmBackdrop';
 import { WordmarkCopaJumentus, WordmarkViceCity } from '@/components/Wordmark';
 import { marcaPorNome } from '@/lib/campeonato/marcas';
-import { NOME_COMPETICAO, SUBTITULO_COMPETICAO, TOLERANCIA_ESTRELAS } from '@/lib/config';
+import { NOME_COMPETICAO, SUBTITULO_COMPETICAO } from '@/lib/config';
 import { montarElencos, sortear, type ResultadoSorteio } from '@/lib/domain/sorteio';
 import type { Jogador, Time } from '@/lib/domain/tipos';
 import {
@@ -102,7 +101,7 @@ export function CerimoniaCliente({ jogadores, times, problemas = [] }: Props) {
     setCopiadoLink(false);
     setCopiadoResumo(false);
     setOficial({ estado: 'ocioso' });
-    setFase('linha');
+    setFase(r.sorteio.goleiros.length > 0 ? 'goleiros' : 'linha');
   }, [jogadores, times, bloqueado]);
 
   const reiniciarParaPalco = useCallback(() => {
@@ -115,43 +114,32 @@ export function CerimoniaCliente({ jogadores, times, problemas = [] }: Props) {
     setFase('pronto');
   }, []);
 
+  // Ordem da cerimônia: goleiros primeiro, depois os jogadores de linha um a um,
+  // em ordem aleatória (decisão do operador em 18/11/2026).
   const revelarProximo = useCallback(() => {
     if (!resultado) return;
     const { linha, goleiros } = resultado.sorteio;
 
-    if (fase === 'linha') {
-      if (reveladasLinha < linha.length) {
-        setReveladasLinha((n) => n + 1);
-        return;
-      }
-      if (goleiros.length > 0) {
-        setFase('pre-goleiros');
-      } else {
-        setFase('fim');
-      }
-      return;
-    }
-
-    if (fase === 'pre-goleiros') {
-      if (goleiros.length > 0) {
-        setFase('goleiros');
-        setReveladasGol(1);
-        if (goleiros.length === 1) {
-          setFase('fim');
-        }
-      } else {
-        setFase('fim');
-      }
-      return;
-    }
-
     if (fase === 'goleiros') {
       if (reveladasGol < goleiros.length) {
-        const proximo = reveladasGol + 1;
-        setReveladasGol(proximo);
-        if (proximo >= goleiros.length) {
-          setFase('fim');
-        }
+        setReveladasGol((n) => n + 1);
+        return;
+      }
+      setFase(linha.length > 0 ? 'pre-linha' : 'fim');
+      return;
+    }
+
+    if (fase === 'pre-linha') {
+      setFase(linha.length > 1 ? 'linha' : 'fim');
+      setReveladasLinha(1);
+      return;
+    }
+
+    if (fase === 'linha') {
+      if (reveladasLinha < linha.length) {
+        const proximo = reveladasLinha + 1;
+        setReveladasLinha(proximo);
+        if (proximo >= linha.length) setFase('fim');
         return;
       }
       setFase('fim');
@@ -160,31 +148,26 @@ export function CerimoniaCliente({ jogadores, times, problemas = [] }: Props) {
 
   const voltarPasso = useCallback(() => {
     if (!resultado) return;
-    if (fase === 'fim') {
-      if (resultado.sorteio.goleiros.length > 0 && reveladasGol > 0) {
-        setReveladasGol((n) => Math.max(0, n - 1));
-        setFase(reveladasGol - 1 === 0 ? 'pre-goleiros' : 'goleiros');
-      } else if (reveladasLinha > 0) {
-        setReveladasLinha((n) => Math.max(0, n - 1));
+    const temGoleiros = resultado.sorteio.goleiros.length > 0;
+    if (fase === 'fim' || fase === 'linha') {
+      if (reveladasLinha > 1) {
+        setReveladasLinha((n) => n - 1);
         setFase('linha');
-      }
-      return;
-    }
-    if (fase === 'goleiros') {
-      if (reveladasGol > 1) {
+      } else if (reveladasLinha === 1) {
+        setReveladasLinha(0);
+        setFase(temGoleiros ? 'pre-linha' : 'linha');
+      } else if (fase === 'fim' && reveladasGol > 0) {
         setReveladasGol((n) => n - 1);
-      } else {
-        setReveladasGol(0);
-        setFase('pre-goleiros');
+        setFase('goleiros');
       }
       return;
     }
-    if (fase === 'pre-goleiros') {
-      setFase('linha');
+    if (fase === 'pre-linha') {
+      setFase('goleiros');
       return;
     }
-    if (fase === 'linha' && reveladasLinha > 0) {
-      setReveladasLinha((n) => n - 1);
+    if (fase === 'goleiros' && reveladasGol > 0) {
+      setReveladasGol((n) => n - 1);
     }
   }, [resultado, fase, reveladasLinha, reveladasGol]);
 
@@ -218,13 +201,13 @@ export function CerimoniaCliente({ jogadores, times, problemas = [] }: Props) {
 
   // ---- Alocacao atual em destaque ----
   const atual = useMemo(() => {
-    if (!resultado || fase === 'pre-goleiros') return null;
+    if (!resultado || fase === 'pre-linha') return null;
     const { linha, goleiros } = resultado.sorteio;
     const aloc =
-      reveladasGol > 0
-        ? goleiros[reveladasGol - 1]
-        : reveladasLinha > 0
-          ? linha[reveladasLinha - 1]
+      reveladasLinha > 0
+        ? linha[reveladasLinha - 1]
+        : reveladasGol > 0
+          ? goleiros[reveladasGol - 1]
           : null;
     if (!aloc) return null;
     const jogador = porId.get(aloc.jogadorId);
@@ -232,15 +215,6 @@ export function CerimoniaCliente({ jogadores, times, problemas = [] }: Props) {
     if (!jogador || !time) return null;
     return { jogador, time, etapa: aloc.etapa };
   }, [resultado, fase, reveladasLinha, reveladasGol, porId, timePorId]);
-
-  // ---- Proximo time na fila serpentina (durante a etapa de linha) ----
-  const proximoTimeId = useMemo(() => {
-    if (!resultado) return null;
-    if (fase === 'linha' && reveladasLinha < resultado.sorteio.linha.length) {
-      return resultado.sorteio.linha[reveladasLinha].timeId;
-    }
-    return null;
-  }, [resultado, fase, reveladasLinha]);
 
   const totalRevelacoes = resultado
     ? resultado.sorteio.linha.length + resultado.sorteio.goleiros.length
@@ -307,15 +281,16 @@ export function CerimoniaCliente({ jogadores, times, problemas = [] }: Props) {
     }
   }, [resultado, elencos, link]);
 
-  const emModoPalco = fase === 'pronto' || fase === 'pre-goleiros';
-  const linhaCompletaAguardandoTransicao =
-    fase === 'linha' &&
+  const emModoPalco = fase === 'pronto' || fase === 'pre-linha';
+  const goleirosCompletosAguardandoTransicao =
+    fase === 'goleiros' &&
     resultado !== null &&
-    reveladasLinha >= resultado.sorteio.linha.length &&
-    resultado.sorteio.goleiros.length > 0;
+    reveladasGol >= resultado.sorteio.goleiros.length &&
+    resultado.sorteio.linha.length > 0;
+  const etapaGoleiros = fase === 'goleiros';
 
   return (
-    <div className="tela-cheia relative min-h-screen px-4 pb-20 pt-6">
+    <div className="tela-cheia relative min-h-screen px-4 pb-20 pt-16">
       <ControlesProjecao />
       <PalmBackdrop
         className={emModoPalco ? 'opacity-90' : 'opacity-75'}
@@ -343,8 +318,9 @@ export function CerimoniaCliente({ jogadores, times, problemas = [] }: Props) {
                   {bloqueado ? 'Cadastro pendente' : 'Tudo pronto'}
                 </h1>
                 <p className="mx-auto mt-4 max-w-lg text-sm text-text-2 sm:text-base">
-                  Ao iniciar, o sistema calcula a distribuição equilibrada em serpentina e revela
-                  um jogador por vez. Você controla o ritmo no projetor.
+                  Ao iniciar, o sistema divide os times de forma equilibrada. Primeiro saem os
+                  goleiros; depois, os jogadores de linha, um por vez e em ordem aleatória. Você
+                  controla o ritmo no projetor.
                 </p>
                 {bloqueado ? (
                   <div className="mx-auto mt-6 max-w-xl border-l-[3px] border-[var(--warning)] bg-[var(--warning-bg)] px-4 py-3 text-left">
@@ -376,32 +352,16 @@ export function CerimoniaCliente({ jogadores, times, problemas = [] }: Props) {
                 <span
                   className="corte-direita hud-label whitespace-nowrap px-3 py-1 !text-[11px]"
                   style={{
-                    background:
-                      fase === 'goleiros' || fase === 'pre-goleiros'
-                        ? 'var(--surface3)'
-                        : 'var(--surface2)',
-                    color:
-                      fase === 'goleiros' || fase === 'pre-goleiros'
-                        ? 'var(--accent-armor)'
-                        : 'var(--accent)',
+                    background: etapaGoleiros ? 'var(--surface3)' : 'var(--surface2)',
+                    color: etapaGoleiros ? 'var(--accent-armor)' : 'var(--accent)',
                   }}
                 >
                   {fase === 'fim'
                     ? 'Sorteio concluído'
-                    : fase === 'goleiros' || fase === 'pre-goleiros'
-                      ? 'Etapa 2 · Goleiros'
-                      : 'Etapa 1 · Linha'}
+                    : etapaGoleiros
+                      ? 'Etapa 1 · Goleiros'
+                      : 'Etapa 2 · Linha'}
                 </span>
-
-                {proximoTimeId && (
-                  <span className="hidden items-center gap-2 font-mono text-xs uppercase tracking-wider text-text-2 sm:inline-flex">
-                    <span className="text-text-3">Próximo na fila:</span>
-                    <EscudoPorNome nome={timePorId.get(proximoTimeId)?.nome ?? ''} tamanho={20} />
-                    <strong style={{ color: 'var(--accent)' }}>
-                      {timePorId.get(proximoTimeId)?.nome}
-                    </strong>
-                  </span>
-                )}
 
                 <div className="flex min-w-[180px] flex-1 items-center gap-3">
                   <div className="h-[6px] flex-1 overflow-hidden bg-[var(--surface2)]">
@@ -416,27 +376,28 @@ export function CerimoniaCliente({ jogadores, times, problemas = [] }: Props) {
                 </div>
               </div>
 
-              {/* Transicao dramatica: Etapa 1 (Linha) -> Etapa 2 (Goleiros) */}
-              {fase === 'pre-goleiros' && (
+              {/* Transicao: Etapa 1 (Goleiros) -> Etapa 2 (Linha) */}
+              {fase === 'pre-linha' && (
                 <HudCard
                   destaque
                   className="modulo animar-revelar px-6 py-10 text-center sm:px-10 sm:py-14"
                 >
                   <p className="hud-label mb-3" style={{ color: 'var(--accent-armor)' }}>
-                    Etapa 1 concluída · Elencos de linha fechados
+                    Etapa 1 concluída · Goleiros definidos
                   </p>
                   <h2 className="titulo-hero t-xl text-[clamp(2.4rem,7.5vw,4.8rem)] text-text-1">
-                    Etapa 2 · Goleiros
+                    Etapa 2 · Jogadores de linha
                   </h2>
                   <p className="mx-auto mt-4 max-w-xl text-sm text-text-2 sm:text-base">
-                    Agora sorteamos <strong className="text-text-1">1 goleiro por time</strong> em
-                    etapa separada. As estrelas dos goleiros não alteram o balanceamento de linha.
+                    Agora saem os jogadores de linha,{' '}
+                    <strong className="text-text-1">um por um, em ordem aleatória</strong>. Cada
+                    um vai direto para o seu time, e no fim os times ficam equilibrados.
                   </p>
                 </HudCard>
               )}
 
               {/* Card aguardando 1a revelacao */}
-              {fase === 'linha' && feitas === 0 && (
+              {fase !== 'fim' && feitas === 0 && (
                 <HudCard className="modulo animar-revelar px-6 py-10 text-center sm:px-10 sm:py-12">
                   <p className="hud-label mb-2" style={{ color: 'var(--accent)' }}>
                     Sorteio calculado e travado
@@ -446,7 +407,8 @@ export function CerimoniaCliente({ jogadores, times, problemas = [] }: Props) {
                   </h2>
                   <p className="mx-auto mt-3 max-w-md text-sm text-text-2">
                     Pressione <span className="font-mono font-bold text-text-1">Espaço</span> ou
-                    clique no botão abaixo para revelar o primeiro jogador.
+                    clique no botão abaixo para revelar o primeiro{' '}
+                    {resultado?.sorteio.goleiros.length ? 'goleiro' : 'jogador'}.
                   </p>
                 </HudCard>
               )}
@@ -471,10 +433,6 @@ export function CerimoniaCliente({ jogadores, times, problemas = [] }: Props) {
                     <span style={{ color: 'var(--accent)' }}>{atual.jogador.posicao}</span>
                   </p>
 
-                  <div className="mt-5 flex justify-center">
-                    <Estrelas nivel={atual.jogador.estrelas} tamanho={26} />
-                  </div>
-
                   <div className="mx-auto mt-7 max-w-lg border-t border-hud pt-5">
                     <p className="hud-label mb-3 text-[11px]">Vai para</p>
                     <div className="inline-flex items-center justify-center gap-4">
@@ -491,7 +449,7 @@ export function CerimoniaCliente({ jogadores, times, problemas = [] }: Props) {
               <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
                 {fase !== 'fim' ? (
                   <>
-                    {(feitas > 0 || fase === 'pre-goleiros') && (
+                    {(feitas > 0 || fase === 'pre-linha') && (
                       <button
                         onClick={voltarPasso}
                         className="btn-hud !px-4 !py-2 !text-sm"
@@ -503,13 +461,15 @@ export function CerimoniaCliente({ jogadores, times, problemas = [] }: Props) {
 
                     <button onClick={revelarProximo} className="btn-cta">
                       <span>
-                        {fase === 'pre-goleiros'
-                          ? 'Revelar 1º goleiro'
-                          : linhaCompletaAguardandoTransicao
-                            ? 'Etapa 2 · Goleiros'
+                        {fase === 'pre-linha'
+                          ? 'Revelar 1º jogador de linha'
+                          : goleirosCompletosAguardandoTransicao
+                            ? 'Etapa 2 · Linha'
                             : feitas === 0
-                              ? 'Revelar 1º jogador'
-                              : fase === 'goleiros'
+                              ? etapaGoleiros
+                                ? 'Revelar 1º goleiro'
+                                : 'Revelar 1º jogador'
+                              : etapaGoleiros
                                 ? 'Revelar próximo goleiro'
                                 : 'Revelar próximo'}
                       </span>
@@ -560,24 +520,15 @@ export function CerimoniaCliente({ jogadores, times, problemas = [] }: Props) {
               {/* Avisos de regra */}
               {resultado && fase === 'fim' && (
                 <div className="mx-auto mt-6 max-w-2xl space-y-2">
-                  <HudCard barra={false} className="px-4 py-3">
-                    <p className="hud-label mb-1 text-[10px]">Balanceamento</p>
-                    <p className="text-sm">
-                      Amplitude final de{' '}
-                      <span
-                        className="font-mono font-bold"
-                        style={{
-                          color: resultado.sorteio.toleranciaEstourada
-                            ? 'var(--error)'
-                            : 'var(--success)',
-                        }}
-                      >
-                        {resultado.sorteio.amplitudeEstrelas}
-                      </span>{' '}
-                      estrela(s) entre o time mais forte e o mais fraco · tolerância ±
-                      {TOLERANCIA_ESTRELAS}
-                    </p>
-                  </HudCard>
+                  {/* Projetado: confirma o equilíbrio sem mostrar estrelas. */}
+                  {!resultado.sorteio.toleranciaEstourada && (
+                    <HudCard barra={false} className="px-4 py-3">
+                      <p className="hud-label mb-1 text-[10px]">Equilíbrio</p>
+                      <p className="text-sm">
+                        Times equilibrados dentro da tolerância definida pela organização.
+                      </p>
+                    </HudCard>
+                  )}
 
                   {resultado.sorteio.toleranciaEstourada && (
                     <Aviso cor="var(--error)" titulo="Tolerância não atingida">
@@ -667,7 +618,6 @@ export function CerimoniaCliente({ jogadores, times, problemas = [] }: Props) {
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {elencos.map((e) => {
                 const recebeuAgora = atual?.time.id === e.time.id;
-                const ehProximoFila = proximoTimeId === e.time.id;
                 const marca = marcaPorNome(e.time.nome);
                 const slotsRestantes = Math.max(0, cotaLinhaMaxima - e.linha.length);
                 const semGoleiroDefinitivo =
@@ -701,14 +651,6 @@ export function CerimoniaCliente({ jogadores, times, problemas = [] }: Props) {
                           >
                             {marca?.sigla ?? 'TIME'}
                           </span>
-                          {ehProximoFila && !recebeuAgora && (
-                            <span
-                              className="corte-direita px-1.5 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider"
-                              style={{ background: '#06122A', color: 'var(--accent)' }}
-                            >
-                              Na mira
-                            </span>
-                          )}
                         </div>
                         <h3
                           className="titulo-hero t-sm truncate text-xl"
@@ -717,20 +659,12 @@ export function CerimoniaCliente({ jogadores, times, problemas = [] }: Props) {
                           {e.time.nome}
                         </h3>
                       </div>
-                      <span
-                        className="numero shrink-0 rounded-component bg-[rgba(6,18,42,0.85)] px-2 py-1 text-lg"
-                        style={{ color: 'var(--accent)' }}
-                        title="Soma de estrelas (capitão + linha)"
-                      >
-                        {e.somaEstrelas}★
-                      </span>
                     </div>
 
                     <ul className="mt-2 space-y-1.5 px-3.5">
                       <LinhaElenco
                         nome={e.capitao.apelido ?? e.capitao.nome}
                         posicao="CAP"
-                        estrelas={e.capitao.estrelas}
                         cor="var(--accent)"
                         ehCapitao
                       />
@@ -738,7 +672,6 @@ export function CerimoniaCliente({ jogadores, times, problemas = [] }: Props) {
                         <LinhaElenco
                           nome={e.goleiro.apelido ?? e.goleiro.nome}
                           posicao="GOL"
-                          estrelas={e.goleiro.estrelas}
                           cor="var(--accent-armor)"
                           ehGoleiro
                           selecionado={
@@ -757,7 +690,6 @@ export function CerimoniaCliente({ jogadores, times, problemas = [] }: Props) {
                           key={j.id}
                           nome={j.apelido ?? j.nome}
                           posicao={j.posicao}
-                          estrelas={j.estrelas}
                           selecionado={
                             recebeuAgora && atual?.etapa === 'linha' && atual.jogador.id === j.id
                           }
@@ -789,7 +721,6 @@ export function CerimoniaCliente({ jogadores, times, problemas = [] }: Props) {
 function LinhaElenco({
   nome,
   posicao,
-  estrelas,
   cor,
   ehCapitao = false,
   ehGoleiro = false,
@@ -797,7 +728,6 @@ function LinhaElenco({
 }: {
   nome: string;
   posicao: string;
-  estrelas: number;
   cor?: string;
   ehCapitao?: boolean;
   ehGoleiro?: boolean;
@@ -820,7 +750,6 @@ function LinhaElenco({
         {ehCapitao && <SeloCapitao tamanho={18} />}
         {ehGoleiro && <IconeLuva tamanho={14} cor="var(--accent-armor)" />}
       </span>
-      <Estrelas nivel={estrelas} tamanho={9} pulsar={false} />
     </li>
   );
 }

@@ -205,6 +205,31 @@ describe('sortear — goleiros (§3.4)', () => {
   });
 });
 
+describe('sortear — ordem de revelação aleatória (decisão de 18/11/2026)', () => {
+  const nivel = (id: string) => JOGADORES_EXEMPLO.find((j) => j.id === id)?.estrelas ?? 0;
+
+  it.each([1, 2, 3, 7, 42])('seed %i: a revelação não sai agrupada do maior nível para o menor', (semente) => {
+    const { sorteio } = sortear({ jogadores: JOGADORES_EXEMPLO, times: TIMES_EXEMPLO }, fonteSemente(semente));
+    const niveis = sorteio.linha.map((a) => nivel(a.jogadorId));
+    const decrescente = niveis.every((n, i) => i === 0 || niveis[i - 1] >= n);
+    expect(decrescente).toBe(false);
+  });
+
+  it('embaralhar a revelação não mexe no equilíbrio: cada um continua no time sorteado', () => {
+    const { sorteio, violacoes } = sortear({ jogadores: JOGADORES_EXEMPLO, times: TIMES_EXEMPLO }, fonteSemente(11));
+    expect(violacoes).toEqual([]);
+    const somas = somasDeEstrelas(JOGADORES_EXEMPLO, TIMES_EXEMPLO, sorteio.linha);
+    expect(amplitude(somas)).toBe(sorteio.amplitudeEstrelas);
+    expect(new Set(sorteio.linha.map((a) => a.jogadorId)).size).toBe(sorteio.linha.length);
+  });
+
+  it('em sorteios diferentes, a ordem de revelação muda', () => {
+    const ordem = (semente: number) =>
+      sortear({ jogadores: JOGADORES_EXEMPLO, times: TIMES_EXEMPLO }, fonteSemente(semente)).sorteio.linha.map((a) => a.jogadorId).join();
+    expect(new Set([1, 2, 3, 4, 5].map(ordem)).size).toBeGreaterThan(1);
+  });
+});
+
 describe('montarElencos — cerimônia parcial', () => {
   it('revela progressivamente sem vazar quem ainda não saiu', () => {
     const { sorteio } = sortear(

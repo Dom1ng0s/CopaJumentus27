@@ -24,7 +24,7 @@ Há **contas de admin**, só para a organização (decisão do operador em 17/11
 2. Cadastro dos **times**: nome do time + capitão fixo (o capitão é um jogador, já pertence ao time, não entra no pote).
 3. **Sorteio balanceado** dos jogadores de linha entre os times.
 4. **Sorteio separado de goleiros**: segunda etapa, 1 goleiro por time.
-5. **Cerimônia de revelação**: um jogador por vez, com animação e suspense, controlada pelo operador.
+5. **Cerimônia de revelação**: primeiro os goleiros, depois os jogadores de linha um por vez em ordem aleatória, sem estrelas na tela, controlada pelo operador.
 6. **Link de resultado estático**: ao fim, gerar uma URL compartilhável que renderiza os elencos finais sem precisar de backend.
 
 ### Fase 2 — Campeonato (implementada, ver §8)
@@ -87,11 +87,12 @@ Algoritmo (serpentina aleatorizada — simples, explicável em voz alta na hora 
 2. **Embaralhe dentro de cada grupo de estrelas** (a aleatoriedade vive aqui).
 3. Percorra os níveis do mais forte para o mais fraco, distribuindo em **ordem serpentina**, onde a ordem de cada passada é dada pela soma de estrelas atual crescente — time mais fraco recebe primeiro.
 4. Ao fim, valide as invariantes. Se a restrição 3 falhar, execute até `MAX_TENTATIVAS` (default: 200) novas tentativas com novo embaralhamento. Se ainda falhar, **mostre o melhor resultado encontrado e avise o operador explicitamente** que a tolerância não foi atingida — nunca falhe em silêncio nem relaxe a regra escondido.
+5. **Ordem de revelação aleatória** (decisão do operador em 18/11/2026): a divisão equilibrada fica pronta ao clicar em Sortear, e a ordem em que a linha é revelada na cerimônia é embaralhada de novo (`random.ts`). A plateia não vê os níveis saindo do mais forte para o mais fraco; os times de cada jogador não mudam. Testado em `sorteio.test.ts`.
 
 Balanceamento por posição é um **objetivo secundário**: distribua ZAG/MEI/ATA o mais uniformemente possível como critério de desempate entre tentativas válidas, mas nunca a ponto de violar as invariantes 1–3.
 
 ### 3.4 Sorteio de goleiros
-- Etapa **separada e posterior**, disparada pelo operador.
+- Etapa **separada**. Na cerimônia, os goleiros são revelados **primeiro**, antes da linha (decisão do operador em 18/11/2026); no cálculo continuam fora do balanceamento.
 - Pote = jogadores com `posicao === 'GOL'` que não são capitães.
 - Exatamente **1 goleiro por time**, atribuição puramente aleatória (estrelas de goleiro não entram em nenhuma conta).
 - Se houver menos goleiros que times, aloque os disponíveis e marque os times restantes como **"GOLEIRO: A DEFINIR"** na UI. Não invente jogador, não reutilize goleiro.
@@ -233,7 +234,7 @@ Ficam em `public/imagens/` (logo oficial, kits, escudos, artes), descritas em `p
 A página de resultado **não** usa o banner: ela é consumida no celular, onde 4:1 fica pequeno demais. Lá o título é o wordmark SVG, que escala melhor em retrato.
 
 Pontos de amarração entre domínio e design:
-- **Nível do jogador → 6 estrelas.** Mesma escala do domínio, sem conversão. Estrelas só em telas de admin.
+- **Nível do jogador → 6 estrelas.** Mesma escala do domínio, sem conversão. Estrelas só em telas de admin que não vão para o projetor (pote em `/sorteio`, inscrições); a cerimônia não mostra estrelas em lugar nenhum (decisão do operador em 18/11/2026).
 - **Cards de jogador e de time → módulos de transmissão** (`.hud-card`), com canto cortado e filete dourado na base.
 - **Botão de sortear e de revelar próximo → botão principal** dourado metálico, com a ponta cortada a 45°.
 - **Cerimônia de revelação** usa as transições snappy (140–320ms, `cubic-bezier(0.16, 1, 0.3, 1)`) e o selection flash. O suspense vem do **ritmo controlado pelo operador**, não de animação lenta: cada revelação é rápida; quem controla a pausa é o clique.
@@ -248,7 +249,7 @@ Regras de interação que valem em todas as telas:
 4. **Três preferências do sistema**, não uma: `prefers-reduced-motion`, `prefers-reduced-transparency` e `prefers-contrast` têm todas tratamento próprio.
 
 A curva mecânica fixa vale porque **nada aqui é dirigido por gesto**. Se um dia entrar superfície arrastável — card que desliza, bottom sheet, slider que se arremessa —, a curva deixa de valer e o caso passa a pedir mola com entrega de velocidade.
-- **Tela de cerimônia é projetada/compartilhada** — dimensione tipografia para ser legível de longe. Prioridade visual: nome do jogador, estrelas, time que recebeu.
+- **Tela de cerimônia é projetada/compartilhada** — dimensione tipografia para ser legível de longe. Prioridade visual: nome do jogador e time que recebeu. Sem estrelas e sem soma de estrelas; no fim, só a confirmação de que os times ficaram dentro da tolerância.
 - **Página de resultado é consumida no celular** — mobile-first, sem scroll horizontal.
 
 Nunca introduza visual corporativo/SaaS genérico, biblioteca de componentes com tema próprio (shadcn default, MUI, Chakra) ou paleta fora do manual de marca.

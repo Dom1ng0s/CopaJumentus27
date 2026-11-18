@@ -71,8 +71,8 @@ export default async function PaginaPote() {
 
           <p className="mx-auto max-w-xl text-sm leading-relaxed text-text-2 sm:text-base">
             Sorteio balanceado por nível. Oito capitães, um pote de {pote.length} jogadores de
-            linha e {goleiros.length} goleiros sorteados à parte. O time mais fraco recebe
-            primeiro em cada rodada de estrelas.
+            linha e {goleiros.length} goleiros. Na cerimônia saem primeiro os goleiros e depois a
+            linha, um por um, em ordem aleatória, sem mostrar estrelas.
           </p>
 
           <div className="mt-8 flex flex-wrap items-center justify-center gap-4">

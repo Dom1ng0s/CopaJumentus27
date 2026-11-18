@@ -3,7 +3,8 @@
 
 import type { ResultadoSorteio } from '@/lib/domain/sorteio';
 
-export type FaseCerimonia = 'pronto' | 'linha' | 'pre-goleiros' | 'goleiros' | 'fim';
+/** Goleiros primeiro, depois a linha (decisão do operador em 18/11/2026). */
+export type FaseCerimonia = 'pronto' | 'goleiros' | 'pre-linha' | 'linha' | 'fim';
 
 export interface SessaoCerimonia {
   resultado: ResultadoSorteio;
@@ -13,7 +14,7 @@ export interface SessaoCerimonia {
   assinaturaCadastro: string;
 }
 
-const CHAVE_SESSAO = 'copa-jumentus:sessao-cerimonia:v1';
+const CHAVE_SESSAO = 'copa-jumentus:sessao-cerimonia:v2';
 
 /** Gera uma assinatura simples do cadastro atual para invalidar sessao se o elenco mudar. */
 export function assinarCadastro(idsJogadores: readonly string[], idsTimes: readonly string[]): string {
