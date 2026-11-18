@@ -222,9 +222,9 @@ Por isso **só títulos de marca** usam wordmark. Todo texto dinâmico — nome 
 
 A home usa `public/banner-copa-jumentus.webp` (2000×504), arte da comissão com skyline, ponte, palmeiras e o wordmark já compostos. Substitui o palco que antes era montado em CSS.
 
-- A arte é **4:1**. Em telas largas ela se basta; abaixo de `sm` vira uma tira de ~94px, então ganha moldura com a própria arte ampliada e desfocada atrás. Isso casa as cores da emenda por construção — não tente adivinhar um gradiente equivalente.
+- A arte é **4:1** e vale a partir de `sm`. **No celular** entra `public/banner-copa-jumentus-celular.webp` (1024×412, 5:2): a mesma arte com céu e água completados (Gemini, pedido do operador em 18/11/2026), já escurecendo para o marinho embaixo. Banner próprio de edição (`campeonato.banner`, 4:1) continua com a moldura desfocada no celular.
 - O `<h1>` é `sr-only`, porque o título ali é pixel, não texto.
-- **Trocar a arte**: mantenha a proporção próxima de 4:1 e atualize `width`/`height` no `next/image`. Proporções muito diferentes quebram a moldura do celular.
+- **Trocar a arte**: troque as duas versões (4:1 e 5:2) e atualize `width`/`height` no `next/image`.
 
 ### Imagens da marca
 
