@@ -198,6 +198,10 @@ Tokens em `src/app/globals.css` (fonte única; o Tailwind só aponta para eles):
 - **Mata-mata do modelo:** chave em 3 etapas (Repescagem → Semifinais → Final e 3º lugar), em colunas no desktop e empilhada no celular, com "Vencedor → Semifinal 2" sob cada jogo. Vaga ainda aberta mostra a origem e quem ocupa a posição hoje ("3º do Grupo Único · hoje HOU", `projecaoMataMata`, só jogos encerrados).
 - **Início:** andamento ("22 de 34 jogos", barra dourada, dia), o jogo ao vivo ou o próximo em destaque no palco do Matchday (escudos grandes, placar ou horário no centro, cores dos times só nas bordas), "Na sequência" e "Últimos resultados". O pódio tem forma de pódio: campeão no centro e mais alto, só ele em dourado.
 - **Andamento e projeção** ficam em `lib/domain/campeonato/andamento.ts` (puro, testado).
+- **Rankings no celular:** uma categoria por vez, em abas fixas no topo (`AbasRankings`); no desktop, todas na grade.
+- **Súmula rápida** (`components/admin/LancadorEventos.tsx`): na beira do campo, lançar é tocar no jogador, depois no evento (Gol, Gol de pênalti, Amarelo, Vermelho, Pênalti perdido, Gol contra; Defesa só para o goleiro) e, se for gol, em quem deu a assistência ou "Sem assistência". Minuto é opcional. A confirmação vem em toast com o placar. Apagar um evento pede dois toques ("Apagar?"). A regra continua toda em `adicionarEvento`/`removerEvento`.
+- **Painel do admin:** o jogo da vez (ao vivo ou próximo) em destaque com "Abrir súmula", números do campeonato e "Na sequência".
+- **Cerimônia projetada:** sem a barra do site; controles discretos no canto ("Tela cheia" e "Voltar" ao sorteio).
 
 Este app é **dark-only de propósito** — a cerimônia acontece à noite.
 

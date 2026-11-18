@@ -1,6 +1,8 @@
 import Link from 'next/link';
-import { Aviso, CardPartida, Numero, Secao } from '@/components/campeonato/ui';
-import { formatarReais, grupoEncerrado, indices, lados } from '@/lib/campeonato/consultas';
+import { LinhaPartida } from '@/components/campeonato/Partidas';
+import { Aviso, Numero, Secao, Vazio } from '@/components/campeonato/ui';
+import { formatarReais, grupoEncerrado, indices, nomeDoLado } from '@/lib/campeonato/consultas';
+import { andamento } from '@/lib/domain/campeonato/andamento';
 import { calcularClassificacao, empatesPendentes } from '@/lib/domain/campeonato/classificacao';
 import { ordenarPartidas } from '@/lib/domain/campeonato/suspensoes';
 import { campeonatoDoAdmin } from '@/lib/campeonato/selecao';
@@ -13,7 +15,12 @@ export default async function Painel({ searchParams }: { searchParams: Promise<{
   const c = await campeonatoDoAdmin();
   const { equipe } = indices(c);
   const pagos = c.jogadores.filter((j) => j.pago).length;
-  const proximas = ordenarPartidas(c.partidas).filter((p) => p.status !== 'encerrada').slice(0, 4);
+  const a = andamento(c.partidas);
+  // O jogo da vez: o ao vivo ou, sem ele, o próximo. É para ele que o admin vai na beira do campo.
+  const daVez = a.aoVivo[0] ?? a.proxima;
+  const proximas = ordenarPartidas(c.partidas)
+    .filter((p) => p.status !== 'encerrada' && p.id !== daVez?.id)
+    .slice(0, 4);
   const semTabela = c.modelo === 'copa-jumentus-8' && c.equipes.some((e) => e.numeroTabela === undefined);
   const empates = c.fases.flatMap((f) =>
     c.grupos
@@ -40,16 +47,38 @@ export default async function Painel({ searchParams }: { searchParams: Promise<{
         />
       )}
 
-      <div className="hud-card relative grid grid-cols-2 gap-4 px-4 py-4 sm:grid-cols-5">
-        <Numero valor={c.equipes.length} rotulo="Equipes" />
-        <Numero valor={c.jogadores.length} rotulo="Jogadores" />
-        <Numero valor={`${pagos}/${c.jogadores.length}`} rotulo="Pagos" />
-        <Numero valor={formatarReais(pagos * c.valorInscricao)} rotulo="Arrecadado" />
-        <Numero valor={c.partidas.length} rotulo="Partidas" />
+      {daVez && (
+        <section className="hud-card hud-clip modulo relative p-4 sm:p-5" aria-label="Jogo da vez">
+          <p className="hud-label mb-2 !text-[13px]" style={{ color: daVez.status === 'ao-vivo' ? 'var(--error-text)' : 'var(--accent)' }}>
+            {daVez.status === 'ao-vivo' ? 'Ao vivo agora' : 'Próximo jogo'}
+          </p>
+          <p className="titulo-hero t-sm text-2xl leading-tight sm:text-3xl">
+            {daVez.numero !== undefined && <span className="numero mr-2 text-[var(--accent)]">J{daVez.numero}</span>}
+            {nomeDoLado(c, daVez, 'mandante', equipe)} <span className="text-text-3">x</span> {nomeDoLado(c, daVez, 'visitante', equipe)}
+          </p>
+          <Link href={`/admin/partidas/${daVez.id}`} className="btn-cta mt-4 w-full sm:w-auto">
+            <span>{daVez.status === 'ao-vivo' ? 'Abrir súmula' : 'Abrir súmula e começar'}</span>
+          </Link>
+        </section>
+      )}
+
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <div className="hud-card relative px-3 py-4">
+          <Numero valor={`${a.encerrados}/${a.total}`} rotulo="Jogos encerrados" />
+        </div>
+        <div className="hud-card relative px-3 py-4">
+          <Numero valor={`${pagos}/${c.jogadores.length}`} rotulo="Inscrições pagas" />
+        </div>
+        <div className="hud-card relative px-3 py-4">
+          <Numero valor={formatarReais(pagos * c.valorInscricao)} rotulo="Arrecadado" />
+        </div>
+        <div className="hud-card relative px-3 py-4">
+          <Numero valor={`${c.equipes.length} · ${c.jogadores.length}`} rotulo="Equipes · jogadores" />
+        </div>
       </div>
 
       <Secao
-        titulo="Próximas partidas"
+        titulo="Na sequência"
         acao={
           <Link href="/admin/partidas" className="btn-mini">
             Todas
@@ -57,11 +86,15 @@ export default async function Painel({ searchParams }: { searchParams: Promise<{
         }
       >
         {proximas.length === 0 ? (
-          <p className="text-sm text-text-3">Nenhuma partida pendente. Crie em Fases e grupos ou em Partidas.</p>
+          a.terminou ? (
+            <Vazio texto="Todos os jogos foram encerrados." detalhe="Quando quiser, marque o campeonato como encerrado em Campeonato." />
+          ) : (
+            <Vazio texto="Nenhuma partida pendente." detalhe="Crie as partidas em Fases e grupos ou em Partidas." />
+          )
         ) : (
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid grid-cols-1 gap-2 lg:grid-cols-2">
             {proximas.map((p) => (
-              <CardPartida key={p.id} partida={p} {...lados(c, p, equipe)} href={`/admin/partidas/${p.id}`} />
+              <LinhaPartida key={p.id} c={c} partida={p} equipe={equipe} href={`/admin/partidas/${p.id}`} />
             ))}
           </div>
         )}

@@ -385,6 +385,16 @@ function ladoDoGol(p: Partida, tipo: TipoEvento, equipeId: string): 'mandante' |
   return marcaMandante ? 'mandante' : 'visitante';
 }
 
+const NOME_EVENTO: Record<TipoEvento, string> = {
+  gol: 'Gol',
+  gol_penalti: 'Gol de pênalti',
+  'gol-contra': 'Gol contra',
+  penalti_perdido: 'Pênalti perdido',
+  amarelo: 'Amarelo',
+  vermelho: 'Vermelho',
+  defesa: 'Defesa',
+};
+
 export async function adicionarEvento(f: FormData): Promise<void> {
   await alterar(f, (c) => {
     const p = acharPartida(c, texto(f, 'partidaId'));
@@ -414,6 +424,7 @@ export async function adicionarEvento(f: FormData): Promise<void> {
     if (lado === 'mandante') p.golsMandante += 1;
     if (lado === 'visitante') p.golsVisitante += 1;
     if (p.status === 'agendada') p.status = 'ao-vivo';
+    return `${NOME_EVENTO[tipo]} · ${jogador.nome}. Placar ${p.golsMandante}:${p.golsVisitante}.`;
   });
 }
 

@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { oficializarSorteio } from '@/app/admin/acoes';
 import { EscudoPorNome, IconeLuva, SeloCapitao } from '@/components/campeonato/ui';
@@ -314,7 +315,8 @@ export function CerimoniaCliente({ jogadores, times, problemas = [] }: Props) {
     resultado.sorteio.goleiros.length > 0;
 
   return (
-    <div className="relative min-h-screen px-4 pb-20 pt-6">
+    <div className="tela-cheia relative min-h-screen px-4 pb-20 pt-6">
+      <ControlesProjecao />
       <PalmBackdrop
         className={emModoPalco ? 'opacity-90' : 'opacity-75'}
         intensidade={emModoPalco ? 'hero' : 'ambiente'}
@@ -841,6 +843,33 @@ function Aviso({
         {titulo}
       </p>
       <p className="text-sm text-text-2">{children}</p>
+    </div>
+  );
+}
+
+/**
+ * Controles discretos da projeção (canto superior direito): tela cheia e voltar ao
+ * sorteio. A barra do site não aparece na cerimônia.
+ */
+function ControlesProjecao() {
+  const [cheia, setCheia] = useState(false);
+  useEffect(() => {
+    const atualizar = () => setCheia(!!document.fullscreenElement);
+    document.addEventListener('fullscreenchange', atualizar);
+    return () => document.removeEventListener('fullscreenchange', atualizar);
+  }, []);
+  return (
+    <div className="nao-imprimir fixed right-3 top-3 z-50 flex gap-2 opacity-60 transition-opacity hover:opacity-100 focus-within:opacity-100">
+      <button
+        type="button"
+        className="btn-mini"
+        onClick={() => (document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen()).catch(() => undefined)}
+      >
+        {cheia ? 'Sair da tela cheia' : 'Tela cheia'}
+      </button>
+      <Link href="/sorteio" className="btn-mini">
+        Voltar
+      </Link>
     </div>
   );
 }

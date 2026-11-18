@@ -1,11 +1,12 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { Sumula, TEXTO_EVENTO } from '@/components/campeonato/Sumula';
+import { BotaoRemoverEvento, LancadorEventos } from '@/components/admin/LancadorEventos';
+import { Sumula } from '@/components/campeonato/Sumula';
 import { Aviso, Escudo, Secao, SeloStatus } from '@/components/campeonato/ui';
 import { formatarDataHora, indices, lados } from '@/lib/campeonato/consultas';
 import { goleiroDaPartida } from '@/lib/domain/campeonato/rankings';
 import { calcularSuspensoes, ordenarPartidas } from '@/lib/domain/campeonato/suspensoes';
-import { TIPOS_EVENTO, type Equipe, type JogadorCampeonato, type Partida, type StatusPartida } from '@/lib/domain/campeonato/tipos';
+import { type Equipe, type JogadorCampeonato, type Partida, type StatusPartida } from '@/lib/domain/campeonato/tipos';
 import { campeonatoDoAdmin } from '@/lib/campeonato/selecao';
 import { adicionarEvento, ajustarPlacar, definirGoleiro, definirStatus, remarcarPartidaAcao, removerEvento } from '../../../acoes';
 
@@ -169,14 +170,7 @@ export default async function ControlePartida({
           partida={p}
           campeonato={c}
           acao={(ev) => (
-            <form action={removerEvento}>
-              <input type="hidden" name="volta" value={volta} />
-              <input type="hidden" name="partidaId" value={p.id} />
-              <input type="hidden" name="eventoId" value={ev.id} />
-              <button type="submit" className="btn-mini" data-perigo aria-label="Remover evento">
-                ✕
-              </button>
-            </form>
+            <BotaoRemoverEvento acao={removerEvento} partidaId={p.id} eventoId={ev.id} volta={volta} />
           )}
         />
       </Secao>
@@ -243,50 +237,13 @@ function FormEvento({
       {jogadores.length === 0 ? (
         <p className="text-sm text-text-3">Sem jogadores cadastrados nesta equipe.</p>
       ) : (
-        <form action={adicionarEvento} className="grid grid-cols-2 gap-2">
-          <input type="hidden" name="volta" value={volta} />
-          <input type="hidden" name="partidaId" value={partidaId} />
-          <label className="col-span-2">
-            <span className="rotulo-campo">Jogador</span>
-            <select name="jogadorId" required className="campo">
-              {jogadores.map((j) => (
-                <option key={j.id} value={j.id}>
-                  {j.numero ? `${j.numero} · ` : ''}
-                  {j.nome}
-                  {suspensos.has(j.id) ? ' (suspenso)' : ''}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            <span className="rotulo-campo">Evento</span>
-            <select name="tipo" className="campo">
-              {TIPOS_EVENTO.map((t) => (
-                <option key={t} value={t}>
-                  {TEXTO_EVENTO[t]}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            <span className="rotulo-campo">Minuto</span>
-            <input name="minuto" type="number" min={0} inputMode="numeric" className="campo" />
-          </label>
-          <label className="col-span-2">
-            <span className="rotulo-campo">Assistência (só gol)</span>
-            <select name="assistenciaId" className="campo" defaultValue="">
-              <option value="">Sem assistência</option>
-              {jogadores.map((j) => (
-                <option key={j.id} value={j.id}>
-                  {j.nome}
-                </option>
-              ))}
-            </select>
-          </label>
-          <button type="submit" className="btn-cta col-span-2">
-            <span>Registrar</span>
-          </button>
-        </form>
+        <LancadorEventos
+          acao={adicionarEvento}
+          partidaId={partidaId}
+          volta={volta}
+          goleiroId={goleiro}
+          jogadores={jogadores.map((j) => ({ id: j.id, nome: j.nome, numero: j.numero, goleiro: j.posicao === 'GOL', suspenso: suspensos.has(j.id) }))}
+        />
       )}
     </Secao>
   );
