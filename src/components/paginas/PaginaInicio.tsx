@@ -59,7 +59,7 @@ export function PaginaInicio({ c, base, edicoes }: CampeonatoPublico) {
           ) : (
             <>
               {/* Celular: versão 5:2 com céu e água completos; desktop: a arte larga 4:1. */}
-              <Image src="/banner-copa-jumentus-celular.webp" alt={titulo} width={1024} height={412} priority sizes="100vw" className="relative block h-auto w-full sm:hidden" />
+              <Image src="/banner-copa-jumentus-celular.webp" alt={titulo} width={2000} height={800} priority sizes="100vw" className="relative block h-auto w-full sm:hidden" />
               <Image src="/banner-copa-jumentus.webp" alt="" width={2000} height={504} priority sizes="100vw" className="relative hidden h-auto w-full sm:block" />
             </>
           )}
