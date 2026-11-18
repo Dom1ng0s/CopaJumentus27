@@ -9,7 +9,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
-type Icone = 'inicio' | 'tabela' | 'jogos' | 'rankings' | 'equipes';
+type Icone = 'inicio' | 'tabela' | 'jogos' | 'rankings' | 'equipes' | 'edicoes';
 
 const LINKS: Array<{ href: string; rotulo: string; curto: string; icone: Icone }> = [
   { href: '/', rotulo: 'Início', curto: 'Início', icone: 'inicio' },
@@ -17,7 +17,11 @@ const LINKS: Array<{ href: string; rotulo: string; curto: string; icone: Icone }
   { href: '/jogos', rotulo: 'Jogos', curto: 'Jogos', icone: 'jogos' },
   { href: '/rankings', rotulo: 'Rankings', curto: 'Rankings', icone: 'rankings' },
   { href: '/equipes', rotulo: 'Equipes', curto: 'Times', icone: 'equipes' },
+  // Histórico: sempre a lista geral de edições, mesmo dentro de uma edição antiga.
+  { href: '/edicoes', rotulo: 'Edições', curto: 'Edições', icone: 'edicoes' },
 ];
+
+const fixo = (href: string) => href === '/edicoes';
 
 /** Telas de operação (admin, sorteio, cerimônia) e o link do resultado não levam o menu público. */
 const SEM_MENU_PUBLICO = /^\/(admin|sorteio|cerimonia|resultado)(\/|$)/;
@@ -30,10 +34,13 @@ function caminhos(pathname: string) {
 }
 
 function destino(edicao: string, href: string) {
+  if (fixo(href)) return href;
   return edicao ? (href === '/' ? edicao : edicao + href) : href;
 }
 
-function ativoEm(caminho: string, href: string) {
+function ativoEm(pathname: string, caminho: string, href: string) {
+  if (fixo(href)) return pathname === href;
+  if (pathname === '/edicoes') return false;
   return href === '/' ? caminho === '/' : caminho.startsWith(href);
 }
 
@@ -56,6 +63,7 @@ function IconeNav({ nome }: { nome: Icone }) {
       )}
       {nome === 'rankings' && <path {...comum} d="M4 20V12h5v8M9 20V6h6v14M15 20v-9h5v9M3 20h18" />}
       {nome === 'equipes' && <path {...comum} d="M8 4l-4 3 2 4 2-1v10h8V10l2 1 2-4-4-3c-.6 1.4-2.1 2.3-4 2.3S8.6 5.4 8 4z" />}
+      {nome === 'edicoes' && <path {...comum} d="M7 4h10v4a5 5 0 01-10 0V4zM7 6H4v1a3 3 0 003 3M17 6h3v1a3 3 0 01-3 3M12 13v4M8 20h8M9 17h6" />}
     </svg>
   );
 }
@@ -85,7 +93,7 @@ export function Navbar() {
           {menuPublico && (
             <div className="ml-auto hidden items-stretch self-stretch sm:flex">
               {LINKS.map((l) => {
-                const ativo = ativoEm(caminho, l.href);
+                const ativo = ativoEm(pathname, caminho, l.href);
                 return (
                   <Link
                     key={l.href}
@@ -112,18 +120,18 @@ export function Navbar() {
           style={{ background: 'rgba(6, 18, 42, 0.96)', backdropFilter: 'blur(14px)', paddingBottom: 'env(safe-area-inset-bottom)' }}
         >
           <div className="filete !h-[2px] opacity-80" aria-hidden="true" />
-          <ul className="grid grid-cols-5">
+          <ul className="grid grid-cols-6">
             {LINKS.map((l) => {
-              const ativo = ativoEm(caminho, l.href);
+              const ativo = ativoEm(pathname, caminho, l.href);
               return (
                 <li key={l.href}>
                   <Link
                     href={destino(edicao, l.href)}
                     aria-current={ativo ? 'page' : undefined}
-                    className="relative flex h-16 flex-col items-center justify-center gap-1 font-mono text-[12px] font-bold uppercase tracking-[0.06em] transition-colors duration-150 active:scale-95"
+                    className="relative flex h-16 flex-col items-center justify-center gap-1 font-mono text-[11px] font-bold uppercase tracking-[0.04em] transition-colors duration-150 active:scale-95"
                     style={{ color: ativo ? 'var(--dourado-claro)' : 'var(--text2)', touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
                   >
-                    {ativo && <span className="absolute inset-x-4 top-0 h-[3px]" style={{ backgroundImage: 'var(--gradient-leonida)' }} />}
+                    {ativo && <span className="absolute inset-x-3 top-0 h-[3px]" style={{ backgroundImage: 'var(--gradient-leonida)' }} />}
                     <IconeNav nome={l.icone} />
                     {l.curto}
                   </Link>
@@ -147,9 +155,6 @@ export function Rodape() {
       <div className="flex flex-wrap items-center justify-between gap-3 font-mono text-[13px] font-semibold uppercase tracking-[0.06em] text-text-3">
         <span>@c.r.jumentus</span>
         <span className="flex gap-4">
-          <Link href="/edicoes" className="hover:text-text-1">
-            Edições
-          </Link>
           <Link href="/admin" className="hover:text-text-1">
             Área dos admins
           </Link>

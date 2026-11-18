@@ -10,6 +10,7 @@ import { cookies } from 'next/headers';
 import { COOKIE_CAMPEONATO, idDoCampeonatoDoAdmin } from '@/lib/campeonato/selecao';
 import { gerarRodadas, nomeGrupo, sortearGrupos } from '@/lib/domain/campeonato/grupos';
 import { DIAS_DO_MODELO, sortearNumerosTabela } from '@/lib/domain/campeonato/modelo';
+import { lerRankingManual } from '@/lib/domain/campeonato/historico';
 import { aplicarProgramacao, problemaNaProgramacao, remarcarPartida, type Programacao } from '@/lib/domain/campeonato/programacao';
 import {
   ehGol,
@@ -156,6 +157,68 @@ export async function salvarCampeonato(f: FormData): Promise<void> {
       derrota: inteiro(f, 'derrota', 0),
     };
     c.valorInscricao = Math.max(0, Number(texto(f, 'valorInscricao').replace(',', '.')) || 0);
+  });
+}
+
+// ---------- edição antiga (histórico) ----------
+
+/** Pódio e rankings de edição antiga, lançados à mão ("Nome; Equipe; número" por linha). */
+export async function salvarHistoricoAcao(f: FormData): Promise<void> {
+  await alterar(f, (c) => {
+    const equipeDe = (campo: string) => {
+      const id = opcional(f, campo);
+      if (id && !c.equipes.some((e) => e.id === id)) throw new ErroRegra('Equipe do pódio não encontrada.');
+      return id;
+    };
+    const podio = { primeiro: equipeDe('primeiro'), segundo: equipeDe('segundo'), terceiro: equipeDe('terceiro') };
+    const ids = [podio.primeiro, podio.segundo, podio.terceiro].filter(Boolean);
+    if (new Set(ids).size !== ids.length) throw new ErroRegra('Uma equipe só pode ocupar um lugar do pódio.');
+    const artilharia = lerRankingManual(String(f.get('artilharia') ?? ''), c.equipes);
+    const assist = lerRankingManual(String(f.get('assistencias') ?? ''), c.equipes);
+    const erros = [...artilharia.erros.map((e) => `Artilharia, ${e}`), ...assist.erros.map((e) => `Assistências, ${e}`)];
+    if (erros.length) throw new ErroRegra(erros.slice(0, 3).join(' '));
+    c.historico = {
+      podio: ids.length ? podio : undefined,
+      artilharia: artilharia.linhas.length ? artilharia.linhas : undefined,
+      assistencias: assist.linhas.length ? assist.linhas : undefined,
+    };
+    return 'Histórico da edição salvo.';
+  });
+}
+
+// ---------- premiação individual ----------
+
+export async function salvarPremioAcao(f: FormData): Promise<void> {
+  await alterar(f, (c) => {
+    const titulo = texto(f, 'titulo');
+    const jogador = texto(f, 'jogador');
+    if (!titulo) throw new ErroRegra('Informe o prêmio (ex.: Artilheiro).');
+    if (!jogador) throw new ErroRegra('Informe quem ganhou.');
+    const equipeId = opcional(f, 'equipeId');
+    if (equipeId && !c.equipes.some((e) => e.id === equipeId)) throw new ErroRegra('Equipe não encontrada.');
+    const premio = { id: texto(f, 'premioId') || novoId(), titulo, jogador, equipeId, detalhe: opcional(f, 'detalhe') };
+    const lista = c.premios ?? [];
+    const i = lista.findIndex((p) => p.id === premio.id);
+    c.premios = i >= 0 ? lista.map((p, k) => (k === i ? premio : p)) : [...lista, premio];
+    return i >= 0 ? 'Prêmio atualizado.' : `${titulo}: ${jogador}.`;
+  });
+}
+
+export async function removerPremioAcao(f: FormData): Promise<void> {
+  await alterar(f, (c) => {
+    c.premios = (c.premios ?? []).filter((p) => p.id !== texto(f, 'premioId'));
+    return 'Prêmio removido.';
+  });
+}
+
+export async function moverPremioAcao(f: FormData): Promise<void> {
+  await alterar(f, (c) => {
+    const lista = [...(c.premios ?? [])];
+    const i = lista.findIndex((p) => p.id === texto(f, 'premioId'));
+    const j = texto(f, 'direcao') === 'cima' ? i - 1 : i + 1;
+    if (i < 0 || j < 0 || j >= lista.length) return;
+    [lista[i], lista[j]] = [lista[j], lista[i]];
+    c.premios = lista;
   });
 }
 

@@ -156,6 +156,8 @@ async function ler(db: Leitor, id: number): Promise<Campeonato | null> {
     valorInscricao: Number(cfg.valorInscricao),
     sorteioOficializadoEm: cfg.sorteioOficializadoEm?.toISOString(),
     programacao: cfg.programacao ?? undefined,
+    premios: cfg.premios ?? undefined,
+    historico: cfg.historico ?? undefined,
     equipes: equipes.map((e) => ({
       id: e.id,
       nome: e.nome,
@@ -237,6 +239,8 @@ function configuracao(c: Campeonato) {
     valorInscricao: c.valorInscricao.toFixed(2),
     sorteioOficializadoEm: c.sorteioOficializadoEm ? new Date(c.sorteioOficializadoEm) : null,
     programacao: c.programacao ?? null,
+    premios: c.premios?.length ? c.premios : null,
+    historico: c.historico ?? null,
     atualizadoEm: new Date(),
   };
 }
@@ -546,6 +550,9 @@ export async function duplicarCampeonato(
     sorteioOficializadoEm: undefined,
     // Mesmos horários e duração; as datas são da edição nova.
     programacao: o.programacao && { ...o.programacao, dias: o.programacao.dias.map((d) => ({ ...d, data: '' })) },
+    // Prêmios são da edição de origem; a nova começa sem.
+    premios: undefined,
+    historico: undefined,
     equipes: o.equipes.map((e) => ({
       ...e,
       id: novo(e.id),

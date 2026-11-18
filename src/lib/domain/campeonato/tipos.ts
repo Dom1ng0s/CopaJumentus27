@@ -190,4 +190,42 @@ export interface Campeonato {
   sorteioOficializadoEm?: string;
   /** Horário de início de cada dia, duração e intervalo dos jogos (modelo oficial). */
   programacao?: Programacao;
+  /** Premiação individual da edição (craque, artilheiro, garçom, goleiro...), na ordem de exibição. */
+  premios?: Premio[];
+  /** Resultado lançado à mão de edição antiga, sem súmulas no sistema. */
+  historico?: Historico;
 }
+
+/** Linha de ranking lançada à mão (edições antigas). */
+export interface LinhaRankingManual {
+  jogador: string;
+  equipeId?: string;
+  valor: number;
+}
+
+/**
+ * Edição antiga (jogada no Copa Fácil, antes do sistema): pódio e rankings vêm do
+ * resultado oficial, não das súmulas. Só aparecem onde o sistema não tem o cálculo.
+ */
+export interface Historico {
+  podio?: { primeiro?: string; segundo?: string; terceiro?: string };
+  artilharia?: LinhaRankingManual[];
+  assistencias?: LinhaRankingManual[];
+}
+
+/**
+ * Prêmio individual. O jogador é texto (edições antigas não têm elenco cadastrado);
+ * a equipe, quando informada, dá escudo e cor.
+ */
+export interface Premio {
+  id: string;
+  /** "Craque do campeonato", "Artilheiro", "Garçom", "Melhor goleiro" ou outro. */
+  titulo: string;
+  jogador: string;
+  equipeId?: string;
+  /** Número do prêmio, quando houver: "12 gols", "7 assistências". */
+  detalhe?: string;
+}
+
+/** Prêmios sugeridos na tela do admin (decisão do operador: craque, artilheiro, garçom e goleiro). */
+export const TITULOS_PREMIO = ['Craque do campeonato', 'Artilheiro', 'Garçom', 'Melhor goleiro'] as const;

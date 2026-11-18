@@ -18,6 +18,7 @@ import {
 } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 import type { Programacao } from '../domain/campeonato/programacao';
+import type { Historico, Premio } from '../domain/campeonato/tipos';
 
 /** Um campeonato (edição) por linha. Vários por instalação (CLAUDE.md §8.6). */
 export const campeonato = pgTable(
@@ -46,6 +47,10 @@ export const campeonato = pgTable(
     sorteioOficializadoEm: timestamp('sorteio_oficializado_em', { withTimezone: true }),
     /** Início de cada dia, duração e intervalo dos jogos (lib/domain/campeonato/programacao.ts). */
     programacao: jsonb('programacao').$type<Programacao>(),
+    /** Premiação individual (lib/domain/campeonato/tipos.ts, Premio). */
+    premios: jsonb('premios').$type<Premio[]>(),
+    /** Pódio e rankings lançados à mão de edição antiga (Historico). */
+    historico: jsonb('historico').$type<Historico>(),
     atualizadoEm: timestamp('atualizado_em', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [

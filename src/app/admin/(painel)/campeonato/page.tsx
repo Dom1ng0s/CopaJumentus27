@@ -1,7 +1,8 @@
 import { Aviso, Secao } from '@/components/campeonato/ui';
-import { ROTULO_CRITERIO, ROTULO_STATUS_CAMPEONATO, type StatusCampeonato } from '@/lib/domain/campeonato/tipos';
+import { ROTULO_CRITERIO, ROTULO_STATUS_CAMPEONATO, TITULOS_PREMIO, type Premio, type StatusCampeonato } from '@/lib/domain/campeonato/tipos';
 import { campeonatoDoAdmin } from '@/lib/campeonato/selecao';
-import { aplicarModeloAcao, moverCriterio, salvarCampeonato } from '../../acoes';
+import { escreverRankingManual } from '@/lib/domain/campeonato/historico';
+import { aplicarModeloAcao, moverCriterio, moverPremioAcao, removerPremioAcao, salvarCampeonato, salvarHistoricoAcao, salvarPremioAcao } from '../../acoes';
 
 export const dynamic = 'force-dynamic';
 const VOLTA = '/admin/campeonato';
@@ -73,6 +74,106 @@ export default async function ConfigCampeonato({ searchParams }: { searchParams:
         )}
       </Secao>
 
+      <Secao titulo="Premiação individual">
+        <p className="mb-3 text-sm text-text-2">
+          Aparece no Início e nos Rankings da edição, na ordem abaixo. O jogador é texto livre, para valer também em edições antigas sem elenco
+          cadastrado.
+        </p>
+        {(c.premios ?? []).length > 0 && (
+          <ol className="mb-4 space-y-2">
+            {(c.premios ?? []).map((p, i, lista) => (
+              <li key={p.id} className="rounded-component bg-[var(--surface1)] p-3">
+                <FormPremio premio={p} equipes={c.equipes} jogadores={c.jogadores.map((j) => j.nome)} />
+                <div className="mt-2 flex gap-2">
+                  {(['cima', 'baixo'] as const).map((direcao) => (
+                    <form key={direcao} action={moverPremioAcao}>
+                      <input type="hidden" name="volta" value={VOLTA} />
+                      <input type="hidden" name="premioId" value={p.id} />
+                      <input type="hidden" name="direcao" value={direcao} />
+                      <button
+                        type="submit"
+                        className="btn-mini"
+                        disabled={direcao === 'cima' ? i === 0 : i === lista.length - 1}
+                        aria-label={`Mover ${p.titulo} para ${direcao}`}
+                      >
+                        {direcao === 'cima' ? '↑' : '↓'}
+                      </button>
+                    </form>
+                  ))}
+                  <form action={removerPremioAcao} className="ml-auto">
+                    <input type="hidden" name="volta" value={VOLTA} />
+                    <input type="hidden" name="premioId" value={p.id} />
+                    <button type="submit" className="btn-mini" data-perigo>
+                      Remover
+                    </button>
+                  </form>
+                </div>
+              </li>
+            ))}
+          </ol>
+        )}
+        <p className="hud-label mb-2 !text-[13px]">Novo prêmio</p>
+        <FormPremio equipes={c.equipes} jogadores={c.jogadores.map((j) => j.nome)} />
+      </Secao>
+
+      <Secao titulo="Edição antiga (sem súmulas)">
+        <p className="mb-3 text-sm text-text-2">
+          Para edições jogadas antes do sistema: o pódio e os rankings oficiais lançados aqui aparecem no Início e nos Rankings enquanto a
+          edição não tiver súmulas. Uma linha por jogador, no formato <span className="font-mono text-text-1">Nome; Equipe; número</span>.
+        </p>
+        <form action={salvarHistoricoAcao} className="grid gap-3">
+          <input type="hidden" name="volta" value={VOLTA} />
+          <div className="grid gap-3 sm:grid-cols-3">
+            {(
+              [
+                ['primeiro', '1º lugar'],
+                ['segundo', '2º lugar'],
+                ['terceiro', '3º lugar'],
+              ] as const
+            ).map(([campo, rotulo]) => (
+              <label key={campo}>
+                <span className="rotulo-campo">{rotulo}</span>
+                <select name={campo} defaultValue={c.historico?.podio?.[campo] ?? ''} className="campo">
+                  <option value="">—</option>
+                  {c.equipes.map((e) => (
+                    <option key={e.id} value={e.id}>
+                      {e.nome}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ))}
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label>
+              <span className="rotulo-campo">Artilharia</span>
+              <textarea
+                name="artilharia"
+                rows={8}
+                defaultValue={escreverRankingManual(c.historico?.artilharia, c.equipes)}
+                placeholder={'Edu; Roma; 5\nCauã; Roma; 4'}
+                className="campo font-mono"
+              />
+            </label>
+            <label>
+              <span className="rotulo-campo">Assistências</span>
+              <textarea
+                name="assistencias"
+                rows={8}
+                defaultValue={escreverRankingManual(c.historico?.assistencias, c.equipes)}
+                placeholder={'Pasquale; Roma; 2'}
+                className="campo font-mono"
+              />
+            </label>
+          </div>
+          <div>
+            <button type="submit" className="btn-mini">
+              Salvar histórico
+            </button>
+          </div>
+        </form>
+      </Secao>
+
       <Secao titulo="Critérios de desempate">
         <p className="mb-3 text-sm text-text-2">
           Aplicados de cima para baixo, só entre as equipes que continuam empatadas. Confronto direto com 3 ou mais é uma
@@ -103,6 +204,55 @@ export default async function ConfigCampeonato({ searchParams }: { searchParams:
         </ol>
       </Secao>
     </div>
+  );
+}
+
+/** Formulário de um prêmio (novo ou existente). Sugestões de título e de nome por datalist. */
+function FormPremio({ premio, equipes, jogadores }: { premio?: Premio; equipes: Array<{ id: string; nome: string }>; jogadores: string[] }) {
+  const sufixo = premio?.id ?? 'novo';
+  return (
+    <form action={salvarPremioAcao} className="grid gap-2 sm:grid-cols-[1fr_1fr_1fr_8rem_auto] sm:items-end">
+      <input type="hidden" name="volta" value={VOLTA} />
+      {premio && <input type="hidden" name="premioId" value={premio.id} />}
+      <label>
+        <span className="rotulo-campo">Prêmio</span>
+        <input name="titulo" list="titulos-premio" defaultValue={premio?.titulo ?? ''} required placeholder="Artilheiro" className="campo" />
+      </label>
+      <label>
+        <span className="rotulo-campo">Jogador</span>
+        <input name="jogador" list={`jogadores-${sufixo}`} defaultValue={premio?.jogador ?? ''} required className="campo" />
+        <datalist id={`jogadores-${sufixo}`}>
+          {jogadores.map((n) => (
+            <option key={n} value={n} />
+          ))}
+        </datalist>
+      </label>
+      <label>
+        <span className="rotulo-campo">Equipe</span>
+        <select name="equipeId" defaultValue={premio?.equipeId ?? ''} className="campo">
+          <option value="">Sem equipe</option>
+          {equipes.map((e) => (
+            <option key={e.id} value={e.id}>
+              {e.nome}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label>
+        <span className="rotulo-campo">Número</span>
+        <input name="detalhe" defaultValue={premio?.detalhe ?? ''} placeholder="12 gols" className="campo" />
+      </label>
+      <button type="submit" className="btn-mini">
+        {premio ? 'Salvar' : 'Adicionar'}
+      </button>
+      {!premio && (
+        <datalist id="titulos-premio">
+          {TITULOS_PREMIO.map((t) => (
+            <option key={t} value={t} />
+          ))}
+        </datalist>
+      )}
+    </form>
   );
 }
 
