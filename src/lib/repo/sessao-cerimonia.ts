@@ -11,6 +11,8 @@ export interface SessaoCerimonia {
   reveladasLinha: number;
   reveladasGol: number;
   fase: FaseCerimonia;
+  /** false enquanto o nome está na tela e o time ainda não foi sorteado. */
+  timeRevelado?: boolean;
   assinaturaCadastro: string;
 }
 

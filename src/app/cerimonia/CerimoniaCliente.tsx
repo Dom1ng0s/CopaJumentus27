@@ -33,6 +33,11 @@ export function CerimoniaCliente({ jogadores, times, problemas = [] }: Props) {
   const [reveladasLinha, setReveladasLinha] = useState(0);
   const [reveladasGol, setReveladasGol] = useState(0);
   const [fase, setFase] = useState<FaseCerimonia>('pronto');
+  // Cada revelação tem dois passos (decisão do operador em 18/11/2026): primeiro
+  // "Sortear jogador" mostra só o nome; depois "Sortear time" mostra o destino e
+  // só então o jogador entra no elenco.
+  const [timeRevelado, setTimeRevelado] = useState(true);
+  const [girando, setGirando] = useState(false);
   const [link, setLink] = useState<string | null>(null);
   const [copiadoLink, setCopiadoLink] = useState(false);
   const [copiadoResumo, setCopiadoResumo] = useState(false);
@@ -63,6 +68,7 @@ export function CerimoniaCliente({ jogadores, times, problemas = [] }: Props) {
       setReveladasLinha(salva.reveladasLinha);
       setReveladasGol(salva.reveladasGol);
       setFase(salva.fase);
+      setTimeRevelado(salva.timeRevelado ?? true);
     }
     setSessaoHidratada(true);
   }, [assinatura, bloqueado]);
@@ -79,17 +85,27 @@ export function CerimoniaCliente({ jogadores, times, problemas = [] }: Props) {
       reveladasLinha,
       reveladasGol,
       fase,
+      timeRevelado,
       assinaturaCadastro: assinatura,
     });
-  }, [sessaoHidratada, resultado, reveladasLinha, reveladasGol, fase, assinatura]);
+  }, [sessaoHidratada, resultado, reveladasLinha, reveladasGol, fase, timeRevelado, assinatura]);
 
   const porId = useMemo(() => new Map(jogadores.map((j) => [j.id, j])), [jogadores]);
   const timePorId = useMemo(() => new Map(times.map((t) => [t.id, t])), [times]);
 
+  // Jogador com o nome à mostra mas o time ainda fechado não entra no elenco.
+  const pendenteLinha = fase === 'linha' && !timeRevelado && reveladasLinha > 0 ? 1 : 0;
+  const pendenteGol = fase === 'goleiros' && !timeRevelado && reveladasGol > 0 ? 1 : 0;
   const elencos = useMemo(() => {
     if (!resultado) return [];
-    return montarElencos(jogadores, times, resultado.sorteio, reveladasLinha, reveladasGol);
-  }, [resultado, jogadores, times, reveladasLinha, reveladasGol]);
+    return montarElencos(
+      jogadores,
+      times,
+      resultado.sorteio,
+      reveladasLinha - pendenteLinha,
+      reveladasGol - pendenteGol,
+    );
+  }, [resultado, jogadores, times, reveladasLinha, reveladasGol, pendenteLinha, pendenteGol]);
 
   const iniciar = useCallback(() => {
     if (bloqueado) return;
@@ -101,6 +117,8 @@ export function CerimoniaCliente({ jogadores, times, problemas = [] }: Props) {
     setCopiadoLink(false);
     setCopiadoResumo(false);
     setOficial({ estado: 'ocioso' });
+    setTimeRevelado(true);
+    setGirando(false);
     setFase(r.sorteio.goleiros.length > 0 ? 'goleiros' : 'linha');
   }, [jogadores, times, bloqueado]);
 
@@ -111,70 +129,102 @@ export function CerimoniaCliente({ jogadores, times, problemas = [] }: Props) {
     setReveladasGol(0);
     setLink(null);
     setOficial({ estado: 'ocioso' });
+    setTimeRevelado(true);
+    setGirando(false);
     setFase('pronto');
   }, []);
 
   // Ordem da cerimônia: goleiros primeiro, depois os jogadores de linha um a um,
   // em ordem aleatória (decisão do operador em 18/11/2026).
-  const revelarProximo = useCallback(() => {
-    if (!resultado) return;
+  const emEtapa = fase === 'goleiros' || fase === 'linha';
+  const aguardandoTime = emEtapa && !timeRevelado && reveladasLinha + reveladasGol > 0;
+
+  /** Passo 1: sorteia o próximo nome (ou passa de etapa / conclui). */
+  const sortearJogador = useCallback(() => {
+    if (!resultado || girando || aguardandoTime) return;
     const { linha, goleiros } = resultado.sorteio;
 
     if (fase === 'goleiros') {
       if (reveladasGol < goleiros.length) {
         setReveladasGol((n) => n + 1);
+        setTimeRevelado(false);
         return;
       }
       setFase(linha.length > 0 ? 'pre-linha' : 'fim');
       return;
     }
-
     if (fase === 'pre-linha') {
-      setFase(linha.length > 1 ? 'linha' : 'fim');
+      setFase('linha');
       setReveladasLinha(1);
+      setTimeRevelado(false);
       return;
     }
-
     if (fase === 'linha') {
       if (reveladasLinha < linha.length) {
-        const proximo = reveladasLinha + 1;
-        setReveladasLinha(proximo);
-        if (proximo >= linha.length) setFase('fim');
+        setReveladasLinha((n) => n + 1);
+        setTimeRevelado(false);
         return;
       }
       setFase('fim');
     }
-  }, [resultado, fase, reveladasLinha, reveladasGol]);
+  }, [resultado, girando, aguardandoTime, fase, reveladasLinha, reveladasGol]);
 
+  /** Passo 2: sorteia o time do nome que está na tela e o coloca no elenco. */
+  const sortearTime = useCallback(() => {
+    if (!aguardandoTime || girando) return;
+    const semMovimento =
+      typeof window !== 'undefined' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (semMovimento) {
+      setTimeRevelado(true);
+      return;
+    }
+    setGirando(true);
+    window.setTimeout(() => {
+      setGirando(false);
+      setTimeRevelado(true);
+    }, 1100);
+  }, [aguardandoTime, girando]);
+
+  const avancar = useCallback(() => {
+    if (aguardandoTime) sortearTime();
+    else sortearJogador();
+  }, [aguardandoTime, sortearTime, sortearJogador]);
+
+  /** Volta um passo: fecha o time do último sorteado; se já estava fechado, tira o nome. */
   const voltarPasso = useCallback(() => {
-    if (!resultado) return;
-    const temGoleiros = resultado.sorteio.goleiros.length > 0;
-    if (fase === 'fim' || fase === 'linha') {
-      if (reveladasLinha > 1) {
-        setReveladasLinha((n) => n - 1);
-        setFase('linha');
-      } else if (reveladasLinha === 1) {
-        setReveladasLinha(0);
-        setFase(temGoleiros ? 'pre-linha' : 'linha');
-      } else if (fase === 'fim' && reveladasGol > 0) {
-        setReveladasGol((n) => n - 1);
-        setFase('goleiros');
-      }
+    if (!resultado || girando) return;
+    if (fase === 'fim') {
+      setFase(reveladasLinha > 0 ? 'linha' : 'goleiros');
+      setTimeRevelado(true);
       return;
     }
     if (fase === 'pre-linha') {
       setFase('goleiros');
       return;
     }
-    if (fase === 'goleiros' && reveladasGol > 0) {
-      setReveladasGol((n) => n - 1);
+    if (!emEtapa) return;
+    const n = fase === 'linha' ? reveladasLinha : reveladasGol;
+    if (n === 0) return;
+    if (timeRevelado) {
+      setTimeRevelado(false);
+      return;
     }
-  }, [resultado, fase, reveladasLinha, reveladasGol]);
+    if (fase === 'linha') {
+      setReveladasLinha(n - 1);
+      if (n === 1 && resultado.sorteio.goleiros.length > 0) setFase('pre-linha');
+    } else {
+      setReveladasGol(n - 1);
+    }
+    setTimeRevelado(true);
+  }, [resultado, girando, fase, emEtapa, timeRevelado, reveladasLinha, reveladasGol]);
 
   const revelarTodos = useCallback(() => {
     if (!resultado) return;
     setReveladasLinha(resultado.sorteio.linha.length);
     setReveladasGol(resultado.sorteio.goleiros.length);
+    setTimeRevelado(true);
+    setGirando(false);
     setFase('fim');
   }, [resultado]);
 
@@ -187,7 +237,7 @@ export function CerimoniaCliente({ jogadores, times, problemas = [] }: Props) {
       if (e.code === 'Space' || e.code === 'Enter') {
         e.preventDefault();
         if (fase === 'pronto') iniciar();
-        else if (fase !== 'fim') revelarProximo();
+        else if (fase !== 'fim') avancar();
       } else if (e.code === 'Backspace' || e.code === 'ArrowLeft') {
         if (fase !== 'pronto') {
           e.preventDefault();
@@ -197,7 +247,7 @@ export function CerimoniaCliente({ jogadores, times, problemas = [] }: Props) {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [fase, iniciar, revelarProximo, voltarPasso]);
+  }, [fase, iniciar, avancar, voltarPasso]);
 
   // ---- Alocacao atual em destaque ----
   const atual = useMemo(() => {
@@ -282,12 +332,29 @@ export function CerimoniaCliente({ jogadores, times, problemas = [] }: Props) {
   }, [resultado, elencos, link]);
 
   const emModoPalco = fase === 'pronto' || fase === 'pre-linha';
-  const goleirosCompletosAguardandoTransicao =
-    fase === 'goleiros' &&
-    resultado !== null &&
-    reveladasGol >= resultado.sorteio.goleiros.length &&
-    resultado.sorteio.linha.length > 0;
   const etapaGoleiros = fase === 'goleiros';
+  const etapaEsgotada =
+    resultado !== null &&
+    ((fase === 'goleiros' && reveladasGol >= resultado.sorteio.goleiros.length) ||
+      (fase === 'linha' && reveladasLinha >= resultado.sorteio.linha.length));
+  const rotuloJogador =
+    fase === 'pre-linha'
+      ? 'Sortear 1º jogador de linha'
+      : etapaEsgotada
+        ? fase === 'goleiros' && (resultado?.sorteio.linha.length ?? 0) > 0
+          ? 'Etapa 2 · Linha'
+          : 'Concluir sorteio'
+        : etapaGoleiros
+          ? 'Sortear goleiro'
+          : 'Sortear jogador';
+  // Times que ainda têm vaga nesta etapa: é por eles que a roleta passa.
+  const timesComVaga = useMemo(() => {
+    if (!resultado || times.length === 0) return [];
+    const cota = Math.ceil(resultado.sorteio.linha.length / times.length);
+    return elencos
+      .filter((e) => (etapaGoleiros ? !e.goleiro : e.linha.length < cota))
+      .map((e) => e.time);
+  }, [resultado, times.length, elencos, etapaGoleiros]);
 
   return (
     <div className="tela-cheia relative min-h-screen px-4 pb-20 pt-16">
@@ -435,12 +502,20 @@ export function CerimoniaCliente({ jogadores, times, problemas = [] }: Props) {
 
                   <div className="mx-auto mt-7 max-w-lg border-t border-hud pt-5">
                     <p className="hud-label mb-3 text-[11px]">Vai para</p>
-                    <div className="inline-flex items-center justify-center gap-4">
-                      <EscudoPorNome nome={atual.time.nome} tamanho={64} />
-                      <p className="titulo-hero t-xl texto-gradiente text-[clamp(1.8rem,6vw,3.2rem)]">
-                        {atual.time.nome}
+                    {timeRevelado ? (
+                      <div key="time" className="animar-revelar flash-selecao inline-flex items-center justify-center gap-4">
+                        <EscudoPorNome nome={atual.time.nome} tamanho={64} />
+                        <p className="titulo-hero t-xl texto-gradiente text-[clamp(1.8rem,6vw,3.2rem)]">
+                          {atual.time.nome}
+                        </p>
+                      </div>
+                    ) : girando ? (
+                      <Roleta times={timesComVaga.length > 0 ? timesComVaga : times} />
+                    ) : (
+                      <p className="titulo-hero t-xl text-[clamp(1.8rem,6vw,3.2rem)] text-text-3">
+                        ?
                       </p>
-                    </div>
+                    )}
                   </div>
                 </HudCard>
               )}
@@ -459,21 +534,23 @@ export function CerimoniaCliente({ jogadores, times, problemas = [] }: Props) {
                       </button>
                     )}
 
-                    <button onClick={revelarProximo} className="btn-cta">
-                      <span>
-                        {fase === 'pre-linha'
-                          ? 'Revelar 1º jogador de linha'
-                          : goleirosCompletosAguardandoTransicao
-                            ? 'Etapa 2 · Linha'
-                            : feitas === 0
-                              ? etapaGoleiros
-                                ? 'Revelar 1º goleiro'
-                                : 'Revelar 1º jogador'
-                              : etapaGoleiros
-                                ? 'Revelar próximo goleiro'
-                                : 'Revelar próximo'}
-                      </span>
+                    {/* Dois botões: primeiro o nome, depois o time. */}
+                    <button
+                      onClick={sortearJogador}
+                      disabled={aguardandoTime || girando}
+                      className={aguardandoTime || girando ? 'btn-hud' : 'btn-cta'}
+                    >
+                      <span>{rotuloJogador}</span>
                     </button>
+                    {(emEtapa || fase === 'pre-linha') && (
+                      <button
+                        onClick={sortearTime}
+                        disabled={!aguardandoTime || girando}
+                        className={aguardandoTime && !girando ? 'btn-cta' : 'btn-hud'}
+                      >
+                        <span>{girando ? 'Sorteando…' : 'Sortear time'}</span>
+                      </button>
+                    )}
 
                     <button
                       onClick={revelarTodos}
@@ -484,7 +561,7 @@ export function CerimoniaCliente({ jogadores, times, problemas = [] }: Props) {
                     </button>
 
                     <span className="hud-label w-full text-center text-[11px] text-text-3">
-                      espaço <span className="text-text-1">=</span> próximo · seta esquerda{' '}
+                      espaço <span className="text-text-1">=</span> próximo passo · seta esquerda{' '}
                       <span className="text-text-1">=</span> voltar
                     </span>
                   </>
@@ -617,7 +694,7 @@ export function CerimoniaCliente({ jogadores, times, problemas = [] }: Props) {
             <h2 className="titulo-hero mb-5 text-2xl sm:text-3xl">Elencos</h2>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {elencos.map((e) => {
-                const recebeuAgora = atual?.time.id === e.time.id;
+                const recebeuAgora = timeRevelado && atual?.time.id === e.time.id;
                 const marca = marcaPorNome(e.time.nome);
                 const slotsRestantes = Math.max(0, cotaLinhaMaxima - e.linha.length);
                 const semGoleiroDefinitivo =
@@ -714,6 +791,23 @@ export function CerimoniaCliente({ jogadores, times, problemas = [] }: Props) {
           </section>
         )}
       </div>
+    </div>
+  );
+}
+
+/** Roleta curta pelos times com vaga, antes de mostrar o time sorteado. */
+function Roleta({ times }: { times: readonly Time[] }) {
+  const [i, setI] = useState(0);
+  useEffect(() => {
+    const id = window.setInterval(() => setI((n) => n + 1), 90);
+    return () => window.clearInterval(id);
+  }, []);
+  const time = times[i % times.length];
+  if (!time) return null;
+  return (
+    <div className="inline-flex items-center justify-center gap-4 opacity-80" aria-live="off">
+      <EscudoPorNome nome={time.nome} tamanho={64} />
+      <p className="titulo-hero t-xl text-[clamp(1.8rem,6vw,3.2rem)] text-text-2">{time.nome}</p>
     </div>
   );
 }

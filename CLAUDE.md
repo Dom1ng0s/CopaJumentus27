@@ -24,7 +24,7 @@ Há **contas de admin**, só para a organização (decisão do operador em 17/11
 2. Cadastro dos **times**: nome do time + capitão fixo (o capitão é um jogador, já pertence ao time, não entra no pote).
 3. **Sorteio balanceado** dos jogadores de linha entre os times.
 4. **Sorteio separado de goleiros**: segunda etapa, 1 goleiro por time.
-5. **Cerimônia de revelação**: primeiro os goleiros, depois os jogadores de linha um por vez em ordem aleatória, sem estrelas na tela, controlada pelo operador.
+5. **Cerimônia de revelação**: primeiro os goleiros, depois os jogadores de linha um por vez em ordem aleatória, sem estrelas na tela, controlada pelo operador. Cada revelação tem **dois botões** (decisão do operador em 18/11/2026): "Sortear jogador" mostra só o nome; "Sortear time" passa uma roleta curta pelos times com vaga e mostra o destino, e só então o jogador entra no elenco. Depois vem o próximo. O time já está decidido pela divisão equilibrada (§3.3); o segundo botão revela, não decide.
 6. **Link de resultado estático**: ao fim, gerar uma URL compartilhável que renderiza os elencos finais sem precisar de backend.
 
 ### Fase 2 — Campeonato (implementada, ver §8)
@@ -203,7 +203,7 @@ Tokens em `src/app/globals.css` (fonte única; o Tailwind só aponta para eles):
 - **Rankings no celular:** uma categoria por vez, em abas fixas no topo (`AbasRankings`); no desktop, todas na grade.
 - **Súmula rápida** (`components/admin/LancadorEventos.tsx`): na beira do campo, lançar é tocar no jogador, depois no evento (Gol, Gol de pênalti, Amarelo, Vermelho, Pênalti perdido, Gol contra; Defesa só para o goleiro) e, se for gol, em quem deu a assistência ou "Sem assistência". Minuto é opcional. A confirmação vem em toast com o placar. Apagar um evento pede dois toques ("Apagar?"). A regra continua toda em `adicionarEvento`/`removerEvento`.
 - **Painel do admin:** o jogo da vez (ao vivo ou próximo) em destaque com "Abrir súmula", números do campeonato e "Na sequência".
-- **Cerimônia projetada:** sem a barra do site; controles discretos no canto ("Tela cheia" e "Voltar" ao sorteio).
+- **Cerimônia projetada:** sem a barra do site; controles discretos no canto ("Tela cheia" e "Voltar" ao sorteio). Espaço avança um passo (nome, depois time); seta esquerda volta um passo. Com `prefers-reduced-motion`, a roleta do time não roda.
 
 Este app é **dark-only de propósito** — a cerimônia acontece à noite.
 
