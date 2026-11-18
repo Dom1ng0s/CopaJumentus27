@@ -8,16 +8,20 @@ import type { Campeonato, Fase, Origem, Partida, Zona } from './tipos';
 
 /**
  * Confrontos de Berger enviados pelo operador, reordenados dentro de cada rodada
- * para nenhum time jogar duas partidas seguidas. [rodada, dia, mandante, visitante].
+ * para dar isonomia de descanso (decisão do operador, 17/11/2026): no mesmo dia,
+ * todo time descansa pelo menos 2 jogos entre uma partida e outra, nenhum tem
+ * mais de 2 descansos curtos (de 2 jogos) e a maior espera é de 5 jogos.
+ * Entre as 8.192 ordens que garantem o descanso mínimo de 2, é a mais equilibrada.
+ * [rodada, dia, mandante, visitante].
  */
 export const TABELA_GRUPO_UNICO: ReadonlyArray<readonly [number, number, number, number]> = [
-  [1, 1, 1, 8], [1, 1, 2, 7], [1, 1, 3, 6], [1, 1, 4, 5],
-  [2, 1, 7, 3], [2, 1, 8, 5], [2, 1, 6, 4], [2, 1, 1, 2],
-  [3, 1, 4, 7], [3, 1, 2, 8], [3, 1, 3, 1], [3, 1, 5, 6],
-  [4, 1, 1, 4], [4, 1, 8, 6], [4, 1, 7, 5], [4, 1, 2, 3],
-  [5, 2, 5, 1], [5, 2, 3, 8], [5, 2, 4, 2], [5, 2, 6, 7],
-  [6, 2, 2, 5], [6, 2, 8, 7], [6, 2, 1, 6], [6, 2, 3, 4],
-  [7, 2, 6, 2], [7, 2, 4, 8], [7, 2, 5, 3], [7, 2, 7, 1],
+  [1, 1, 1, 8], [1, 1, 4, 5], [1, 1, 3, 6], [1, 1, 2, 7],
+  [2, 1, 8, 5], [2, 1, 6, 4], [2, 1, 1, 2], [2, 1, 7, 3],
+  [3, 1, 5, 6], [3, 1, 2, 8], [3, 1, 3, 1], [3, 1, 4, 7],
+  [4, 1, 8, 6], [4, 1, 2, 3], [4, 1, 7, 5], [4, 1, 1, 4],
+  [5, 2, 3, 8], [5, 2, 6, 7], [5, 2, 4, 2], [5, 2, 5, 1],
+  [6, 2, 8, 7], [6, 2, 3, 4], [6, 2, 1, 6], [6, 2, 2, 5],
+  [7, 2, 4, 8], [7, 2, 7, 1], [7, 2, 5, 3], [7, 2, 6, 2],
 ];
 
 export const ZONAS_GRUPO_UNICO: readonly Zona[] = [
