@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { Anton, Barlow, Barlow_Condensed } from 'next/font/google';
 import localFont from 'next/font/local';
-import { Navbar } from '@/components/Navbar';
+import { Navbar, Rodape } from '@/components/Navbar';
 import { NOME_COMPETICAO, SUBTITULO_COMPETICAO } from '@/lib/config';
 import './globals.css';
 
@@ -34,7 +34,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <div className="grain-overlay" aria-hidden="true" />
         <div className="scroll-edge" aria-hidden="true" />
         <Navbar />
-        <main className="pt-24">{children}</main>
+        {/* 58 px = barra (56) + filete (2). O espaço de respiro fica com cada tela. */}
+        <main className="pt-[58px]">{children}</main>
+        <Rodape />
       </body>
     </html>
   );

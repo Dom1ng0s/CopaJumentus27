@@ -16,7 +16,7 @@ export function PaginaJogo({ c, base, id }: { c: Campeonato; base: string; id: s
   const infoLados = lados(c, partida, equipe);
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6 px-4 pb-20">
+    <div className="mx-auto max-w-3xl space-y-6 px-4 pb-20 pt-6">
       <AutoAtualizar ativo={partida.status === 'ao-vivo'} segundos={15} />
       <div className="nao-imprimir flex items-center justify-between">
         <Link href={`${base}/jogos`} className="hud-label hover:text-text-1">

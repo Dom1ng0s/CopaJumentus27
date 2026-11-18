@@ -18,7 +18,8 @@ export function PaginaInicio({ c, base, edicoes }: CampeonatoPublico) {
   const ultimas = ordenadas.filter((p) => p.status === 'encerrada').slice(-4).reverse();
   const resumo = resumirJogos(c.partidas);
   const resultado = podio(c);
-  const status = aoVivo.length ? 'Ao vivo' : ROTULO_STATUS_CAMPEONATO[c.status];
+  // Status é do campeonato; o vermelho "ao vivo" fica só com os jogos (manual: vermelho só para ao vivo, erro e eliminado).
+  const status = ROTULO_STATUS_CAMPEONATO[c.status];
   const outras = edicoes.filter((e) => e.id !== c.id);
   const titulo = [c.nome, c.edicao && !c.nome.includes(c.edicao) ? c.edicao : ''].filter(Boolean).join(' ');
   const bannerSrc = c.banner || '/banner-copa-jumentus.webp';
@@ -70,7 +71,7 @@ export function PaginaInicio({ c, base, edicoes }: CampeonatoPublico) {
           <div className="flex flex-wrap gap-3">
             <Info rotulo="Período" valor={c.inicio ? `${formatarData(c.inicio)}${c.fim ? ` – ${formatarData(c.fim)}` : ''}` : 'A definir'} />
             <Info rotulo="Local" valor={c.local ?? 'A definir'} />
-            <Info rotulo="Status" valor={status} destaque={aoVivo.length > 0} />
+            <Info rotulo="Status" valor={status} />
           </div>
         </div>
 
@@ -186,13 +187,11 @@ function Podio({ primeiro, segundo, terceiro }: { primeiro?: Equipe; segundo?: E
   );
 }
 
-function Info({ rotulo, valor, destaque }: { rotulo: string; valor: string; destaque?: boolean }) {
+function Info({ rotulo, valor }: { rotulo: string; valor: string }) {
   return (
     <div className="hud-card relative px-3 py-2">
-      <p className="hud-label text-[10px]">{rotulo}</p>
-      <p className="text-sm font-semibold" style={destaque ? { color: 'var(--vermelho)' } : undefined}>
-        {valor}
-      </p>
+      <p className="hud-label !text-[12px]">{rotulo}</p>
+      <p className="text-sm font-semibold text-text-1">{valor}</p>
     </div>
   );
 }

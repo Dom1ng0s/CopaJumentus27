@@ -25,7 +25,8 @@
   --text1: #f4f2ec;
   --text2: #c9ccd1;
   --text3: #94a2bd;
-  --text4: #6b7c9c;
+  /* 5,1:1 sobre --surface2; o antigo #6b7c9c (3,9:1) reprovava em texto pequeno e sob sol. */
+  --text4: #8a99b8;
 
   /* Acento: dourado Jumentus */
   --accent: #d4a12a;
@@ -35,9 +36,10 @@
   --vermelho: #e4002b;
 
   /* Status (o vermelho de "ao vivo" e "eliminado" vem do manual) */
-  --success: #3ddc84;
-  --success-bg: #0d3524;
-  --success-text: #5be89a;
+  /* O manual não tem verde: confirmação usa o dourado da Copa. */
+  --success: #d4a12a;
+  --success-bg: #2e2408;
+  --success-text: #f2cb57;
   --warning: #f2cb57;
   --warning-bg: #2e2408;
   --warning-text: #f2cb57;
@@ -48,7 +50,8 @@
   /* Vice City: sinais pontuais, nunca preenchimento de superfície */
   --accent-orange: #ffb458;
   --accent-violet: #7b208f;
-  --accent-armor: #6aa8e8;
+  /* Goleiro: cinza concreto (o azul antigo não existe no manual). */
+  --accent-armor: #c9ccd1;
   --noite-vice: #1e0838;
 
   /* Gradientes: dourado metálico a 45° e noite Vice descendo para o marinho */
@@ -341,15 +344,20 @@ body {
 
 /* ---------- Botões: retos, ponta cortada a 45° (pontas de barra do manual) ---------- */
 .btn-cta {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 3rem;
   background-image: var(--gradient-leonida);
   color: #06122a;
   font-family: var(--font-display);
   text-transform: uppercase;
   font-size: 1.125rem;
   letter-spacing: 0.02em;
-  padding: 0.8rem 2.1rem 0.8rem 1.75rem;
+  padding: 0.5rem 2.1rem 0.5rem 1.75rem;
   border: 0;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
   border-radius: 0;
   clip-path: polygon(0 0, 100% 0, 100% calc(100% - var(--corte)), calc(100% - var(--corte)) 100%, 0 100%);
   transition: all var(--duration-medium) var(--ease);
@@ -377,7 +385,12 @@ body {
 }
 
 .btn-hud {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 3rem;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
   background: var(--surface1);
   border: 1px solid var(--border-visible);
   border-bottom-color: var(--accent);
@@ -387,7 +400,7 @@ body {
   text-transform: uppercase;
   font-size: 1rem;
   letter-spacing: 0.06em;
-  padding: 0.6rem 1.4rem;
+  padding: 0.5rem 1.4rem;
   border-radius: var(--radius-control);
   transition: all var(--duration-medium) var(--ease);
 }
@@ -444,9 +457,10 @@ select.campo option {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 2.25rem;
-  min-height: 2.25rem;
-  padding: 0 0.75rem;
+  /* 44 px: alvo de toque mínimo no celular. */
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  padding: 0 0.85rem;
   border-radius: var(--radius-control);
   border: 1px solid var(--border-visible);
   background: var(--surface1);
@@ -454,7 +468,8 @@ select.campo option {
   font-family: var(--font-mono);
   font-size: 0.9375rem;
   font-weight: 700;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
   transition: all var(--duration-fast) var(--ease);
@@ -473,14 +488,46 @@ select.campo option {
   color: var(--error-text);
 }
 .btn-mini[aria-pressed='true'] {
-  background: var(--success-bg);
-  border-color: var(--success);
-  color: var(--success-text);
+  background: var(--accent-subtle);
+  border-color: var(--accent);
+  color: var(--dourado-claro);
 }
 /* Item ativo de navegação: dourado */
 .btn-mini[aria-current='page'] {
   border-color: var(--accent);
   color: var(--dourado-claro);
+}
+
+/* ---------- Esqueleto de carregamento ---------- */
+.esqueleto {
+  background: linear-gradient(90deg, var(--surface1) 0%, var(--surface2) 50%, var(--surface1) 100%);
+  background-size: 200% 100%;
+  animation: esqueleto 1.4s ease-in-out infinite;
+}
+@keyframes esqueleto {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: -100% 0;
+  }
+}
+
+/* ---------- Toast: confirmação que materializa e some ---------- */
+.toast {
+  animation: toastEntra var(--duration-medium) var(--ease) both;
+}
+@keyframes toastEntra {
+  from {
+    opacity: 0;
+    filter: blur(6px);
+    transform: translateY(12px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    filter: blur(0);
+    transform: none;
+  }
 }
 
 /* ---------- Animacoes ---------- */
@@ -544,6 +591,10 @@ select.campo option {
    Movimento reduzido nao quer dizer sem retorno: quer dizer um equivalente
    suave e nao vestibular. Opacidade continua, deslocamento e escala saem. */
 @media (prefers-reduced-motion: reduce) {
+  .esqueleto,
+  .toast {
+    animation: none;
+  }
   *,
   *::before,
   *::after {

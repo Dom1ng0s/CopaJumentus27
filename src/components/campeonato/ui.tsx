@@ -4,6 +4,7 @@ import Link from 'next/link';
 import type { Equipe, Partida } from '@/lib/domain/campeonato/tipos';
 import { formatarDataHora } from '@/lib/campeonato/consultas';
 import { escudoDe, marcaPorNome } from '@/lib/campeonato/marcas';
+import { Toast } from './Toast';
 
 export function Escudo({ equipe, tamanho = 28 }: { equipe?: Equipe; tamanho?: number }) {
   if (!equipe) return <span style={{ width: tamanho, height: tamanho }} className="inline-block" />;
@@ -88,14 +89,33 @@ export function SeloCapitao({ tamanho = 22 }: { tamanho?: number }) {
   );
 }
 
-/** Título de tela em Anton com o filete dourado e o grupo de faixas a 45° à direita. */
-export function Cabecalho({ titulo, legenda }: { titulo: string; legenda?: string }) {
+/**
+ * Título de tela em Anton com o filete dourado e o grupo de faixas a 45° no canto
+ * direito. O texto reserva a largura das faixas: elas nunca passam atrás de título,
+ * legenda ou botão (manual §7.2). A ação (ex.: Imprimir) fica sob a legenda.
+ */
+export function Cabecalho({ titulo, legenda, acao }: { titulo: string; legenda?: string; acao?: React.ReactNode }) {
   return (
-    <div className="relative mb-8 overflow-hidden pb-4 pt-2">
+    <div className="relative mb-8 overflow-hidden pb-4 pt-8 sm:pt-10">
       <div className="faixas hidden sm:block" aria-hidden="true" />
-      <h1 className="titulo-hero t-xl relative text-5xl sm:text-6xl">{titulo}</h1>
-      <div className="filete relative mt-3 w-24" aria-hidden="true" />
-      {legenda && <p className="relative mt-3 text-base text-text-2">{legenda}</p>}
+      <div className="relative sm:pr-[280px]">
+        <h1 className="titulo-hero t-xl text-5xl sm:text-6xl">{titulo}</h1>
+        <div className="filete mt-3 w-24" aria-hidden="true" />
+        {legenda && <p className="mt-3 text-base text-text-2">{legenda}</p>}
+        {acao && <div className="mt-4 flex flex-wrap gap-2">{acao}</div>}
+      </div>
+    </div>
+  );
+}
+
+/** Estado vazio: módulo tracejado com uma frase curta, sem ilustração genérica. */
+export function Vazio({ texto, detalhe }: { texto: string; detalhe?: string }) {
+  return (
+    <div className="flex flex-col items-center justify-center gap-1 border border-dashed border-[var(--border-visible)] px-4 py-8 text-center">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src="/imagens/logo/copa-jumentus-logo.png" alt="" width={28} height={38} className="mb-2 h-9 w-auto opacity-40 grayscale" />
+      <p className="font-mono text-sm font-bold uppercase tracking-[0.06em] text-text-2">{texto}</p>
+      {detalhe && <p className="text-sm text-text-3">{detalhe}</p>}
     </div>
   );
 }
@@ -114,10 +134,12 @@ export function Secao({ titulo, children, acao }: { titulo: string; children: Re
 
 export function Aviso({ texto, tipo = 'erro' }: { texto?: string; tipo?: 'erro' | 'ok' | 'info' }) {
   if (!texto) return null;
+  // Confirmação vira toast; erro e informação ficam fixos na página.
+  if (tipo === 'ok') return <Toast key={texto} texto={texto} />;
   const cores = {
     erro: { bg: 'var(--error-bg)', fg: 'var(--error-text)', borda: 'var(--error)' },
     ok: { bg: 'var(--success-bg)', fg: 'var(--success-text)', borda: 'var(--success)' },
-    info: { bg: 'var(--warning-bg)', fg: 'var(--warning-text)', borda: 'var(--warning)' },
+    info: { bg: 'var(--surface2)', fg: 'var(--text1)', borda: 'var(--accent)' },
   }[tipo];
   return (
     <p
@@ -133,7 +155,7 @@ export function Aviso({ texto, tipo = 'erro' }: { texto?: string; tipo?: 'erro' 
 const ROTULO_STATUS: Record<Partida['status'], string> = {
   agendada: 'Agendada',
   'ao-vivo': 'Ao vivo',
-  encerrada: 'Encerrado',
+  encerrada: 'Encerrada',
 };
 
 export function SeloStatus({ status }: { status: Partida['status'] }) {
@@ -191,7 +213,7 @@ export function CardPartida({
         </div>
       )}
       <div className="mb-2 flex items-center justify-between gap-2 pt-0.5">
-        <span className="hud-label truncate !text-[11px]">
+        <span className="hud-label truncate !text-[12px]">
           {partida.numero !== undefined && <span style={{ color: 'var(--accent)' }}>J{partida.numero} · </span>}
           {partida.rotulo ?? ''}
         </span>
@@ -200,7 +222,7 @@ export function CardPartida({
       <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
         <div className={`flex min-w-0 flex-col items-center gap-1 text-center ${visitanteVenceu ? 'opacity-65' : ''}`}>
           <Escudo equipe={mandante} tamanho={40} />
-          <span className={`w-full truncate font-mono text-sm font-bold uppercase tracking-wide ${mandante ? '' : 'text-text-3'}`}>{mandante?.nome ?? rotuloMandante ?? 'A definir'}</span>
+          <span className={`line-clamp-2 w-full font-mono text-sm font-bold uppercase leading-tight tracking-wide ${mandante ? '' : 'text-text-3'}`}>{mandante?.nome ?? rotuloMandante ?? 'A definir'}</span>
         </div>
         <div className="text-center">
           <p className="numero text-4xl">
@@ -214,10 +236,10 @@ export function CardPartida({
         </div>
         <div className={`flex min-w-0 flex-col items-center gap-1 text-center ${mandanteVenceu ? 'opacity-65' : ''}`}>
           <Escudo equipe={visitante} tamanho={40} />
-          <span className={`w-full truncate font-mono text-sm font-bold uppercase tracking-wide ${visitante ? '' : 'text-text-3'}`}>{visitante?.nome ?? rotuloVisitante ?? 'A definir'}</span>
+          <span className={`line-clamp-2 w-full font-mono text-sm font-bold uppercase leading-tight tracking-wide ${visitante ? '' : 'text-text-3'}`}>{visitante?.nome ?? rotuloVisitante ?? 'A definir'}</span>
         </div>
       </div>
-      <p className="mt-2 text-center font-mono text-[13px] font-semibold uppercase tracking-wide text-text-3">
+      <p className="mt-2 text-center font-mono text-[13px] font-semibold uppercase tracking-wide text-text-2">
         {partida.dataHora ? formatarDataHora(partida.dataHora) : partida.dia !== undefined ? `Dia ${partida.dia}` : formatarDataHora()}
         {partida.campo ? ` · ${partida.campo}` : ''}
         {partida.local ? ` · ${partida.local}` : ''}
