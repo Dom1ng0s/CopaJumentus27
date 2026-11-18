@@ -32,34 +32,39 @@ export function PaginaInicio({ c, base, edicoes }: CampeonatoPublico) {
   const status = ROTULO_STATUS_CAMPEONATO[c.status];
   const outras = edicoes.filter((e) => e.id !== c.id);
   const titulo = [c.nome, c.edicao && !c.nome.includes(c.edicao) ? c.edicao : ''].filter(Boolean).join(' ');
-  const bannerSrc = c.banner || '/banner-copa-jumentus.webp';
 
   return (
     <>
       <AutoAtualizar ativo={aoVivo.length > 0} />
       <section className="relative">
-        <div className="relative w-full overflow-hidden py-8 sm:py-0">
-          {/* Moldura no celular: a própria arte ampliada e desfocada para casar a emenda (CLAUDE.md §5) */}
-          <div
-            className="pointer-events-none absolute inset-0 scale-110 sm:hidden"
-            style={{
-              backgroundImage: `url(${bannerSrc})`,
-              backgroundSize: 'cover',
-              backgroundPosition: 'center',
-              filter: 'blur(26px) saturate(1.15)',
-            }}
-            aria-hidden="true"
-          />
+        <div className={`relative w-full overflow-hidden ${c.banner ? 'py-8 sm:py-0' : ''}`}>
+          {c.banner && (
+            // Arte cadastrada no admin é 4:1: no celular ganha moldura com a própria arte desfocada (CLAUDE.md §5).
+            <div
+              className="pointer-events-none absolute inset-0 scale-110 sm:hidden"
+              style={{
+                backgroundImage: `url(${c.banner})`,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+                filter: 'blur(26px) saturate(1.15)',
+              }}
+              aria-hidden="true"
+            />
+          )}
           <h1 className="sr-only">{titulo}</h1>
           {c.banner ? (
             // Arte da edição cadastrada no admin (caminho ou URL).
             // eslint-disable-next-line @next/next/no-img-element
             <img src={c.banner} alt={titulo} className="relative block h-auto w-full" />
           ) : (
-            <Image src="/banner-copa-jumentus.webp" alt={titulo} width={2000} height={504} priority sizes="100vw" className="relative block h-auto w-full" />
+            <>
+              {/* Celular: versão 5:2 com céu e água completos; desktop: a arte larga 4:1. */}
+              <Image src="/banner-copa-jumentus-celular.webp" alt={titulo} width={1024} height={412} priority sizes="100vw" className="relative block h-auto w-full sm:hidden" />
+              <Image src="/banner-copa-jumentus.webp" alt="" width={2000} height={504} priority sizes="100vw" className="relative hidden h-auto w-full sm:block" />
+            </>
           )}
           <div
-            className="pointer-events-none absolute inset-x-0 bottom-0 h-[30%] sm:h-[14%]"
+            className="pointer-events-none absolute inset-x-0 bottom-0 h-[18%] sm:h-[14%]"
             style={{ backgroundImage: 'linear-gradient(180deg, transparent 0%, var(--background) 92%)' }}
             aria-hidden="true"
           />
