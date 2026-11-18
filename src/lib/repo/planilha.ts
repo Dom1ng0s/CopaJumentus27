@@ -33,7 +33,6 @@ const COLUNAS = {
   apelido: 'apelido',
   posicao: 'posicao',
   estrelas: 'estrelas',
-  capitao: 'capitao do time',
   status: 'status',
 } as const;
 
@@ -105,8 +104,6 @@ export interface LinhaInscricao {
   apelido?: string | null;
   posicao?: string | null;
   estrelas?: string | number | null;
-  /** Nome do time do qual é capitão; vazio = não é capitão. */
-  capitaoDe?: string | null;
   /** "confirmado" entra no sorteio; qualquer outro valor fica de fora. Vazio conta como confirmado. */
   status?: string | null;
   /** Como citar a linha nas mensagens, ex.: "linha 7" no CSV. */
@@ -124,7 +121,6 @@ export function linhasDoCsv(csv: string): { linhas: LinhaInscricao[]; erro?: str
     apelido: indice(COLUNAS.apelido),
     posicao: indice(COLUNAS.posicao),
     estrelas: indice(COLUNAS.estrelas),
-    capitao: indice(COLUNAS.capitao),
     status: indice(COLUNAS.status),
   };
   const faltando = (Object.keys(col) as (keyof typeof col)[]).filter((k) => col[k] < 0);
@@ -142,7 +138,6 @@ export function linhasDoCsv(csv: string): { linhas: LinhaInscricao[]; erro?: str
       apelido: pegar(col.apelido),
       posicao: pegar(col.posicao),
       estrelas: pegar(col.estrelas),
-      capitaoDe: pegar(col.capitao),
       status: pegar(col.status),
       referencia: `linha ${numeroLinha}`,
     });
@@ -150,17 +145,23 @@ export function linhasDoCsv(csv: string): { linhas: LinhaInscricao[]; erro?: str
   return { linhas };
 }
 
-export function interpretarPlanilha(csv: string): CadastroPlanilha {
+export function interpretarPlanilha(csv: string, nomesTimes: readonly string[] = ORDEM_TIMES): CadastroPlanilha {
   const { linhas, erro } = linhasDoCsv(csv);
   if (erro) return { jogadores: [], times: [], problemas: [erro], ignorados: 0 };
-  return interpretarInscricoes(linhas);
+  return interpretarInscricoes(linhas, nomesTimes);
 }
 
-/** Valida as inscrições e monta elenco e times para o sorteio, com a lista de pendências. */
-export function interpretarInscricoes(linhas: readonly LinhaInscricao[]): CadastroPlanilha {
+/**
+ * Valida as inscrições e monta elenco e times para o sorteio, com a lista de pendências.
+ * Os times são as equipes do campeonato e começam vazios: não há capitão fixo; o time
+ * escolhe o capitão depois do sorteio (decisão do operador em 18/11/2026).
+ */
+export function interpretarInscricoes(
+  linhas: readonly LinhaInscricao[],
+  nomesTimes: readonly string[] = ORDEM_TIMES,
+): CadastroPlanilha {
   const problemas: string[] = [];
   const jogadores: Jogador[] = [];
-  const capitaesPorTime = new Map<string, { nomeTime: string; jogadorIds: string[] }>();
   const nomesVistos = new Map<string, LinhaInscricao>();
   let ignorados = 0;
 
@@ -207,15 +208,6 @@ export function interpretarInscricoes(linhas: readonly LinhaInscricao[]): Cadast
       );
     }
 
-    const timeCapitao = (l.capitaoDe ?? '').trim();
-    if (timeCapitao !== '') {
-      if (posicao === 'GOL') problemas.push(`${rotulo}: goleiro não pode ser capitão.`);
-      const chave = chaveTime(timeCapitao);
-      const atual = capitaesPorTime.get(chave) ?? { nomeTime: timeCapitao, jogadorIds: [] };
-      atual.jogadorIds.push(id);
-      capitaesPorTime.set(chave, atual);
-    }
-
     if (!posicao || !estrelasValidas) continue;
 
     const apelido = (l.apelido ?? '').trim();
@@ -225,33 +217,18 @@ export function interpretarInscricoes(linhas: readonly LinhaInscricao[]): Cadast
       ...(apelido ? { apelido } : {}),
       posicao,
       estrelas: numero as Estrelas,
-      ehCapitao: timeCapitao !== '',
     });
   }
 
-  const ordem = ORDEM_TIMES.map(chaveTime);
-  const entradas = [...capitaesPorTime.entries()].sort(([a], [b]) => {
-    const ia = ordem.indexOf(a);
-    const ib = ordem.indexOf(b);
-    return (ia < 0 ? Number.MAX_SAFE_INTEGER : ia) - (ib < 0 ? Number.MAX_SAFE_INTEGER : ib);
-  });
-
-  const idsValidos = new Set(jogadores.map((j) => j.id));
+  const vistos = new Set<string>();
   const times: Time[] = [];
-  for (const [chave, { nomeTime, jogadorIds }] of entradas) {
-    if (jogadorIds.length > 1) {
-      problemas.push(`${nomeTime}: ${jogadorIds.length} capitães marcados (deve ser 1).`);
-      continue;
-    }
-    const capitaoId = jogadorIds[0];
-    if (!idsValidos.has(capitaoId)) continue;
-    const oficial = ORDEM_TIMES.find((t) => chaveTime(t) === chave);
-    times.push({ id: `t-${slug(oficial ?? nomeTime)}`, nome: oficial ?? nomeTime, capitaoId });
+  for (const nome of nomesTimes) {
+    const chave = chaveTime(nome);
+    if (vistos.has(chave)) continue;
+    vistos.add(chave);
+    times.push({ id: `t-${slug(nome)}`, nome });
   }
-
-  for (const nomeTime of ORDEM_TIMES) {
-    if (!capitaesPorTime.has(chaveTime(nomeTime))) problemas.push(`${nomeTime}: sem capitão.`);
-  }
+  if (times.length < 2) problemas.push('O campeonato precisa de pelo menos 2 equipes para o sorteio.');
 
   return { jogadores, times, problemas, ignorados };
 }

@@ -1,5 +1,5 @@
 // DADOS DE EXEMPLO para a demonstracao a comissao.
-// Os 8 nomes de time sao reais; capitaes e jogadores sao PLACEHOLDER inventados
+// Os 8 nomes de time sao reais; jogadores sao PLACEHOLDER inventados
 // e devem ser substituidos pelo cadastro de verdade antes de qualquer sorteio oficial.
 // Ao sair da demo, estes dados viram dados/elenco.json e dados/times.json (CLAUDE.md §4.2).
 
@@ -12,7 +12,8 @@ interface LinhaSeed {
   estrelas: Estrelas;
 }
 
-const CAPITAES: LinhaSeed[] = [
+// Ex-capitaes fixos: desde 18/11/2026 entram no pote como qualquer jogador.
+const VETERANOS: LinhaSeed[] = [
   { nome: 'Rodrigo Albuquerque', apelido: 'Digão', posicao: 'MEI', estrelas: 6 },
   { nome: 'Marcelo Tavares', apelido: 'Celo', posicao: 'ATA', estrelas: 5 },
   { nome: 'Fernando Quirino', apelido: 'Nando', posicao: 'ZAG', estrelas: 5 },
@@ -95,25 +96,20 @@ export const NOMES_TIMES = [
   'Houston Dynamo',
 ] as const;
 
-function montar(prefixo: string, seeds: LinhaSeed[], ehCapitao: boolean): Jogador[] {
+function montar(prefixo: string, seeds: LinhaSeed[]): Jogador[] {
   return seeds.map((s, i) => ({
     id: `${prefixo}${String(i + 1).padStart(2, '0')}`,
     nome: s.nome,
     apelido: s.apelido,
     posicao: s.posicao,
     estrelas: s.estrelas,
-    ehCapitao,
   }));
 }
 
 export const JOGADORES_EXEMPLO: Jogador[] = [
-  ...montar('c', CAPITAES, true),
-  ...montar('g', GOLEIROS, false),
-  ...montar('j', LINHA, false),
+  ...montar('c', VETERANOS),
+  ...montar('g', GOLEIROS),
+  ...montar('j', LINHA),
 ];
 
-export const TIMES_EXEMPLO: Time[] = NOMES_TIMES.map((nome, i) => ({
-  id: `t${i + 1}`,
-  nome,
-  capitaoId: `c${String(i + 1).padStart(2, '0')}`,
-}));
+export const TIMES_EXEMPLO: Time[] = NOMES_TIMES.map((nome, i) => ({ id: `t${i + 1}`, nome }));

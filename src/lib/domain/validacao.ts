@@ -5,7 +5,7 @@ import { TOLERANCIA_ESTRELAS } from '@/lib/config';
 import type { Alocacao, Jogador, Time } from './tipos';
 
 export interface Violacao {
-  invariante: 1 | 2 | 3 | 4;
+  invariante: 1 | 2 | 3;
   mensagem: string;
 }
 
@@ -15,7 +15,7 @@ interface EntradaValidacao {
   alocacoesLinha: readonly Alocacao[];
 }
 
-/** Soma de estrelas por time: capitao + jogadores de linha. Goleiro nao conta. */
+/** Soma de estrelas por time: jogadores de linha. Goleiro nao conta. Todo time comeca em 0. */
 export function somasDeEstrelas(
   jogadores: readonly Jogador[],
   times: readonly Time[],
@@ -24,10 +24,7 @@ export function somasDeEstrelas(
   const porId = new Map(jogadores.map((j) => [j.id, j]));
   const somas = new Map<string, number>();
 
-  for (const time of times) {
-    const capitao = porId.get(time.capitaoId);
-    somas.set(time.id, capitao ? capitao.estrelas : 0);
-  }
+  for (const time of times) somas.set(time.id, 0);
   for (const a of alocacoesLinha) {
     const jogador = porId.get(a.jogadorId);
     if (!jogador) continue;
@@ -42,13 +39,13 @@ export function amplitude(somas: Map<string, number>): number {
   return Math.max(...valores) - Math.min(...valores);
 }
 
-/** Pote de linha: jogadores de linha que nao sao capitaes (CLAUDE.md §3.3). */
+/** Pote de linha: todos os jogadores de linha (CLAUDE.md §3.3; sem capitão fixo). */
 export function poteDeLinha(jogadores: readonly Jogador[]): Jogador[] {
-  return jogadores.filter((j) => j.posicao !== 'GOL' && !j.ehCapitao);
+  return jogadores.filter((j) => j.posicao !== 'GOL');
 }
 
 export function poteDeGoleiros(jogadores: readonly Jogador[]): Jogador[] {
-  return jogadores.filter((j) => j.posicao === 'GOL' && !j.ehCapitao);
+  return jogadores.filter((j) => j.posicao === 'GOL');
 }
 
 export function validarSorteio({
@@ -59,7 +56,7 @@ export function validarSorteio({
   const violacoes: Violacao[] = [];
   const pote = poteDeLinha(jogadores);
 
-  // Invariante 1: todo jogador de linha nao-capitao alocado a exatamente um time.
+  // Invariante 1: todo jogador de linha alocado a exatamente um time.
   const contagem = new Map<string, number>();
   for (const a of alocacoesLinha) {
     contagem.set(a.jogadorId, (contagem.get(a.jogadorId) ?? 0) + 1);
@@ -101,16 +98,6 @@ export function validarSorteio({
     violacoes.push({
       invariante: 3,
       mensagem: `Amplitude de estrelas ${amp} acima da tolerancia ${TOLERANCIA_ESTRELAS}`,
-    });
-  }
-
-  // Invariante 4: capitao nunca realocado.
-  const capitaesPorTime = new Set(times.map((t) => t.capitaoId));
-  const capitaoRealocado = alocacoesLinha.filter((a) => capitaesPorTime.has(a.jogadorId));
-  if (capitaoRealocado.length > 0) {
-    violacoes.push({
-      invariante: 4,
-      mensagem: `${capitaoRealocado.length} capitao(es) apareceram no sorteio de linha`,
     });
   }
 

@@ -1,5 +1,6 @@
 // Inscrições do sorteio no banco (substituem a aba INSCRITOS da planilha).
-// Cada campeonato tem as suas.
+// Cada campeonato tem as suas. A coluna capitao_de ficou sem uso desde 18/11/2026
+// (não há capitão fixo no sorteio); o banco a mantém só para não exigir migração.
 
 import { and, asc, eq } from 'drizzle-orm';
 import { banco, type Banco } from '@/lib/db/cliente';
@@ -15,7 +16,6 @@ export interface DadosInscricao {
   apelido?: string | null;
   posicao?: Posicao | null;
   estrelas?: number | null;
-  capitaoDe?: string | null;
   status?: StatusInscricao;
 }
 
@@ -56,7 +56,6 @@ export async function criarInscricao(campeonatoId: number, dados: DadosInscricao
       apelido: dados.apelido?.trim() || null,
       posicao: dados.posicao ?? null,
       estrelas: dados.estrelas ?? null,
-      capitaoDe: dados.capitaoDe?.trim() || null,
       status: dados.status ?? 'confirmado',
     })
     .returning();
@@ -72,7 +71,6 @@ export async function atualizarInscricao(campeonatoId: number, id: string, dados
       apelido: dados.apelido?.trim() || null,
       posicao: dados.posicao ?? null,
       estrelas: dados.estrelas ?? null,
-      capitaoDe: dados.capitaoDe?.trim() || null,
       status: dados.status ?? 'confirmado',
     })
     .where(and(eq(inscricao.id, id), eq(inscricao.campeonatoId, campeonatoId)));
@@ -109,7 +107,6 @@ export async function importarCsv(
         apelido: l.apelido?.trim() || null,
         posicao: lerPosicao(l.posicao),
         estrelas: lerEstrelas(l.estrelas),
-        capitaoDe: l.capitaoDe?.trim() || null,
         status: lerStatus(l.status),
         criadoEm: new Date(base + i),
       })),
@@ -126,7 +123,6 @@ export function paraLinhas(inscricoes: readonly Inscricao[]): LinhaInscricao[] {
     apelido: i.apelido,
     posicao: i.posicao,
     estrelas: i.estrelas,
-    capitaoDe: i.capitaoDe,
     status: i.status,
   }));
 }

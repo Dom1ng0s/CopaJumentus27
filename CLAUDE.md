@@ -1,6 +1,6 @@
 # COPA JUMENTUS — VICE CITY
 
-Sistema de sorteio balanceado para uma competição de futebol amadora. Sorteia **jogadores de linha entre times de capitães fixos**, com equilíbrio por nível (estrelas), revelação jogador-por-jogador em formato de cerimônia, e um link compartilhável com o resultado final.
+Sistema de sorteio balanceado para uma competição de futebol amadora. Sorteia **todos os jogadores entre times que começam vazios** (sem capitão fixo desde 18/11/2026), com equilíbrio por nível (estrelas), revelação jogador-por-jogador em formato de cerimônia, e um link compartilhável com o resultado final.
 
 Este arquivo é a fonte de verdade do projeto. Ao implementar qualquer coisa, siga-o. Se uma decisão aqui estiver errada ou faltando, **pergunte antes de inventar** — não resolva ambiguidade de regra de sorteio por conta própria.
 
@@ -10,7 +10,7 @@ Este arquivo é a fonte de verdade do projeto. Ao implementar qualquer coisa, si
 
 | Papel | Quem | O que faz |
 |---|---|---|
-| **Operador** | o dono do projeto (única pessoa com acesso de escrita) | cadastra jogadores e capitães, dispara o sorteio, conduz a cerimônia na própria tela |
+| **Operador** | o dono do projeto (única pessoa com acesso de escrita) | cadastra jogadores, dispara o sorteio, conduz a cerimônia na própria tela e, depois, registra o capitão que cada time escolheu |
 | **Plateia** | a galera da pelada | abre o **link de resultado** no celular depois da cerimônia e vê os elencos |
 
 Há **contas de admin**, só para a organização (decisão do operador em 17/11/2026): cada admin entra com usuário e senha próprios e só admins editam qualquer coisa. Não há níveis entre admins. A plateia não tem conta nem login: vê o campeonato (tabela, jogos, rankings, elencos) e nunca vê estrelas.
@@ -21,10 +21,10 @@ Há **contas de admin**, só para a organização (decisão do operador em 17/11
 
 ### Fase 1 — Sorteio (escopo atual, único que deve ser implementado agora)
 1. Cadastro/edição do **elenco**: jogadores de linha e goleiros, cada um com nome, posição e nível em estrelas.
-2. Cadastro dos **times**: nome do time + capitão fixo (o capitão é um jogador, já pertence ao time, não entra no pote).
+2. **Times**: são as equipes do campeonato e começam vazios. **Não há capitão fixo** (decisão do operador em 18/11/2026): depois do sorteio, cada time escolhe o seu capitão e um admin o registra em Admin › Equipes.
 3. **Sorteio balanceado** dos jogadores de linha entre os times.
 4. **Sorteio separado de goleiros**: segunda etapa, 1 goleiro por time.
-5. **Cerimônia de revelação**: primeiro os goleiros, depois os jogadores de linha um por vez em ordem aleatória, sem estrelas na tela, controlada pelo operador. Cada revelação tem **dois botões** (decisão do operador em 18/11/2026): "Sortear jogador" mostra só o nome; "Sortear time" passa uma roleta curta pelos times com vaga e mostra o destino, e só então o jogador entra no elenco. Depois vem o próximo. O time já está decidido pela divisão equilibrada (§3.3); o segundo botão revela, não decide.
+5. **Cerimônia de revelação**: primeiro os goleiros, depois os jogadores de linha um por vez em ordem aleatória, sem estrelas na tela, controlada pelo operador. Cada revelação tem **dois botões** (decisão do operador em 18/11/2026): "Sortear jogador" roda uma roleta curta pelos nomes que ainda estão no pote da etapa e para no sorteado, mostrando só o nome; "Sortear time" passa uma roleta curta pelos times com vaga e mostra o destino, e só então o jogador entra no elenco. Depois vem o próximo. O time já está decidido pela divisão equilibrada (§3.3); o segundo botão revela, não decide.
 6. **Link de resultado estático**: ao fim, gerar uma URL compartilhável que renderiza os elencos finais sem precisar de backend.
 
 ### Fase 2 — Campeonato (implementada, ver §8)
@@ -55,32 +55,31 @@ interface Jogador {
   apelido?: string;        // o nome que a galera usa; preferir na UI quando existir
   posicao: Posicao;
   estrelas: 1|2|3|4|5|6;   // nível de força — ver 3.2
-  ehCapitao: boolean;
 }
 
 interface Time {
   id: string;
-  nome: string;
-  capitaoId: string;       // obrigatório, aponta para um Jogador com ehCapitao
+  nome: string;            // nome da equipe do campeonato
   escudo?: string;         // URL/asset; opcional na fase 1
 }
+// Sem capitão no sorteio. O capitão é da equipe do campeonato (Equipe.capitaoId),
+// escolhido pelo time depois do sorteio e registrado por um admin.
 ```
 
 ### 3.2 Nível em estrelas
 - Escala **1 a 6 estrelas**, atribuída manualmente pelo operador. 6 = craque, 1 = perna de pau.
 - Visualmente a escala usa o **Wanted System de 6 estrelas** do design system (ver §5). A escala de domínio e a escala visual são a mesma coisa de propósito — nunca converta nem reescale.
-- Estrelas do **capitão contam** na força do time (ele já está no elenco antes do sorteio).
+- Todo time começa com **0 estrelas**: não há capitão pré-alocado.
 - Estrelas do **goleiro NÃO contam** no balanceamento de linha (goleiro é sorteado em etapa separada, depois).
 
 ### 3.3 Sorteio balanceado de jogadores de linha
 
-Objetivo: distribuir todos os jogadores de linha (exceto capitães e goleiros) entre os times de forma que **a soma de estrelas de cada time fique o mais próxima possível**, mantendo aleatoriedade real dentro das restrições.
+Objetivo: distribuir todos os jogadores de linha (todos, exceto goleiros) entre os times de forma que **a soma de estrelas de cada time fique o mais próxima possível**, mantendo aleatoriedade real dentro das restrições.
 
 Restrições obrigatórias (invariantes — valide-as antes de exibir qualquer resultado):
-1. Todo jogador de linha não-capitão é alocado a exatamente um time.
+1. Todo jogador de linha é alocado a exatamente um time.
 2. O tamanho dos elencos é equilibrado: a diferença entre o maior e o menor elenco é no máximo 1 jogador.
 3. A diferença entre a maior e a menor soma de estrelas entre os times é no máximo **`TOLERANCIA_ESTRELAS` (default: 2)**.
-4. Capitão nunca é realocado.
 
 Algoritmo (serpentina aleatorizada — simples, explicável em voz alta na hora do sorteio):
 1. Agrupe os jogadores do pote por nível de estrelas (6, 5, 4, … 1).
@@ -93,7 +92,7 @@ Balanceamento por posição é um **objetivo secundário**: distribua ZAG/MEI/AT
 
 ### 3.4 Sorteio de goleiros
 - Etapa **separada**. Na cerimônia, os goleiros são revelados **primeiro**, antes da linha (decisão do operador em 18/11/2026); no cálculo continuam fora do balanceamento.
-- Pote = jogadores com `posicao === 'GOL'` que não são capitães.
+- Pote = jogadores com `posicao === 'GOL'`.
 - Exatamente **1 goleiro por time**, atribuição puramente aleatória (estrelas de goleiro não entram em nenhuma conta).
 - Se houver menos goleiros que times, aloque os disponíveis e marque os times restantes como **"GOLEIRO: A DEFINIR"** na UI. Não invente jogador, não reutilize goleiro.
 - Se houver mais goleiros que times, os excedentes **não** voltam para o pote de linha — ficam listados à parte como reservas. Qualquer mudança nessa regra é decisão do operador.
@@ -134,9 +133,10 @@ interface CopaRepo {
 
 - O resultado do sorteio continua em `localStorage` e no link (§4.4); o que vale para o campeonato é o "Oficializar" (§8.4).
 - **Fonte do cadastro: tabela `inscricao` no banco, editada em Admin › Inscrições** (decisão do operador em 17/11/2026: "direto no sistema"). A planilha vira só uma importação: o admin envia o CSV da aba `INSCRITOS` na mesma tela, e quem já existe (mesmo nome, sem acento/caixa) é mantido. `src/lib/repo/inscricoes-repo.ts` faz o CRUD; `interpretarInscricoes()` em `planilha.ts` (pura, testada) valida e monta `Jogador[]`/`Time[]` com as pendências, a mesma função para o CSV e para o banco. `carregarCadastro()` lê o banco e cai no seed de exemplo se não houver nenhuma inscrição.
-  - Colunas do CSV (cabeçalho, sem acento/caixa): `Nome`, `Apelido`, `Posição` (GOL/ZAG/MEI/ATA), `Estrelas` (1–6), `Capitão do time` (nome do time; marca o capitão e cria o `Time`), `Status` (só `Confirmado` entra).
+  - Colunas do CSV (cabeçalho, sem acento/caixa): `Nome`, `Apelido`, `Posição` (GOL/ZAG/MEI/ATA), `Estrelas` (1–6), `Status` (só `Confirmado` entra). Uma coluna `Capitão do time` antiga é ignorada, e a coluna `inscricao.capitao_de` do banco ficou sem uso.
+  - Os times do sorteio são as **equipes do campeonato em edição**, na ordem cadastrada (`carregarCadastro`).
   - Goleiro com `Estrelas` vazio recebe `ESTRELAS_MIN` (não conta no balanceamento, §3.2).
-  - Qualquer pendência (posição/estrelas vazias, nome repetido, time sem capitão ou com dois) **bloqueia** o botão de sorteio.
+  - Qualquer pendência (posição/estrelas vazias, nome repetido, menos de 2 equipes) **bloqueia** o botão de sorteio.
 - **`dados/` está no `.gitignore`** (exceto `dados/*.example.*`): lá fica o banco local (`dados/pglite`). Mantenha `dados/inscritos.example.csv` como referência de formato do CSV.
 - Nenhum componente de UI importa `localStorage`, `fs`, caminho de arquivo ou o cliente do banco direto. Tudo pelos módulos de `src/lib/repo/`.
 
@@ -203,7 +203,7 @@ Tokens em `src/app/globals.css` (fonte única; o Tailwind só aponta para eles):
 - **Rankings no celular:** uma categoria por vez, em abas fixas no topo (`AbasRankings`); no desktop, todas na grade.
 - **Súmula rápida** (`components/admin/LancadorEventos.tsx`): na beira do campo, lançar é tocar no jogador, depois no evento (Gol, Gol de pênalti, Amarelo, Vermelho, Pênalti perdido, Gol contra; Defesa só para o goleiro) e, se for gol, em quem deu a assistência ou "Sem assistência". Minuto é opcional. A confirmação vem em toast com o placar. Apagar um evento pede dois toques ("Apagar?"). A regra continua toda em `adicionarEvento`/`removerEvento`.
 - **Painel do admin:** o jogo da vez (ao vivo ou próximo) em destaque com "Abrir súmula", números do campeonato e "Na sequência".
-- **Cerimônia projetada:** sem a barra do site; controles discretos no canto ("Tela cheia" e "Voltar" ao sorteio). Espaço avança um passo (nome, depois time); seta esquerda volta um passo. Com `prefers-reduced-motion`, a roleta do time não roda.
+- **Cerimônia projetada:** sem a barra do site; controles discretos no canto ("Tela cheia" e "Voltar" ao sorteio). Espaço avança um passo (nome, depois time); seta esquerda volta um passo. Com `prefers-reduced-motion`, as roletas (nome e time) não rodam.
 
 Este app é **dark-only de propósito** — a cerimônia acontece à noite.
 
@@ -309,7 +309,7 @@ Nunca introduza visual corporativo/SaaS genérico, biblioteca de componentes com
 - `lib/repo/campeonato-repo.ts` monta o documento `Campeonato` de um campeonato a partir das tabelas (§9), já com os participantes derivados (§8.6), e o grava inteiro numa transação, só nas linhas daquele campeonato. Toda gravação passa pela **trava** e pelas **regras de consistência** (§8.6). Banco vazio: importa `dados/campeonato.json` se existir (legado e `npm run demo`), senão parte do `campeonatoPadrao()` (8 equipes do manual de marca, fases "Fase de grupos" e "Mata-mata").
 - **Campeonato em edição** (`lib/campeonato/selecao.ts`): cada admin escolhe em Admin › Campeonatos; fica num cookie do navegador. Todas as telas e ações do admin, as inscrições, o pote e a cerimônia usam esse campeonato. Sem escolha, vale o atual do site público.
 - **Inscrições** são de cada campeonato (`inscricao.campeonato_id`).
-- No fim da cerimônia, **"Oficializar no campeonato"** grava equipes, jogadores e capitães no campeonato em edição. É bloqueado se já houver súmula preenchida. O pagamento de quem já estava cadastrado (pelo nome) é preservado.
+- No fim da cerimônia, **"Oficializar no campeonato"** grava os elencos (goleiro e linha) nas equipes do campeonato em edição, **sem capitão**: cada time escolhe o seu e um admin registra em Admin › Equipes. É bloqueado se já houver súmula preenchida. O pagamento de quem já estava cadastrado (pelo nome) é preservado.
 - **Pagamentos** (pago/pendente por jogador, valor da inscrição) só aparecem em `/admin/pagamentos`.
 - **Estrelas nunca aparecem em página pública.** O pote foi para `/sorteio`, protegido.
 

@@ -16,14 +16,14 @@ function fonteSemente(semente: number) {
   };
 }
 
-function jogador(
-  id: string,
-  estrelas: Estrelas,
-  posicao: Posicao = 'MEI',
-  ehCapitao = false,
-): Jogador {
-  return { id, nome: `Jogador ${id}`, posicao, estrelas, ehCapitao };
+function jogador(id: string, estrelas: Estrelas, posicao: Posicao = 'MEI'): Jogador {
+  return { id, nome: `Jogador ${id}`, posicao, estrelas };
 }
+
+const DOIS_TIMES: Time[] = [
+  { id: 't1', nome: 'A' },
+  { id: 't2', nome: 'B' },
+];
 
 describe('sortear — invariantes', () => {
   const casos = [1, 2, 3, 7, 42, 99, 12345];
@@ -62,13 +62,15 @@ describe('sortear — invariantes', () => {
     expect(Math.max(...tamanhos) - Math.min(...tamanhos)).toBeLessThanOrEqual(1);
   });
 
-  it('invariante 4: capitão nunca aparece no sorteio de linha', () => {
+  it('sem capitão fixo: todo jogador de linha entra no pote e os times começam vazios', () => {
     const { sorteio } = sortear(
       { jogadores: JOGADORES_EXEMPLO, times: TIMES_EXEMPLO },
       fonteSemente(21),
     );
-    const capitaes = new Set(TIMES_EXEMPLO.map((t) => t.capitaoId));
-    expect(sorteio.linha.some((a) => capitaes.has(a.jogadorId))).toBe(false);
+    const linha = JOGADORES_EXEMPLO.filter((j) => j.posicao !== 'GOL');
+    expect(sorteio.linha).toHaveLength(linha.length);
+    const somasVazias = somasDeEstrelas(JOGADORES_EXEMPLO, TIMES_EXEMPLO, []);
+    expect([...somasVazias.values()].every((v) => v === 0)).toBe(true);
   });
 
   it('não muta a entrada', () => {
@@ -79,44 +81,15 @@ describe('sortear — invariantes', () => {
 });
 
 describe('sortear — estrelas', () => {
-  it('estrelas do capitão contam na soma do time (§3.2)', () => {
-    const jogadores: Jogador[] = [
-      jogador('c1', 6, 'MEI', true),
-      jogador('c2', 2, 'MEI', true),
-      jogador('j1', 3),
-      jogador('j2', 3),
-    ];
-    const times: Time[] = [
-      { id: 't1', nome: 'A', capitaoId: 'c1' },
-      { id: 't2', nome: 'B', capitaoId: 'c2' },
-    ];
-
-    const { sorteio } = sortear({ jogadores, times }, fonteSemente(1));
-    const somas = somasDeEstrelas(jogadores, times, sorteio.linha);
-
-    // O capitão entra na conta: 6+3=9 contra 2+3=5.
-    expect([...somas.values()].sort((a, b) => b - a)).toEqual([9, 5]);
-  });
-
   it('tamanho de elenco (inv. 2) tem prioridade sobre tolerância (inv. 3)', () => {
-    // Capitães muito desiguais e só 1 jogador por time: dar os dois reforços ao
-    // time fraco fecharia a conta de estrelas, mas quebraria o tamanho do elenco.
-    // O sistema mantém os elencos iguais e avisa o operador.
-    const jogadores: Jogador[] = [
-      jogador('c1', 6, 'MEI', true),
-      jogador('c2', 2, 'MEI', true),
-      jogador('j1', 3),
-      jogador('j2', 3),
-    ];
-    const times: Time[] = [
-      { id: 't1', nome: 'A', capitaoId: 'c1' },
-      { id: 't2', nome: 'B', capitaoId: 'c2' },
-    ];
+    // Um craque de 6 e três de 1: dar os dois mais fracos ao time do craque fecharia
+    // pior; dar três ao outro time quebraria o tamanho. O sistema mantém 2 x 2 e avisa.
+    const jogadores: Jogador[] = [jogador('j1', 6), jogador('j2', 1), jogador('j3', 1), jogador('j4', 1)];
 
-    const { sorteio, violacoes } = sortear({ jogadores, times }, fonteSemente(1));
-    const tamanhos = times.map((t) => sorteio.linha.filter((a) => a.timeId === t.id).length);
+    const { sorteio, violacoes } = sortear({ jogadores, times: DOIS_TIMES }, fonteSemente(1));
+    const tamanhos = DOIS_TIMES.map((t) => sorteio.linha.filter((a) => a.timeId === t.id).length);
 
-    expect(tamanhos).toEqual([1, 1]);
+    expect(tamanhos).toEqual([2, 2]);
     expect(sorteio.amplitudeEstrelas).toBeGreaterThan(TOLERANCIA_ESTRELAS);
     expect(sorteio.toleranciaEstourada).toBe(true);
     expect(violacoes.some((v) => v.invariante === 3)).toBe(true);
@@ -131,24 +104,16 @@ describe('sortear — estrelas', () => {
     const elencos = montarElencos(JOGADORES_EXEMPLO, TIMES_EXEMPLO, sorteio);
 
     for (const e of elencos) {
-      const esperado = e.capitao.estrelas + e.linha.reduce((s, j) => s + j.estrelas, 0);
+      const esperado = e.linha.reduce((s, j) => s + j.estrelas, 0);
       expect(e.somaEstrelas).toBe(esperado);
     }
   });
 
   it('avisa em vez de falhar quando a tolerância é impossível', () => {
     // Um craque de 6 e nada para compensar: amplitude mínima possível é 6.
-    const jogadores: Jogador[] = [
-      jogador('c1', 1, 'MEI', true),
-      jogador('c2', 1, 'MEI', true),
-      jogador('j1', 6),
-    ];
-    const times: Time[] = [
-      { id: 't1', nome: 'A', capitaoId: 'c1' },
-      { id: 't2', nome: 'B', capitaoId: 'c2' },
-    ];
+    const jogadores: Jogador[] = [jogador('j1', 6)];
 
-    const { sorteio, violacoes } = sortear({ jogadores, times }, fonteSemente(9));
+    const { sorteio, violacoes } = sortear({ jogadores, times: DOIS_TIMES }, fonteSemente(9));
 
     expect(sorteio.toleranciaEstourada).toBe(true);
     expect(sorteio.linha).toHaveLength(1);
@@ -168,19 +133,9 @@ describe('sortear — goleiros (§3.4)', () => {
   });
 
   it('faltando goleiro: marca o time em vez de reutilizar ou inventar', () => {
-    const jogadores: Jogador[] = [
-      jogador('c1', 3, 'MEI', true),
-      jogador('c2', 3, 'MEI', true),
-      jogador('g1', 3, 'GOL'),
-      jogador('j1', 2),
-      jogador('j2', 2),
-    ];
-    const times: Time[] = [
-      { id: 't1', nome: 'A', capitaoId: 'c1' },
-      { id: 't2', nome: 'B', capitaoId: 'c2' },
-    ];
+    const jogadores: Jogador[] = [jogador('g1', 3, 'GOL'), jogador('j1', 2), jogador('j2', 2)];
 
-    const { sorteio } = sortear({ jogadores, times }, fonteSemente(4));
+    const { sorteio } = sortear({ jogadores, times: DOIS_TIMES }, fonteSemente(4));
 
     expect(sorteio.goleiros).toHaveLength(1);
     expect(sorteio.timesSemGoleiroIds).toHaveLength(1);
@@ -188,13 +143,8 @@ describe('sortear — goleiros (§3.4)', () => {
   });
 
   it('goleiro sobrando vira reserva e não volta ao pote de linha', () => {
-    const jogadores: Jogador[] = [
-      jogador('c1', 3, 'MEI', true),
-      jogador('g1', 3, 'GOL'),
-      jogador('g2', 4, 'GOL'),
-      jogador('j1', 2),
-    ];
-    const times: Time[] = [{ id: 't1', nome: 'A', capitaoId: 'c1' }];
+    const jogadores: Jogador[] = [jogador('g1', 3, 'GOL'), jogador('g2', 4, 'GOL'), jogador('j1', 2)];
+    const times: Time[] = [{ id: 't1', nome: 'A' }];
 
     const { sorteio } = sortear({ jogadores, times }, fonteSemente(6));
 

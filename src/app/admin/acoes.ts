@@ -567,7 +567,6 @@ export async function alternarPagamento(f: FormData): Promise<void> {
 
 export interface ElencoParaOficializar {
   time: string;
-  capitao: { nome: string; posicao: Posicao };
   goleiro: { nome: string } | null;
   linha: Array<{ nome: string; posicao: Posicao }>;
 }
@@ -595,7 +594,8 @@ export async function oficializarSorteio(elencos: ElencoParaOficializar[]): Prom
           jogadores.push(j);
           return j;
         };
-        equipe.capitaoId = novo(el.capitao.nome, el.capitao.posicao).id;
+        // Sem capitão no sorteio: o time escolhe depois e um admin registra em Equipes.
+        equipe.capitaoId = undefined;
         if (el.goleiro) novo(el.goleiro.nome, 'GOL');
         for (const j of el.linha) novo(j.nome, j.posicao);
       }
@@ -620,7 +620,6 @@ function dadosInscricao(f: FormData): DadosInscricao {
     apelido: opcional(f, 'apelido') ?? null,
     posicao: lerPosicao(texto(f, 'posicao')),
     estrelas: lerEstrelas(texto(f, 'estrelas')),
-    capitaoDe: opcional(f, 'capitaoDe') ?? null,
     status: lerStatus(texto(f, 'status') === 'espera' ? 'espera' : 'confirmado'),
   };
 }

@@ -10,13 +10,13 @@ export interface Jogador {
   apelido?: string;
   posicao: Posicao;
   estrelas: Estrelas;
-  ehCapitao: boolean;
 }
 
+/** Time do sorteio. Começa vazio: o capitão é escolhido depois, pelo próprio time,
+ *  e registrado por um admin em Admin › Equipes (decisão do operador em 18/11/2026). */
 export interface Time {
   id: string;
   nome: string;
-  capitaoId: string;
   escudo?: string;
 }
 
@@ -47,9 +47,8 @@ export interface Sorteio {
 
 export interface ElencoDoTime {
   time: Time;
-  capitao: Jogador;
   goleiro: Jogador | null;
   linha: Jogador[];
-  /** Soma de estrelas de capitao + linha. Goleiro NAO conta (CLAUDE.md §3.2). */
+  /** Soma de estrelas da linha. Goleiro NAO conta (CLAUDE.md §3.2). */
   somaEstrelas: number;
 }

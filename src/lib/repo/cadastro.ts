@@ -2,8 +2,9 @@
 // Sem nenhuma inscrição, usa o elenco de exemplo para a tela não ficar vazia.
 
 import type { Jogador, Time } from '@/lib/domain/tipos';
+import { carregarCampeonato } from './campeonato-repo';
 import { listarInscricoes, paraLinhas } from './inscricoes-repo';
-import { interpretarInscricoes } from './planilha';
+import { interpretarInscricoes, ORDEM_TIMES } from './planilha';
 import { JOGADORES_EXEMPLO, TIMES_EXEMPLO } from './seed';
 
 export interface Cadastro {
@@ -20,5 +21,8 @@ export async function carregarCadastro(campeonatoId: number): Promise<Cadastro> 
   if (inscricoes.length === 0) {
     return { jogadores: JOGADORES_EXEMPLO, times: TIMES_EXEMPLO, problemas: [], ignorados: 0, origem: 'exemplo' };
   }
-  return { ...interpretarInscricoes(paraLinhas(inscricoes)), origem: 'banco' };
+  // Os times do sorteio são as equipes do campeonato, na ordem cadastrada.
+  const { equipes } = await carregarCampeonato(campeonatoId);
+  const nomes = equipes.length > 0 ? equipes.map((e) => e.nome) : [...ORDEM_TIMES];
+  return { ...interpretarInscricoes(paraLinhas(inscricoes), nomes), origem: 'banco' };
 }
