@@ -22,25 +22,81 @@ export function PaginaRankings({ c, base, fase }: { c: Campeonato; base: string;
     );
   };
 
-  const lista = (itens: Array<{ jogadorId: string; valor: React.ReactNode; detalhe?: string }>, vazio: string) =>
-    itens.length === 0 ? (
-      <p className="text-sm text-text-3">{vazio}</p>
-    ) : (
-      <ol className="divide-y divide-[var(--panel-stroke)]">
-        {itens.slice(0, 10).map((it, i) => (
-          <li key={it.jogadorId} className="flex items-center gap-3 py-2">
-            <span className="w-6 font-mono text-sm text-text-3">{i + 1}</span>
-            <span className="min-w-0 flex-1">
-              {linhaJogador(it.jogadorId)}
-              {it.detalhe && <span className="mt-0.5 block font-mono text-xs text-text-3">{it.detalhe}</span>}
-            </span>
-            <span className="numero text-3xl" style={{ color: 'var(--accent)' }}>
-              {it.valor}
-            </span>
-          </li>
-        ))}
-      </ol>
+  const lista = (
+    itens: Array<{ jogadorId: string; valor: React.ReactNode; detalhe?: string }>,
+    vazio: string,
+    destacarLider = true,
+  ) => {
+    if (itens.length === 0) {
+      return <p className="text-sm text-text-3">{vazio}</p>;
+    }
+
+    const [lider, ...resto] = itens.slice(0, 10);
+    const jLider = jogador.get(lider.jogadorId);
+    const eqLider = jLider ? equipe.get(jLider.equipeId) : undefined;
+
+    return (
+      <div className="space-y-2">
+        {destacarLider ? (
+          /* Líder em destaque com barra na cor do time e número em Big Shoulders dourado (manual §7.3) */
+          <div
+            className="malha-camisa relative overflow-hidden border border-hud p-3"
+            style={{
+              backgroundImage: eqLider
+                ? `linear-gradient(135deg, rgba(11, 31, 63, 0.92) 0% 68%, ${eqLider.corPrimaria} 68% 94%, #D4A12A 94% 96%, ${eqLider.corSecundaria} 96% 100%)`
+                : 'var(--surface2)',
+            }}
+          >
+            <div className="flex items-center gap-3">
+              <span
+                className="numero corte-direita inline-flex h-8 w-8 shrink-0 items-center justify-center pr-1 text-lg"
+                style={{ background: 'var(--gradient-leonida)', color: '#06122a' }}
+              >
+                1
+              </span>
+              <Escudo equipe={eqLider} tamanho={38} />
+              <div className="min-w-0 flex-1">
+                <p className="titulo-hero t-sm truncate text-xl text-text-1">
+                  {jLider?.nome ?? '—'}
+                </p>
+                <p className="truncate font-mono text-xs font-bold uppercase tracking-wider text-text-2">
+                  {eqLider?.nome}
+                </p>
+                {lider.detalhe && (
+                  <p className="mt-0.5 font-mono text-xs text-text-3">{lider.detalhe}</p>
+                )}
+              </div>
+              <div className="rounded-component bg-[rgba(6,18,42,0.86)] px-3 py-1.5 text-right shadow-1">
+                <span className="numero text-4xl sm:text-5xl" style={{ color: 'var(--accent)' }}>
+                  {lider.valor}
+                </span>
+              </div>
+            </div>
+          </div>
+        ) : null}
+
+        <ol className="divide-y divide-[var(--panel-stroke)]">
+          {(destacarLider ? resto : itens.slice(0, 10)).map((it, idx) => {
+            const pos = destacarLider ? idx + 2 : idx + 1;
+            return (
+              <li key={it.jogadorId} className="flex items-center gap-3 py-2">
+                <span className="w-6 font-mono text-sm font-bold text-text-3">{pos}</span>
+                <span className="min-w-0 flex-1">
+                  {linhaJogador(it.jogadorId)}
+                  {it.detalhe && (
+                    <span className="mt-0.5 block font-mono text-xs text-text-3">{it.detalhe}</span>
+                  )}
+                </span>
+                <span className="numero text-3xl" style={{ color: 'var(--accent)' }}>
+                  {it.valor}
+                </span>
+              </li>
+            );
+          })}
+        </ol>
+      </div>
     );
+  };
 
   const filtro = (id?: string) => `${base}/rankings${id ? `?fase=${id}` : ''}`;
 
@@ -93,6 +149,7 @@ export function PaginaRankings({ c, base, fase }: { c: Campeonato; base: string;
               ),
             })),
             'Nenhum cartão registrado.',
+            false,
           )}
         </Secao>
       </div>

@@ -1,0 +1,60 @@
+// Persistencia local da sessao de cerimonia (CLAUDE.md §4.2).
+// Nenhum componente de UI acessa localStorage diretamente; tudo passa por este modulo.
+
+import type { ResultadoSorteio } from '@/lib/domain/sorteio';
+
+export type FaseCerimonia = 'pronto' | 'linha' | 'pre-goleiros' | 'goleiros' | 'fim';
+
+export interface SessaoCerimonia {
+  resultado: ResultadoSorteio;
+  reveladasLinha: number;
+  reveladasGol: number;
+  fase: FaseCerimonia;
+  assinaturaCadastro: string;
+}
+
+const CHAVE_SESSAO = 'copa-jumentus:sessao-cerimonia:v1';
+
+/** Gera uma assinatura simples do cadastro atual para invalidar sessao se o elenco mudar. */
+export function assinarCadastro(idsJogadores: readonly string[], idsTimes: readonly string[]): string {
+  return `${idsTimes.join(',')}::${idsJogadores.join(',')}`;
+}
+
+export function carregarSessaoCerimonia(assinaturaAtual: string): SessaoCerimonia | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const bruto = window.localStorage.getItem(CHAVE_SESSAO);
+    if (!bruto) return null;
+    const obj = JSON.parse(bruto) as SessaoCerimonia;
+    if (
+      !obj ||
+      obj.assinaturaCadastro !== assinaturaAtual ||
+      !obj.resultado?.sorteio ||
+      typeof obj.reveladasLinha !== 'number' ||
+      typeof obj.reveladasGol !== 'number'
+    ) {
+      return null;
+    }
+    return obj;
+  } catch {
+    return null;
+  }
+}
+
+export function salvarSessaoCerimonia(sessao: SessaoCerimonia): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(CHAVE_SESSAO, JSON.stringify(sessao));
+  } catch {
+    // Ignorar caso storage esteja indisponivel
+  }
+}
+
+export function limparSessaoCerimonia(): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.removeItem(CHAVE_SESSAO);
+  } catch {
+    // Ignorar
+  }
+}

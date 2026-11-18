@@ -59,4 +59,31 @@ function deBase64Url(payload: string): string {
   return new TextDecoder().decode(bytes);
 }
 
+/**
+ * Formata o resumo público dos elencos para WhatsApp (sem estrelas, conforme CLAUDE.md §1 e §8.4).
+ */
+export function formatarPayloadWhatsApp(dados: PayloadResultado, url?: string): string {
+  const blocos = dados.t.map(([nomeTime, capitao, goleiro, linha]) => {
+    const linhasJogadores = [
+      `  • [GOL] ${goleiro !== 0 ? goleiro[0] : 'A definir'}`,
+      `  • [CAP] ${capitao[0]}`,
+      ...linha.map(([nome, , pos]) => `  • [${pos}] ${nome}`),
+    ];
+    return `*${nomeTime.toUpperCase()}*\n${linhasJogadores.join('\n')}`;
+  });
+
+  const rodape = url ? `\n\nLink oficial: ${url}` : '';
+  return `*COPA JUMENTUS — VICE CITY*\n*Os times estão definidos (${dados.d})*\n\n${blocos.join('\n\n')}${rodape}`;
+}
+
+export function formatarElencosWhatsApp(
+  elencos: readonly ElencoDoTime[],
+  amplitude: number,
+  url?: string,
+): string {
+  const payload = decodificarResultado(codificarResultado(elencos, amplitude));
+  if (!payload) return '';
+  return formatarPayloadWhatsApp(payload, url);
+}
+
 export type { PayloadResultado };

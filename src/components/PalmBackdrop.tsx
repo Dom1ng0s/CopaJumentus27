@@ -1,12 +1,14 @@
-// Palco key art: sol queimando, ceu de sunset, palmeiras grandes em silhueta.
-// A referencia aqui e a arte do trailer, nao o site de pre-venda.
-// Decorativo: pointer-events-none, aria-hidden.
+// Palco de evento Vice City (manual de marca §Cores — Paleta Vice City):
+// Ceu: #2A0E4F -> #3B146B -> #7B208F -> #C9349B -> #F36A78 -> #FF9B55, horizonte em 3/4,
+// #1E0838 abaixo e dissolve para var(--background) (#06122A).
+// Sol: #FFE08A -> #FFB458 -> #FF9B55 cortado por faixas horizontais.
+// Palmeiras: silhuetas nas laterais e na base.
 
 import type { CSSProperties } from 'react';
 
 interface Props {
   className?: string;
-  /** 'hero' queima o ceu inteiro. 'ambiente' e a versao contida para paginas internas. */
+  /** 'hero' queima o ceu inteiro (peca de evento). 'ambiente' e a versao contida. */
   intensidade?: 'hero' | 'ambiente';
 }
 
@@ -18,76 +20,72 @@ export function PalmBackdrop({ className = '', intensidade = 'hero' }: Props) {
       className={`pointer-events-none absolute inset-0 overflow-hidden ${className}`}
       aria-hidden="true"
     >
-      {/* Ceu de sunset: violeta em cima, pink no meio, laranja queimando embaixo */}
+      {/* Ceu padrao do manual de marca */}
       <div
         className="absolute inset-x-0 top-0"
         style={{
-          // No hero o ceu desce ate a base: o tronco das palmeiras e da cor do
-          // campo escuro, entao so e visivel recortado contra o ceu aceso.
-          height: hero ? '100%' : '46%',
+          height: hero ? '100%' : '52%',
           backgroundImage:
-            'linear-gradient(180deg, #2A1046 0%, #6B1E63 26%, #C53A7E 48%, #FF7A3D 70%, #FFB067 86%, #E8743A 100%)',
-          opacity: hero ? 0.95 : 0.42,
+            'linear-gradient(180deg, #2A0E4F 0%, #3B146B 17%, #7B208F 37%, #C9349B 54%, #F36A78 65%, #FF9B55 75%, #1E0838 90%, #06122A 100%)',
+          opacity: hero ? 0.92 : 0.48,
         }}
       />
 
-      {/* Halo quente */}
+      {/* Halo ambar no horizonte */}
       <div
         className="absolute left-1/2 -translate-x-1/2"
         style={{
-          top: hero ? '4%' : '0%',
+          top: hero ? '10%' : '0%',
           width: 1200,
           height: 620,
           background:
-            'radial-gradient(ellipse at center, rgba(255,147,71,0.45) 0%, rgba(241,67,162,0.28) 38%, transparent 70%)',
+            'radial-gradient(ellipse at center, rgba(255, 180, 88, 0.42) 0%, rgba(201, 52, 155, 0.24) 40%, transparent 70%)',
         }}
       />
 
-      {/* Disco solar */}
+      {/* Disco solar (#FFE08A -> #FFB458 -> #FF9B55) */}
       <div
         className="absolute left-1/2 -translate-x-1/2 rounded-full"
         style={{
-          top: hero ? '30%' : '12%',
+          top: hero ? '28%' : '10%',
           width: hero ? 340 : 190,
           height: hero ? 340 : 190,
           background:
-            'radial-gradient(circle, #FFE9B0 0%, #FFC46B 38%, #FF8A47 62%, rgba(255,120,60,0) 72%)',
-          opacity: hero ? 0.95 : 0.45,
+            'radial-gradient(circle, #FFE08A 0%, #FFB458 42%, #FF9B55 64%, rgba(255, 155, 85, 0) 74%)',
+          opacity: hero ? 0.92 : 0.45,
         }}
       />
 
-      {/* Linhas de horizonte retro cortando o sol */}
+      {/* Faixas horizontais cortando o sol */}
       {hero && (
         <div
           className="absolute inset-x-0"
           style={{
-            top: '46%',
+            top: '44%',
             height: 150,
             backgroundImage:
-              'repeating-linear-gradient(180deg, rgba(12,13,27,0.5) 0px, rgba(12,13,27,0.5) 3px, transparent 3px, transparent 14px)',
+              'repeating-linear-gradient(180deg, rgba(30, 8, 56, 0.55) 0px, rgba(30, 8, 56, 0.55) 3px, transparent 3px, transparent 14px)',
           }}
         />
       )}
 
-      {/* Dissolve para o campo escuro.
-          Comeca tarde de proposito: se o dissolve subir demais, o tronco das
-          palmeiras (que e da cor do campo) some e elas viram arbustos. */}
+      {/* Dissolve para o marinho profundo do sistema (--background: #06122A) */}
       <div
         className="absolute inset-x-0 bottom-0"
         style={{
-          height: hero ? '18%' : '62%',
-          backgroundImage: 'linear-gradient(180deg, transparent 0%, #0C0D1B 92%)',
+          height: hero ? '22%' : '62%',
+          backgroundImage: 'linear-gradient(180deg, transparent 0%, var(--background) 92%)',
         }}
       />
 
-      {/* Palmeiras grandes em silhueta solida */}
+      {/* Palmeiras em silhueta nas laterais e na base */}
       <Palmeira className="absolute bottom-0 left-0" style={{ height: hero ? 430 : 250 }} />
       <Palmeira
         className="absolute bottom-0 right-0"
         style={{ height: hero ? 370 : 210, transform: 'scaleX(-1)' }}
       />
       {hero && (
-        <Palmeira className="absolute bottom-0 left-[24%] opacity-70" style={{ height: 240 }} />
+        <Palmeira className="absolute bottom-0 left-[22%] opacity-65" style={{ height: 240 }} />
       )}
     </div>
   );
@@ -95,7 +93,7 @@ export function PalmBackdrop({ className = '', intensidade = 'hero' }: Props) {
 
 function Palmeira({ className, style }: { className?: string; style?: CSSProperties }) {
   return (
-    <svg className={`w-auto ${className}`} style={style} viewBox="0 0 240 420" fill="#0C0D1B">
+    <svg className={`w-auto ${className}`} style={style} viewBox="0 0 240 420" fill="#06122A">
       {/* tronco */}
       <path d="M112 420c-4-120 2-212 10-286l14 2c-9 74-14 166-10 284z" />
       {/* folhas */}

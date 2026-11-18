@@ -148,10 +148,25 @@ body {
   background-size: 8px 8px;
 }
 
+/* ---------- Textura de malha de camisa (7 a 12% sobre fundos chapados) ---------- */
+.malha-camisa {
+  background-image: radial-gradient(rgba(0, 0, 0, 0.22) 1px, transparent 1px);
+  background-size: 4px 4px;
+}
+
+/* ---------- Ponta direita cortada a 45° (caixas de número e etiquetas) ---------- */
+.corte-direita {
+  clip-path: polygon(0 0, 100% 0, calc(100% - 8px) 100%, 0 100%);
+}
+
+/* ---------- Destaque de linha ativa ou recém-sorteada ---------- */
+.linha-selecionada {
+  background: rgba(212, 161, 42, 0.14);
+  border-left: 3px solid var(--accent);
+  padding-left: 0.5rem;
+}
+
 /* ---------- Tipografia ---------- */
-/* Tracking e leading sao especificos de tamanho, nunca um valor so.
-   Texto grande le com as letras longe demais e pede tracking negativo;
-   texto pequeno pede tracking proximo de zero para nao fechar. */
 /* Anton: caixa alta, entrelinha 90-95%, espaçamento 0 (manual, Tipografia) */
 .titulo-hero {
   font-family: var(--font-display);
@@ -272,6 +287,7 @@ body {
   backdrop-filter: blur(12px);
   border: 1px solid var(--panel-stroke);
   border-radius: var(--radius-hud);
+  clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 0 100%);
   box-shadow: var(--shadow-1);
   transition:
     border-color var(--duration-medium) var(--ease),
@@ -538,10 +554,6 @@ select.campo option {
   }
   .animar-revelar {
     animation: revelarSuave 200ms ease both;
-  }
-  .btn-cta:hover:not(:disabled),
-  .btn-cta:focus-visible:not(:disabled) {
-    transform: skewX(-6deg);
   }
   .btn-cta:active:not(:disabled),
   .btn-hud:active:not(:disabled) {

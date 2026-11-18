@@ -9,7 +9,7 @@ import { resumirJogos } from '@/lib/domain/campeonato/classificacao';
 import { ordenarPartidas } from '@/lib/domain/campeonato/suspensoes';
 import { ROTULO_STATUS_CAMPEONATO, type Equipe } from '@/lib/domain/campeonato/tipos';
 
-/** Início de uma edição: banner, escudo, status, período, pódio e jogos. */
+/** Início de uma edição: banner, escudo, status, período, pódio, franquias e jogos. */
 export function PaginaInicio({ c, base, edicoes }: CampeonatoPublico) {
   const { equipe } = indices(c);
   const ordenadas = ordenarPartidas(c.partidas);
@@ -21,24 +21,38 @@ export function PaginaInicio({ c, base, edicoes }: CampeonatoPublico) {
   const status = aoVivo.length ? 'Ao vivo' : ROTULO_STATUS_CAMPEONATO[c.status];
   const outras = edicoes.filter((e) => e.id !== c.id);
   const titulo = [c.nome, c.edicao && !c.nome.includes(c.edicao) ? c.edicao : ''].filter(Boolean).join(' ');
+  const bannerSrc = c.banner || '/banner-copa-jumentus.webp';
 
   return (
     <>
       <AutoAtualizar ativo={aoVivo.length > 0} />
       <section className="relative">
-        <h1 className="sr-only">{titulo}</h1>
-        {c.banner ? (
-          // Arte da edição cadastrada no admin (caminho ou URL).
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={c.banner} alt={titulo} className="relative block h-auto w-full" />
-        ) : (
-          <Image src="/banner-copa-jumentus.webp" alt={titulo} width={2000} height={504} priority sizes="100vw" className="relative block h-auto w-full" />
-        )}
-        <div
-          className="pointer-events-none absolute inset-x-0 bottom-0 h-[30%] sm:h-[14%]"
-          style={{ backgroundImage: 'linear-gradient(180deg, transparent 0%, #0C0D1B 92%)' }}
-          aria-hidden="true"
-        />
+        <div className="relative w-full overflow-hidden py-8 sm:py-0">
+          {/* Moldura no celular: a própria arte ampliada e desfocada para casar a emenda (CLAUDE.md §5) */}
+          <div
+            className="pointer-events-none absolute inset-0 scale-110 sm:hidden"
+            style={{
+              backgroundImage: `url(${bannerSrc})`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              filter: 'blur(26px) saturate(1.15)',
+            }}
+            aria-hidden="true"
+          />
+          <h1 className="sr-only">{titulo}</h1>
+          {c.banner ? (
+            // Arte da edição cadastrada no admin (caminho ou URL).
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={c.banner} alt={titulo} className="relative block h-auto w-full" />
+          ) : (
+            <Image src="/banner-copa-jumentus.webp" alt={titulo} width={2000} height={504} priority sizes="100vw" className="relative block h-auto w-full" />
+          )}
+          <div
+            className="pointer-events-none absolute inset-x-0 bottom-0 h-[30%] sm:h-[14%]"
+            style={{ backgroundImage: 'linear-gradient(180deg, transparent 0%, var(--background) 92%)' }}
+            aria-hidden="true"
+          />
+        </div>
       </section>
 
       <div className="mx-auto max-w-6xl space-y-10 px-4 pb-20 pt-8">
@@ -62,12 +76,32 @@ export function PaginaInicio({ c, base, edicoes }: CampeonatoPublico) {
 
         {resultado && <Podio primeiro={equipe.get(resultado.primeiro)} segundo={equipe.get(resultado.segundo)} terceiro={resultado.terceiro ? equipe.get(resultado.terceiro) : undefined} />}
 
-        <div className="hud-card relative grid grid-cols-4 gap-2 px-4 py-4">
+        <div className="hud-card hud-clip modulo relative grid grid-cols-4 gap-2 px-4 py-4">
           <Numero valor={c.equipes.length} rotulo="Equipes" />
           <Numero valor={resumo.jogos} rotulo="Jogos" />
           <Numero valor={resumo.gols} rotulo="Gols" />
           <Numero valor={resumo.mediaGols.toLocaleString('pt-BR')} rotulo="Média" />
         </div>
+
+        {/* Faixa de escudos das franquias participantes */}
+        {c.equipes.length > 0 && (
+          <div className="grid grid-cols-4 gap-2 sm:grid-cols-8">
+            {c.equipes.map((eq) => (
+              <Link
+                key={eq.id}
+                href={`${base}/equipes`}
+                className="hud-card flex flex-col items-center gap-1.5 px-2 py-3 text-center transition-transform hover:-translate-y-0.5"
+                style={{ borderBottom: `3px solid ${eq.corPrimaria}` }}
+                title={eq.nome}
+              >
+                <Escudo equipe={eq} tamanho={36} />
+                <span className="w-full truncate font-mono text-xs font-bold uppercase tracking-wider text-text-2">
+                  {eq.sigla || eq.nome}
+                </span>
+              </Link>
+            ))}
+          </div>
+        )}
 
         {aoVivo.length > 0 && (
           <Lista titulo="Ao vivo">
@@ -99,6 +133,9 @@ export function PaginaInicio({ c, base, edicoes }: CampeonatoPublico) {
           </Link>
           <Link href={`${base}/equipes`} className="btn-hud">
             Elencos
+          </Link>
+          <Link href={`${base}/jogos`} className="btn-hud">
+            Tabela de jogos
           </Link>
         </div>
 

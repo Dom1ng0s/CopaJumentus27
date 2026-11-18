@@ -1,26 +1,28 @@
 import Image from 'next/image';
 import Link from 'next/link';
+import { EscudoPorNome, SeloCapitao } from '@/components/campeonato/ui';
 import { Estrelas } from '@/components/Estrelas';
 import { HudCard } from '@/components/HudCard';
+import { PoteInterativo } from '@/components/PoteInterativo';
+import { marcaPorNome } from '@/lib/campeonato/marcas';
+import { idDoCampeonatoDoAdmin } from '@/lib/campeonato/selecao';
 import { NOME_COMPETICAO, SUBTITULO_COMPETICAO, TOLERANCIA_ESTRELAS } from '@/lib/config';
 import { poteDeGoleiros, poteDeLinha } from '@/lib/domain/validacao';
 import { carregarCadastro } from '@/lib/repo/cadastro';
-import { idDoCampeonatoDoAdmin } from '@/lib/campeonato/selecao';
-import type { Estrelas as NivelEstrelas, Jogador } from '@/lib/domain/tipos';
 
 export const dynamic = 'force-dynamic';
 
-export const metadata = { title: "Pote do sorteio — Copa Jumentus" };
+export const metadata = { title: 'Pote do sorteio — Copa Jumentus' };
 
 export default async function PaginaPote() {
-  const { jogadores, times, problemas, ignorados, origem } = await carregarCadastro(await idDoCampeonatoDoAdmin());
+  const { jogadores, times, problemas, ignorados, origem } = await carregarCadastro(
+    await idDoCampeonatoDoAdmin(),
+  );
   const pote = poteDeLinha(jogadores);
   const goleiros = poteDeGoleiros(jogadores);
   const capitaoPorId = new Map(
     jogadores.filter((j) => j.ehCapitao).map((j) => [j.id, j]),
   );
-
-  const niveis = [6, 5, 4, 3, 2, 1] as const;
 
   return (
     <>
@@ -33,7 +35,7 @@ export default async function PaginaPote() {
             tira de ~94px, entao recebe um ceu em volta para ganhar presenca. */}
         <div className="relative w-full overflow-hidden py-10 sm:py-0">
           {/* Preenchimento: a propria arte ampliada e desfocada. Casa as cores da
-              emenda por construcao, em vez de eu adivinhar um gradiente. */}
+              emenda por construcao, em vez de adivinhar um gradiente. */}
           <div
             className="pointer-events-none absolute inset-0 scale-110 sm:hidden"
             style={{
@@ -56,10 +58,10 @@ export default async function PaginaPote() {
             sizes="100vw"
             className="relative block h-auto w-full"
           />
-          {/* Dissolve da arte para o campo escuro */}
+          {/* Dissolve da arte para o marinho profundo do sistema */}
           <div
             className="pointer-events-none absolute inset-x-0 bottom-0 h-[30%] sm:h-[14%]"
-            style={{ backgroundImage: 'linear-gradient(180deg, transparent 0%, #0C0D1B 92%)' }}
+            style={{ backgroundImage: 'linear-gradient(180deg, transparent 0%, var(--background) 92%)' }}
             aria-hidden="true"
           />
         </div>
@@ -77,13 +79,16 @@ export default async function PaginaPote() {
             <Link href="/cerimonia" className="btn-cta">
               <span>Iniciar sorteio</span>
             </Link>
+            <Link href="/admin/inscricoes" className="btn-hud">
+              Gerenciar inscrições
+            </Link>
           </div>
         </div>
       </section>
 
       {/* ---------------- METRICAS ----------------
            Dados vivem no campo escuro, nunca sobre o ceu aceso. */}
-      <section className="relative px-4 pt-10">
+      <section className="relative px-4 pt-6">
         <div className="mx-auto grid max-w-2xl grid-cols-2 gap-3 sm:grid-cols-4">
           <Metrica rotulo="Times" valor={String(times.length)} cor="var(--accent-orange)" />
           <Metrica rotulo="No pote" valor={String(pote.length)} cor="var(--success)" />
@@ -95,7 +100,7 @@ export default async function PaginaPote() {
       {/* ---------------- PENDENCIAS DO CADASTRO ---------------- */}
       {problemas.length > 0 && (
         <section className="relative px-4 pt-8">
-          <HudCard className="mx-auto max-w-2xl px-4 py-4">
+          <HudCard className="mx-auto max-w-2xl border-l-[3px] border-l-[var(--warning)] px-4 py-4">
             <p className="hud-label mb-2 text-[10px]" style={{ color: 'var(--warning)' }}>
               Cadastro com {problemas.length} pendência{problemas.length > 1 ? 's' : ''} — sorteio
               bloqueado
@@ -120,17 +125,43 @@ export default async function PaginaPote() {
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {times.map((time, i) => {
               const capitao = capitaoPorId.get(time.capitaoId);
+              const marca = marcaPorNome(time.nome);
               return (
-                <HudCard key={time.id} clip className="p-4 pb-5">
-                  <span className="font-mono text-xs text-text-3">
-                    {String(i + 1).padStart(2, '0')}
-                  </span>
-
-                  <h3 className="titulo-hero mt-1 text-2xl">{time.nome}</h3>
+                <HudCard key={time.id} clip className="modulo overflow-hidden pb-5">
+                  <div
+                    className="malha-camisa flex items-center gap-3 px-4 py-3.5"
+                    style={
+                      marca
+                        ? {
+                            color: marca.corTexto,
+                            backgroundImage: `linear-gradient(135deg, ${marca.corPrimaria} 0 82%, ${marca.corSecundaria} 82% 91%, ${marca.corPrimaria} 91% 93%, #D4A12A 93% 95%, ${marca.corPrimaria} 95%)`,
+                          }
+                        : { background: 'var(--surface2)' }
+                    }
+                  >
+                    <EscudoPorNome nome={time.nome} tamanho={44} />
+                    <div className="min-w-0 flex-1">
+                      <span
+                        className="font-mono text-xs font-bold uppercase tracking-wider opacity-80"
+                        style={{ color: marca?.corTexto }}
+                      >
+                        #{String(i + 1).padStart(2, '0')} · {marca?.sigla ?? 'MLS'}
+                      </span>
+                      <h3
+                        className="titulo-hero t-sm truncate text-2xl"
+                        style={{ color: marca?.corTexto }}
+                      >
+                        {time.nome}
+                      </h3>
+                    </div>
+                  </div>
 
                   {capitao && (
-                    <div className="mt-4 border-t border-hud pt-3">
-                      <p className="hud-label mb-1 text-[10px]">Capitão</p>
+                    <div className="px-4 pt-3">
+                      <div className="mb-1 flex items-center justify-between">
+                        <p className="hud-label text-[10px]">Capitão</p>
+                        <SeloCapitao tamanho={20} />
+                      </div>
                       <p className="text-sm font-semibold">{capitao.apelido ?? capitao.nome}</p>
                       <p className="mb-2 font-mono text-[11px] text-text-3">
                         {capitao.nome} · {capitao.posicao}
@@ -150,44 +181,10 @@ export default async function PaginaPote() {
         <div className="mx-auto max-w-6xl">
           <CabecalhoSecao
             titulo="O pote"
-            legenda={`${pote.length} jogadores de linha, agrupados por nível`}
+            legenda={`${pote.length} jogadores de linha e ${goleiros.length} goleiros disponíveis para o sorteio`}
           />
 
-          <div className="space-y-6">
-            {niveis.map((nivel) => {
-              const doNivel = pote.filter((j) => j.estrelas === nivel);
-              if (doNivel.length === 0) return null;
-              return (
-                <div key={nivel}>
-                  <div className="mb-3 flex items-center gap-3">
-                    <Estrelas nivel={nivel} tamanho={14} pulsar={false} />
-                    <span className="font-mono text-xs text-text-3">
-                      {doNivel.length} jogador{doNivel.length > 1 ? 'es' : ''}
-                    </span>
-                    <div className="halftone h-[8px] flex-1 opacity-60" />
-                  </div>
-                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
-                    {doNivel.map((j) => (
-                      <FichaPote key={j.id} jogador={j} />
-                    ))}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Goleiros */}
-          <div className="mt-12">
-            <CabecalhoSecao
-              titulo="Goleiros"
-              legenda="Sorteio separado, 1 por time — estrelas não contam no balanceamento"
-            />
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-              {goleiros.map((g) => (
-                <FichaPote key={g.id} jogador={g} armor />
-              ))}
-            </div>
-          </div>
+          <PoteInterativo pote={pote} goleiros={goleiros} />
         </div>
       </section>
 
@@ -218,23 +215,6 @@ function CabecalhoSecao({ titulo, legenda }: { titulo: string; legenda: string }
     <div className="mb-6">
       <h2 className="titulo-hero text-3xl sm:text-4xl">{titulo}</h2>
       <p className="mt-1 text-sm text-text-2">{legenda}</p>
-    </div>
-  );
-}
-
-function FichaPote({ jogador, armor = false }: { jogador: Jogador; armor?: boolean }) {
-  return (
-    <div className="hud-card flex items-center justify-between gap-2 px-3 py-2.5">
-      <div className="min-w-0">
-        <p className="truncate text-sm font-semibold">{jogador.apelido ?? jogador.nome}</p>
-        <p
-          className="font-mono text-[10px] uppercase tracking-wider"
-          style={{ color: armor ? 'var(--accent-armor)' : 'var(--text3)' }}
-        >
-          {jogador.posicao}
-        </p>
-      </div>
-      <Estrelas nivel={jogador.estrelas as NivelEstrelas} tamanho={11} pulsar={false} />
     </div>
   );
 }
