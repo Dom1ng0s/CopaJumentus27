@@ -20,7 +20,7 @@ Há **contas de admin**, só para a organização (decisão do operador em 17/11
 ## 2. Escopo
 
 ### Fase 1 — Sorteio (escopo atual, único que deve ser implementado agora)
-1. Cadastro/edição do **elenco**: jogadores de linha e goleiros, cada um com nome, posição e nível em estrelas.
+1. Cadastro/edição do **elenco**: cada inscrito com nome, apelido, nível em estrelas e a marca **"Goleiro"** (decisão do operador em 18/11/2026: a posição de linha ZAG/MEI/ATA saiu da inscrição). O **número da camisa** não é pedido na inscrição: é lançado depois, em Admin › Equipes, quando os times estiverem montados.
 2. **Times**: são as equipes do campeonato e começam vazios. **Não há capitão fixo** (decisão do operador em 18/11/2026): depois do sorteio, cada time escolhe o seu capitão e um admin o registra em Admin › Equipes.
 3. **Sorteio balanceado** dos jogadores de linha entre os times.
 4. **Sorteio separado de goleiros**: segunda etapa, 1 goleiro por time.
@@ -48,7 +48,7 @@ Contas de usuário para a plateia (só os admins têm conta, §4.5), seguidores,
 ### 3.1 Entidades
 
 ```ts
-type Posicao = 'GOL' | 'ZAG' | 'MEI' | 'ATA';
+type Posicao = 'GOL' | 'LIN';   // só marca goleiro; ZAG/MEI/ATA ficam aceitos para dados antigos e contam como linha
 
 interface Jogador {
   id: string;
@@ -89,7 +89,7 @@ Algoritmo (serpentina aleatorizada — simples, explicável em voz alta na hora 
 4. Ao fim, valide as invariantes. Se a restrição 3 falhar, execute até `MAX_TENTATIVAS` (default: 200) novas tentativas com novo embaralhamento. Se ainda falhar, **mostre o melhor resultado encontrado e avise o operador explicitamente** que a tolerância não foi atingida — nunca falhe em silêncio nem relaxe a regra escondido.
 5. **Ordem de revelação aleatória** (decisão do operador em 18/11/2026): a divisão equilibrada fica pronta ao clicar em Sortear, e a ordem em que a linha é revelada na cerimônia é embaralhada de novo (`random.ts`). A plateia não vê os níveis saindo do mais forte para o mais fraco; os times de cada jogador não mudam. Testado em `sorteio.test.ts`.
 
-Balanceamento por posição é um **objetivo secundário**: distribua ZAG/MEI/ATA o mais uniformemente possível como critério de desempate entre tentativas válidas, mas nunca a ponto de violar as invariantes 1–3.
+Balanceamento por posição é um **objetivo secundário** (sem efeito desde 18/11/2026, quando a inscrição passou a marcar só goleiro/linha; vale apenas para dados antigos com ZAG/MEI/ATA): distribua ZAG/MEI/ATA o mais uniformemente possível como critério de desempate entre tentativas válidas, mas nunca a ponto de violar as invariantes 1–3.
 
 ### 3.4 Sorteio de goleiros
 - Etapa **separada**. Na cerimônia, os goleiros são revelados **primeiro**, antes da linha (decisão do operador em 18/11/2026); no cálculo continuam fora do balanceamento.
@@ -134,10 +134,10 @@ interface CopaRepo {
 
 - O resultado do sorteio continua em `localStorage` e no link (§4.4); o que vale para o campeonato é o "Oficializar" (§8.4).
 - **Fonte do cadastro: tabela `inscricao` no banco, editada em Admin › Inscrições** (decisão do operador em 17/11/2026: "direto no sistema"). A planilha vira só uma importação: o admin envia o CSV da aba `INSCRITOS` na mesma tela, e quem já existe (mesmo nome, sem acento/caixa) é mantido. `src/lib/repo/inscricoes-repo.ts` faz o CRUD; `interpretarInscricoes()` em `planilha.ts` (pura, testada) valida e monta `Jogador[]`/`Time[]` com as pendências, a mesma função para o CSV e para o banco. `carregarCadastro()` lê o banco e cai no seed de exemplo se não houver nenhuma inscrição.
-  - Colunas do CSV (cabeçalho, sem acento/caixa): `Nome`, `Apelido`, `Posição` (GOL/ZAG/MEI/ATA), `Estrelas` (1–6), `Status` (só `Confirmado` entra). Uma coluna `Capitão do time` antiga é ignorada, e a coluna `inscricao.capitao_de` do banco ficou sem uso.
+  - Colunas do CSV (cabeçalho, sem acento/caixa): `Nome`, `Apelido`, `Estrelas` (1–6), `Status` (só `Confirmado` entra) e, opcional, `Goleiro` (sim/x/1) — ou a antiga `Posição`, da qual só `GOL` importa (`lerGoleiro`). Sem as duas, todos são de linha. Uma coluna `Capitão do time` antiga é ignorada, e a coluna `inscricao.capitao_de` do banco ficou sem uso.
   - Os times do sorteio são as **equipes do campeonato em edição**, na ordem cadastrada (`carregarCadastro`).
   - Goleiro com `Estrelas` vazio recebe `ESTRELAS_MIN` (não conta no balanceamento, §3.2).
-  - Qualquer pendência (posição/estrelas vazias, nome repetido, menos de 2 equipes) **bloqueia** o botão de sorteio.
+  - Qualquer pendência (estrelas vazias em jogador de linha, nome repetido, menos de 2 equipes) **bloqueia** o botão de sorteio.
 - **`dados/` está no `.gitignore`** (exceto `dados/*.example.*`): lá fica o banco local (`dados/pglite`). Mantenha `dados/inscritos.example.csv` como referência de formato do CSV.
 - Nenhum componente de UI importa `localStorage`, `fs`, caminho de arquivo ou o cliente do banco direto. Tudo pelos módulos de `src/lib/repo/`.
 

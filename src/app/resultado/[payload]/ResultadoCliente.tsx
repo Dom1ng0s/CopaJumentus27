@@ -1,5 +1,6 @@
 'use client';
 
+import { rotuloPosicao } from '@/lib/domain/tipos';
 import { useCallback, useMemo, useState } from 'react';
 import { EscudoPorNome, IconeLuva, SeloCapitao } from '@/components/campeonato/ui';
 import { HudCard } from '@/components/HudCard';
@@ -216,7 +217,7 @@ export function ResultadoCliente({ dados }: Props) {
                       termo &&
                         (nome.toLowerCase().includes(termo) || pos.toLowerCase().includes(termo)),
                     );
-                    return <Item key={`${nome}-${k}`} nome={nome} rotulo={pos} destacado={bate} />;
+                    return <Item key={`${nome}-${k}`} nome={nome} rotulo={rotuloPosicao(pos)} destacado={bate} />;
                   })}
                 </ul>
               </HudCard>

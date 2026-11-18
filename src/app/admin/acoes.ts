@@ -49,7 +49,6 @@ import {
   criarInscricao,
   importarCsv,
   lerEstrelas,
-  lerPosicao,
   lerStatus,
   removerInscricao,
   type DadosInscricao,
@@ -87,10 +86,9 @@ function opcional(f: FormData, campo: string): string | undefined {
   return texto(f, campo) || undefined;
 }
 
-const POSICOES: readonly Posicao[] = ['GOL', 'ZAG', 'MEI', 'ATA'];
+/** Goleiro ou linha: o formulário manda a caixa "goleiro" marcada (ou posicao=GOL). */
 function posicao(f: FormData): Posicao {
-  const p = texto(f, 'posicao').toUpperCase();
-  return POSICOES.find((x) => x === p) ?? 'MEI';
+  return f.get('goleiro') || texto(f, 'posicao').toUpperCase() === 'GOL' ? 'GOL' : 'LIN';
 }
 
 /**
@@ -628,7 +626,7 @@ function dadosInscricao(f: FormData): DadosInscricao {
   return {
     nome,
     apelido: opcional(f, 'apelido') ?? null,
-    posicao: lerPosicao(texto(f, 'posicao')),
+    posicao: posicao(f),
     estrelas: lerEstrelas(texto(f, 'estrelas')),
     status: lerStatus(texto(f, 'status') === 'espera' ? 'espera' : 'confirmado'),
   };

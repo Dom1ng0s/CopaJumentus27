@@ -14,17 +14,14 @@ import {
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Inscrições — Admin Copa Jumentus' };
 const VOLTA = '/admin/inscricoes';
-const POSICOES = ['GOL', 'ZAG', 'MEI', 'ATA'] as const;
 
 const FILTROS: ReadonlyArray<readonly [string, string]> = [
   ['', 'Todos'],
   ['confirmados', 'Confirmados'],
   ['espera', 'Lista de espera'],
   ['incompletos', 'Incompletos'],
-  ['GOL', 'GOL'],
-  ['ZAG', 'ZAG'],
-  ['MEI', 'MEI'],
-  ['ATA', 'ATA'],
+  ['goleiros', 'Goleiros'],
+  ['linha', 'Linha'],
 ];
 
 function Volta({ filtro, q }: { filtro?: string; q?: string }) {
@@ -45,7 +42,7 @@ export default async function Inscricoes({
   const cadastro = interpretarInscricoes(paraLinhas(inscricoes));
   const confirmados = inscricoes.filter((i) => i.status === 'confirmado');
   const goleiros = confirmados.filter((i) => i.posicao === 'GOL').length;
-  const linha = confirmados.filter((i) => i.posicao && i.posicao !== 'GOL').length;
+  const linha = confirmados.filter((i) => i.posicao !== 'GOL').length;
 
   const termo = q.trim().toLowerCase();
   const filtradas = inscricoes.filter((i) => {
@@ -53,11 +50,12 @@ export default async function Inscricoes({
     if (filtro === 'espera' && i.status !== 'espera') return false;
     if (
       filtro === 'incompletos' &&
-      !(i.status === 'confirmado' && (!i.posicao || (i.posicao !== 'GOL' && !i.estrelas)))
+      !(i.status === 'confirmado' && i.posicao !== 'GOL' && !i.estrelas)
     ) {
       return false;
     }
-    if ((POSICOES as readonly string[]).includes(filtro) && i.posicao !== filtro) return false;
+    if (filtro === 'goleiros' && i.posicao !== 'GOL') return false;
+    if (filtro === 'linha' && i.posicao === 'GOL') return false;
     if (!termo) return true;
     return (
       i.nome.toLowerCase().includes(termo) ||
@@ -206,12 +204,10 @@ function CamposInscricao({
     <>
       <input name="nome" required defaultValue={valores?.nome ?? ''} placeholder="Nome" aria-label="Nome" className="campo" />
       <input name="apelido" defaultValue={valores?.apelido ?? ''} placeholder="Apelido" aria-label="Apelido" className="campo" />
-      <select name="posicao" defaultValue={valores?.posicao ?? ''} aria-label="Posição" className="campo">
-        <option value="">Posição</option>
-        {POSICOES.map((p) => (
-          <option key={p}>{p}</option>
-        ))}
-      </select>
+      <label className="campo flex cursor-pointer items-center gap-2 !py-0" style={{ touchAction: 'manipulation' }}>
+        <input name="goleiro" type="checkbox" defaultChecked={valores?.posicao === 'GOL'} className="h-4 w-4 accent-[var(--accent)]" />
+        <span className="text-sm">Goleiro</span>
+      </label>
       <select name="estrelas" defaultValue={valores?.estrelas ?? ''} aria-label="Estrelas" className="campo">
         <option value="">Estrelas</option>
         {[6, 5, 4, 3, 2, 1].map((n) => (

@@ -81,7 +81,8 @@ export const inscricao = pgTable(
     campeonatoId: doCampeonato(),
     nome: text('nome').notNull(),
     apelido: text('apelido'),
-    posicao: text('posicao', { enum: ['GOL', 'ZAG', 'MEI', 'ATA'] }),
+    // 'GOL' ou 'LIN' desde 18/11/2026 (só a marca de goleiro); ZAG/MEI/ATA são de dados antigos.
+    posicao: text('posicao', { enum: ['GOL', 'LIN', 'ZAG', 'MEI', 'ATA'] }),
     estrelas: smallint('estrelas'),
     /** Nome do time do qual é capitão (vazio = não é capitão). */
     capitaoDe: text('capitao_de'),
@@ -122,7 +123,7 @@ export const jogador = pgTable(
     equipeId: text('equipe_id')
       .notNull()
       .references(() => equipe.id, { onDelete: 'restrict' }),
-    posicao: text('posicao', { enum: ['GOL', 'ZAG', 'MEI', 'ATA'] }).notNull(),
+    posicao: text('posicao', { enum: ['GOL', 'LIN', 'ZAG', 'MEI', 'ATA'] }).notNull(),
     numero: smallint('numero'),
     pago: boolean('pago').notNull().default(false),
     ordem: integer('ordem').notNull().default(0),

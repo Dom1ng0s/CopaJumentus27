@@ -10,7 +10,7 @@ import { WordmarkCopaJumentus, WordmarkViceCity } from '@/components/Wordmark';
 import { marcaPorNome } from '@/lib/campeonato/marcas';
 import { NOME_COMPETICAO, SUBTITULO_COMPETICAO } from '@/lib/config';
 import { montarElencos, sortear, type ResultadoSorteio } from '@/lib/domain/sorteio';
-import type { Jogador, Time } from '@/lib/domain/tipos';
+import { ehGoleiro, rotuloPosicao, type Jogador, type Time } from '@/lib/domain/tipos';
 import {
   assinarCadastro,
   carregarSessaoCerimonia,
@@ -530,8 +530,13 @@ export function CerimoniaCliente({ jogadores, times, problemas = [] }: Props) {
                         {atual.jogador.apelido ?? atual.jogador.nome}
                       </p>
                       <p className="mt-1 font-mono text-sm font-bold uppercase tracking-wider text-text-2">
-                        {atual.jogador.nome} ·{' '}
-                        <span style={{ color: 'var(--accent)' }}>{atual.jogador.posicao}</span>
+                        {atual.jogador.nome}
+                        {ehGoleiro(atual.jogador.posicao) && (
+                          <>
+                            {' · '}
+                            <span style={{ color: 'var(--accent-armor)' }}>Goleiro</span>
+                          </>
+                        )}
                       </p>
                     </div>
                   )}
@@ -796,7 +801,7 @@ export function CerimoniaCliente({ jogadores, times, problemas = [] }: Props) {
                         <LinhaElenco
                           key={j.id}
                           nome={j.apelido ?? j.nome}
-                          posicao={j.posicao}
+                          posicao={rotuloPosicao(j.posicao)}
                           selecionado={
                             recebeuAgora && atual?.etapa === 'linha' && atual.jogador.id === j.id
                           }

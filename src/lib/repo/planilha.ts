@@ -14,7 +14,14 @@ export interface CadastroPlanilha {
   ignorados: number;
 }
 
-const POSICOES: readonly Posicao[] = ['GOL', 'ZAG', 'MEI', 'ATA'];
+/**
+ * Lê a marca de goleiro de uma inscrição: coluna "Goleiro" (sim/x/1) ou a antiga
+ * "Posição" (GOL). Qualquer outra coisa, inclusive vazio, é jogador de linha.
+ */
+export function lerGoleiro(valor: string | null | undefined): Posicao {
+  const v = normalizar(valor ?? '');
+  return ['gol', 'goleiro', 'sim', 's', 'x', '1', 'true'].includes(v) ? 'GOL' : 'LIN';
+}
 
 /** Ordem oficial dos times. Times fora desta lista entram depois, na ordem em que aparecem. */
 export const ORDEM_TIMES = [
@@ -31,7 +38,6 @@ export const ORDEM_TIMES = [
 const COLUNAS = {
   nome: 'nome',
   apelido: 'apelido',
-  posicao: 'posicao',
   estrelas: 'estrelas',
   status: 'status',
 } as const;
@@ -102,6 +108,7 @@ export interface LinhaInscricao {
   id: string;
   nome: string;
   apelido?: string | null;
+  /** 'GOL' para goleiro; qualquer outra coisa é linha (ver lerGoleiro). */
   posicao?: string | null;
   estrelas?: string | number | null;
   /** "confirmado" entra no sorteio; qualquer outro valor fica de fora. Vazio conta como confirmado. */
@@ -119,7 +126,6 @@ export function linhasDoCsv(csv: string): { linhas: LinhaInscricao[]; erro?: str
   const col = {
     nome: indice(COLUNAS.nome),
     apelido: indice(COLUNAS.apelido),
-    posicao: indice(COLUNAS.posicao),
     estrelas: indice(COLUNAS.estrelas),
     status: indice(COLUNAS.status),
   };
@@ -127,6 +133,8 @@ export function linhasDoCsv(csv: string): { linhas: LinhaInscricao[]; erro?: str
   if (faltando.length > 0) {
     return { linhas: [], erro: `Colunas ausentes no cabeçalho: ${faltando.map((k) => COLUNAS[k]).join(', ')}.` };
   }
+  // Goleiro: coluna "Goleiro" (nova) ou "Posição" (antiga, GOL/ZAG/MEI/ATA). Opcional.
+  const colGoleiro = indice('goleiro') >= 0 ? indice('goleiro') : indice('posicao');
   const linhas: LinhaInscricao[] = [];
   tabela.slice(1).forEach((celulas, i) => {
     const numeroLinha = i + 2;
@@ -136,7 +144,7 @@ export function linhasDoCsv(csv: string): { linhas: LinhaInscricao[]; erro?: str
       id: `p${String(numeroLinha - 1).padStart(3, '0')}`,
       nome: pegar(col.nome),
       apelido: pegar(col.apelido),
-      posicao: pegar(col.posicao),
+      posicao: colGoleiro >= 0 ? lerGoleiro(pegar(colGoleiro)) : 'LIN',
       estrelas: pegar(col.estrelas),
       status: pegar(col.status),
       referencia: `linha ${numeroLinha}`,
@@ -190,11 +198,8 @@ export function interpretarInscricoes(
       nomesVistos.set(chaveNome, l);
     }
 
-    const posicaoBruta = (l.posicao ?? '').trim().toUpperCase();
-    const posicao = POSICOES.find((p) => p === posicaoBruta);
-    if (!posicao) {
-      problemas.push(`${rotulo}: posição ${posicaoBruta ? `"${posicaoBruta}" inválida` : 'vazia'}.`);
-    }
+    // Só importa se é goleiro: a posição de linha saiu da inscrição (18/11/2026).
+    const posicao: Posicao = lerGoleiro(l.posicao);
 
     // Estrelas de goleiro nao contam no balanceamento (CLAUDE.md §3.2): vazio vira o minimo.
     const estrelasTexto = l.estrelas === null || l.estrelas === undefined ? '' : String(l.estrelas).trim();
@@ -208,7 +213,7 @@ export function interpretarInscricoes(
       );
     }
 
-    if (!posicao || !estrelasValidas) continue;
+    if (!estrelasValidas) continue;
 
     const apelido = (l.apelido ?? '').trim();
     jogadores.push({

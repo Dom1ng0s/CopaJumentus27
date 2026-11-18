@@ -1,10 +1,11 @@
 import { BotaoImprimir } from '@/components/campeonato/BotaoImprimir';
+import { rotuloPosicao } from '@/lib/domain/tipos';
 import { Cabecalho, Escudo, IconeLuva, SeloCapitao } from '@/components/campeonato/ui';
 import { fundoVisivel, textoSobre } from '@/lib/campeonato/cores';
 import { suspensoes } from '@/lib/campeonato/consultas';
 import type { Campeonato } from '@/lib/domain/campeonato/tipos';
 
-const ORDEM_POSICAO = { GOL: 0, ZAG: 1, MEI: 2, ATA: 3 } as const;
+const ORDEM_POSICAO = { GOL: 0, LIN: 1, ZAG: 1, MEI: 1, ATA: 1 } as const;
 
 /** Elencos das equipes no padrão do manual de marca (malha de camisa, caixa a 45°, luva e C dourado). */
 export function PaginaEquipes({ c }: { c: Campeonato }) {
@@ -93,7 +94,7 @@ export function PaginaEquipes({ c }: { c: Campeonato }) {
                       {ehCapitao && <SeloCapitao tamanho={22} />}
 
                       <span className="hud-label w-9 text-right !text-[12px] text-text-2">
-                        {j.posicao}
+                        {rotuloPosicao(j.posicao)}
                       </span>
                     </li>
                   );
