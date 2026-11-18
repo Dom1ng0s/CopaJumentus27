@@ -6,7 +6,7 @@ import { and, asc, eq } from 'drizzle-orm';
 import { banco, type Banco } from '@/lib/db/cliente';
 import { inscricao } from '@/lib/db/schema';
 import type { Posicao } from '@/lib/domain/tipos';
-import { linhasDoCsv, normalizar, type LinhaInscricao } from './planilha';
+import { lerGoleiro, linhasDoCsv, normalizar, type LinhaInscricao } from './planilha';
 
 export type Inscricao = typeof inscricao.$inferSelect;
 export type StatusInscricao = Inscricao['status'];
@@ -19,11 +19,9 @@ export interface DadosInscricao {
   status?: StatusInscricao;
 }
 
-const POSICOES: readonly Posicao[] = ['GOL', 'ZAG', 'MEI', 'ATA'];
-
-export function lerPosicao(valor: string | null | undefined): Posicao | null {
-  const p = (valor ?? '').trim().toUpperCase();
-  return POSICOES.find((x) => x === p) ?? null;
+/** 'GOL' para goleiro, 'LIN' para o resto (a inscrição só marca goleiro desde 18/11/2026). */
+export function lerPosicao(valor: string | null | undefined): Posicao {
+  return lerGoleiro(valor);
 }
 
 export function lerEstrelas(valor: string | number | null | undefined): number | null {
