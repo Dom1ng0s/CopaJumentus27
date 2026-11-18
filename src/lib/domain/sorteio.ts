@@ -1,4 +1,5 @@
-// Sorteio balanceado — serpentina aleatorizada. Fonte: CLAUDE.md §3.3 e §3.4
+// Sorteio balanceado — serpentina aleatorizada, revelada em ordem aleatoria.
+// Fonte: CLAUDE.md §3.3 e §3.4
 // PURO: sem React, sem DOM, sem IO. Nunca muta a entrada.
 
 import { ESTRELAS_MAX, ESTRELAS_MIN, MAX_TENTATIVAS, TOLERANCIA_ESTRELAS } from '@/lib/config';
@@ -130,7 +131,10 @@ export function sortear(
     if (melhorAmp <= TOLERANCIA_ESTRELAS && melhorDesvio === 0) break;
   }
 
-  const alocacoesLinha = melhor ?? [];
+  // A divisao equilibrada fica pronta aqui; a ordem de revelacao e embaralhada
+  // de novo, para a cerimonia nao mostrar os niveis do mais forte ao mais fraco
+  // (decisao do operador em 18/11/2026). Os times de cada jogador nao mudam.
+  const alocacoesLinha = shuffle(melhor ?? [], fonte);
 
   // ---- Etapa separada: goleiros (CLAUDE.md §3.4) ----
   const goleirosEmbaralhados = shuffle(poteDeGoleiros(jogadores), fonte);
