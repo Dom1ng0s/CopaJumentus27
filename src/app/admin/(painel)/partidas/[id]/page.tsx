@@ -7,7 +7,7 @@ import { goleiroDaPartida } from '@/lib/domain/campeonato/rankings';
 import { calcularSuspensoes, ordenarPartidas } from '@/lib/domain/campeonato/suspensoes';
 import { TIPOS_EVENTO, type Equipe, type JogadorCampeonato, type Partida, type StatusPartida } from '@/lib/domain/campeonato/tipos';
 import { campeonatoDoAdmin } from '@/lib/campeonato/selecao';
-import { adicionarEvento, ajustarPlacar, definirGoleiro, definirStatus, removerEvento } from '../../../acoes';
+import { adicionarEvento, ajustarPlacar, definirGoleiro, definirStatus, remarcarPartidaAcao, removerEvento } from '../../../acoes';
 
 export const dynamic = 'force-dynamic';
 
@@ -22,9 +22,9 @@ export default async function ControlePartida({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ erro?: string }>;
+  searchParams: Promise<{ erro?: string; ok?: string }>;
 }) {
-  const [{ id }, { erro }] = await Promise.all([params, searchParams]);
+  const [{ id }, { erro, ok }] = await Promise.all([params, searchParams]);
   const c = await campeonatoDoAdmin();
   const p = c.partidas.find((x) => x.id === id);
   if (!p) notFound();
@@ -66,6 +66,7 @@ export default async function ControlePartida({
         ← Partidas
       </Link>
       <Aviso texto={erro} />
+      <Aviso texto={ok} tipo="ok" />
 
       <section className="hud-card relative p-5">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
@@ -121,6 +122,29 @@ export default async function ControlePartida({
           {ehMataMata && ' Jogo eliminatório empatado só encerra com placar de pênaltis.'}
         </p>
       </section>
+
+      {p.status === 'agendada' && (
+        <details className="hud-card p-4">
+          <summary className="hud-label cursor-pointer select-none">Remarcar horário</summary>
+          <form action={remarcarPartidaAcao} className="mt-3 flex flex-wrap items-end gap-3">
+            <input type="hidden" name="volta" value={volta} />
+            <input type="hidden" name="partidaId" value={p.id} />
+            <label className="min-w-[13rem] flex-1">
+              <span className="rotulo-campo">Data e hora</span>
+              <input name="dataHora" type="datetime-local" defaultValue={p.dataHora ?? ''} required className="campo" />
+            </label>
+            {p.numero !== undefined && p.dia !== undefined && (
+              <label className="flex items-center gap-2 pb-3 text-sm text-text-2">
+                <input type="checkbox" name="empurrar" value="1" defaultChecked className="h-5 w-5 accent-[var(--accent)]" />
+                Empurrar os jogos seguintes do dia
+              </label>
+            )}
+            <button type="submit" className="btn-mini">
+              Remarcar
+            </button>
+          </form>
+        </details>
+      )}
 
       <div className="grid gap-4 lg:grid-cols-2">
         {(['mandante', 'visitante'] as const).map((lado) => {

@@ -44,6 +44,8 @@ function chaveMataMata(faseGrupo: string): Array<[number, string, Origem, Origem
 }
 
 export const TOTAL_EQUIPES_MODELO = 8;
+/** O modelo acontece em 2 dias (rodadas 1–4 no dia 1; 5–7 e mata-mata no dia 2). */
+export const DIAS_DO_MODELO = 2;
 
 /**
  * Troca fases, grupos e partidas do campeonato pelos do modelo. Só sem partidas

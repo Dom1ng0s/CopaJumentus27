@@ -1,0 +1,1 @@
+ALTER TABLE "campeonato" ADD COLUMN "programacao" jsonb;

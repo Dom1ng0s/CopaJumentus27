@@ -22,6 +22,13 @@
       "when": 1794942784526,
       "tag": "0002_multi_campeonato_modelo",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1794967117389,
+      "tag": "0003_programacao",
+      "breakpoints": true
     }
   ]
 }
