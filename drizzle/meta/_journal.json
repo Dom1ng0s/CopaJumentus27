@@ -36,6 +36,13 @@
       "when": 1794970091914,
       "tag": "0004_premios_historico",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1795021079669,
+      "tag": "0005_financeiro",
+      "breakpoints": true
     }
   ]
 }

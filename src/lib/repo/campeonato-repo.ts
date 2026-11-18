@@ -158,6 +158,7 @@ async function ler(db: Leitor, id: number): Promise<Campeonato | null> {
     // Programações antigas (uma duração para todos os jogos) são convertidas na leitura.
     programacao: normalizarProgramacao(cfg.programacao),
     premios: cfg.premios ?? undefined,
+    financeiro: cfg.financeiro ?? undefined,
     historico: cfg.historico ?? undefined,
     equipes: equipes.map((e) => ({
       id: e.id,
@@ -241,6 +242,7 @@ function configuracao(c: Campeonato) {
     sorteioOficializadoEm: c.sorteioOficializadoEm ? new Date(c.sorteioOficializadoEm) : null,
     programacao: c.programacao ?? null,
     premios: c.premios?.length ? c.premios : null,
+    financeiro: c.financeiro ?? null,
     historico: c.historico ?? null,
     atualizadoEm: new Date(),
   };
@@ -553,6 +555,8 @@ export async function duplicarCampeonato(
     programacao: o.programacao && { ...o.programacao, dias: o.programacao.dias.map((d) => ({ ...d, data: '' })) },
     // Prêmios são da edição de origem; a nova começa sem.
     premios: undefined,
+    // Financeiro é de cada edição: duplicar não copia gastos, patrocínios nem entradas.
+    financeiro: undefined,
     historico: undefined,
     equipes: o.equipes.map((e) => ({
       ...e,

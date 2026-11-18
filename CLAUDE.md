@@ -35,6 +35,7 @@ Decisões do operador em 17/11/2026 que ampliaram esta fase (§8.6):
 - **Histórico de edições**: cada campeonato encerrado continua consultável em `/edicoes/[slug]`.
 - **Exportação/impressão limpa** de súmula, classificação e elencos (CSS de impressão; sem biblioteca de PDF).
 - **Modelo oficial "Copa Jumentus · 8 times · 34 jogos"**, aplicado com um clique ao criar o campeonato. O formato livre (§8.1) continua existindo para outras edições.
+- **Financeiro e patrocinadores** (pedido do operador em 18/11/2026, base na planilha "Financeiro Copa Jumentus 2027"): gastos, patrocínios e outras entradas editáveis em Admin › Financeiro, com o valor por atleta; patrocinadores fechados aparecem no Início (§8.8).
 - **Edições antigas e premiação individual** (pedido do operador em 17/11/2026: "coloque as duas últimas edições no menu"): as edições jogadas no Copa Fácil entram com pódio, artilharia, assistências e prêmios lançados à mão (§8.7).
 
 ### Fora de escopo (não construir, nem "preparar terreno" com abstração especulativa)
@@ -315,7 +316,7 @@ Nunca introduza visual corporativo/SaaS genérico, biblioteca de componentes com
 
 ### 8.5 Rotas
 - Públicas: `/`, `/classificacao`, `/jogos`, `/jogos/[id]`, `/rankings`, `/equipes` mostram o **campeonato atual**: o mais recente em andamento; senão em inscrições; senão o último encerrado. Rascunho nunca é público. Histórico: `/edicoes` e `/edicoes/[slug]/…` (as mesmas telas, componentes em `src/components/paginas/`). Mais `/resultado/[payload]`.
-- Admin: `/admin`, `/admin/campeonatos`, `/admin/inscricoes`, `/admin/campeonato`, `/admin/fases`, `/admin/partidas`, `/admin/partidas/[id]`, `/admin/equipes`, `/admin/pagamentos`, `/admin/admins`, `/admin/conta`, `/sorteio`, `/cerimonia`. Login em `/admin/entrar`.
+- Admin: `/admin`, `/admin/campeonatos`, `/admin/inscricoes`, `/admin/campeonato`, `/admin/fases`, `/admin/partidas`, `/admin/partidas/[id]`, `/admin/equipes`, `/admin/pagamentos`, `/admin/financeiro`, `/admin/admins`, `/admin/conta`, `/sorteio`, `/cerimonia`. Login em `/admin/entrar`.
 
 ### 8.6 Modelo oficial "Copa Jumentus · 8 times · 34 jogos"
 Decisão do operador em 17/11/2026. Código em `lib/domain/campeonato/modelo.ts` (tabela e aplicação) e `chaveamento.ts` (participantes, trava e consistência), puro e testado.
@@ -334,13 +335,20 @@ Decisão do operador em 17/11/2026. Código em `lib/domain/campeonato/modelo.ts`
 - **Edição antiga** (`campeonato.historico`, `Historico`): pódio (equipes) e artilharia/assistências oficiais, lançados em Admin › Campeonato › Edição antiga, uma linha por jogador no formato `Nome; Equipe; número` (`lerRankingManual`, puro e testado; casa a equipe pelo nome ou sigla, sem acento/caixa, e aponta a linha com erro). O pódio lançado só aparece se o modelo não der pódio pelas súmulas; os rankings lançados só aparecem se as súmulas não tiverem gols/assistências (e sem filtro de fase). Duplicar não copia.
 - As duas edições do Copa Fácil foram inseridas uma vez no Neon por SQL (status encerrado, formato livre, sem jogos): **Copa Jumentus 2025** (clubes italianos; Roma campeã) e **Copa Jumentus 2026 · Copa do Mundo** (Espanha campeã; prêmios do post de 24/05 no @c.r.jumentus). Escudos em `public/imagens/escudos/selecoes/` e `public/imagens/escudos/clubes/` (enviados pelo operador; a Juventus vai na versão negativa branca, porque o preto some no marinho). Os jogos dessas edições não entram no site (decisão do operador em 18/11/2026: "só os resultados"): Tabela e Jogos mostram `AvisoEdicaoSemJogos` em vez de "a tabela ainda não saiu" (`edicaoSemJogos`: encerrado e sem partidas). As cores foram tiradas das camisas oficiais.
 
+### 8.8 Financeiro e patrocinadores
+Pedido do operador em 18/11/2026. Domínio em `lib/domain/campeonato/financeiro.ts` (puro, testado), gravado em `campeonato.financeiro` (jsonb). Valores sempre em **centavos**.
+- **Admin › Financeiro** começa com o modelo da planilha (`financeiroPadrao`): aluguel do campo, arbitragem, troféus, fotógrafo, água (zerados), uniformes Camizzeria 64 × R$ 78,50 e as 5 cotas da camisa (Master frente, Mangas, Costas 1 e 2, Shorts) "A definir". Tudo editável, removível e acrescentável: **gastos** (descrição, categoria, quantidade × valor, previsto/pago), **patrocínios** (patrocinador, cota, valor, negociando/confirmado/recebido, logo, link, mostrar no site) e **outras entradas** (rifa, doação, venda; previsto/recebido).
+- **Resumo** (`resumirFinanceiro`): a cobrar dos atletas = gastos − patrocínio fechado (confirmado ou recebido) − outras entradas; valor por atleta arredonda para cima no centavo; "falta para a meta" usa a meta por atleta (padrão R$ 70). Caixa = inscrições pagas (Pagamentos) + patrocínio e entradas recebidos − gastos pagos. Um botão copia o valor por atleta para o valor da inscrição.
+- **Site:** o Início mostra "Patrocinadores" só com cotas fechadas, marcadas para o site e com nome (`patrocinadoresPublicos`), master em destaque; nunca valores. `campeonatoPublico()` tira o financeiro do campeonato antes de entregar às páginas públicas.
+- Duplicar não copia o financeiro.
+
 ---
 
 ## 9. Banco de dados
 
 - **Produção:** Postgres no **Neon** (São Paulo, `sa-east-1`), app na **Vercel** com funções em São Paulo (`vercel.json`, `gru1`) para ficar perto do banco. Repositório na organização `copa-jumentus` do GitHub (a Vercel não publica repo de conta pessoal de outra pessoa). `DATABASE_URL` (connection string *pooled* do Neon) nas variáveis de ambiente da Vercel. O cliente usa `postgres` 3.x com `prepare: false` (exigido pelo pooler).
 - **Desenvolvimento:** sem `DATABASE_URL`, `src/lib/db/cliente.ts` abre um **PGlite** em `dados/pglite` e aplica as migrações sozinho. Para começar do zero, apague a pasta. Testes usam PGlite em memória (`bancoDeTeste()`).
-- **Esquema:** `src/lib/db/schema.ts`. Tabelas: `admin` (contas, §4.5), `campeonato` (um por edição: `slug` único, `edicao`, `status` rascunho|inscricoes|andamento|encerrado, `modelo` copa-jumentus-8|livre, `banner`, `escudo`, `duplicado_de`, `programacao`, `premios` e `historico` jsonb), `inscricao`, `equipe`, `jogador`, `fase`, `grupo`, `grupo_equipe`, `partida`, `evento`. As restrições do domínio que o banco consegue garantir (estrelas 1–6, mandante ≠ visitante, FKs) estão em `check` e `foreign key`.
+- **Esquema:** `src/lib/db/schema.ts`. Tabelas: `admin` (contas, §4.5), `campeonato` (um por edição: `slug` único, `edicao`, `status` rascunho|inscricoes|andamento|encerrado, `modelo` copa-jumentus-8|livre, `banner`, `escudo`, `duplicado_de`, `programacao`, `premios`, `historico` e `financeiro` jsonb), `inscricao`, `equipe`, `jogador`, `fase`, `grupo`, `grupo_equipe`, `partida`, `evento`. As restrições do domínio que o banco consegue garantir (estrelas 1–6, mandante ≠ visitante, FKs) estão em `check` e `foreign key`.
 - **Migrações:** SQL em `drizzle/`, geradas com `npm run db:gerar` depois de mudar o esquema (revise o SQL e versione). `npm run build` roda `scripts/migrar.mjs` antes do `next build`, então o deploy na Vercel atualiza o Neon sozinho. Nunca edite uma migração já aplicada; gere outra.
 - **Vários campeonatos:** `inscricao`, `equipe` e `fase` têm `campeonato_id`; jogador, grupo, partida e evento pertencem pelo pai. Ids de texto novos (`novoId()`, 12 hex) são únicos entre campeonatos. `campeonato_id` tem default 1 só por compatibilidade com o código anterior (campeonato único) durante a transição; o código atual sempre informa.
 - **Duplicar** copia configuração, fases, zonas, grupos e equipes (ids novos); elencos opcionais (pagamento zerado); nunca partidas, súmulas, pagamentos nem inscrições. Nasce em rascunho, com `duplicado_de`.

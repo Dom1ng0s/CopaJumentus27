@@ -4,6 +4,7 @@
 // - Público: o atual (escolherAtual) nas rotas da raiz; qualquer edição não
 //   rascunho em /edicoes/[slug].
 
+import { patrocinadoresPublicos, type Patrocinio } from '@/lib/domain/campeonato/financeiro';
 import { cookies } from 'next/headers';
 import type { Campeonato } from '@/lib/domain/campeonato/tipos';
 import { carregarCampeonato, escolherAtual, listarCampeonatos, type ResumoCampeonato } from '@/lib/repo/campeonato-repo';
@@ -31,6 +32,8 @@ export interface CampeonatoPublico {
   base: string;
   /** Edições públicas, para o histórico. */
   edicoes: ResumoCampeonato[];
+  /** Patrocinadores fechados e marcados para o site. O resto do financeiro nunca sai do admin. */
+  patrocinadores: Patrocinio[];
 }
 
 /** Campeonato do site público: por slug (histórico) ou o atual. null = não existe ou é rascunho. */
@@ -38,5 +41,7 @@ export async function campeonatoPublico(slug?: string): Promise<CampeonatoPublic
   const edicoes = await edicoesPublicas();
   const resumo = slug ? edicoes.find((c) => c.slug === slug) : escolherAtual(edicoes);
   if (!resumo) return null;
-  return { c: await carregarCampeonato(resumo.id), base: slug ? `/edicoes/${slug}` : '', edicoes };
+  const c = await carregarCampeonato(resumo.id);
+  const patrocinadores = patrocinadoresPublicos(c.financeiro);
+  return { c: { ...c, financeiro: undefined }, base: slug ? `/edicoes/${slug}` : '', edicoes, patrocinadores };
 }

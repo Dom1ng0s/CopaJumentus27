@@ -1,6 +1,7 @@
 // Tipos do campeonato (gestão simples: equipes, fases, grupos, partidas, súmula).
 // Fonte: CLAUDE.md §8.
 
+import type { Financeiro } from './financeiro';
 import type { Programacao } from './programacao';
 
 import type { Posicao } from '@/lib/domain/tipos';
@@ -194,6 +195,8 @@ export interface Campeonato {
   premios?: Premio[];
   /** Resultado lançado à mão de edição antiga, sem súmulas no sistema. */
   historico?: Historico;
+  /** Gastos, patrocínios e entradas (financeiro.ts). Só os admins veem, exceto os patrocinadores exibidos. */
+  financeiro?: Financeiro;
 }
 
 /** Linha de ranking lançada à mão (edições antigas). */
