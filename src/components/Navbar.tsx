@@ -3,8 +3,8 @@
 // Barra de transmissão: brasão oficial como assinatura à esquerda, links em
 // Barlow Condensed e filete dourado na base (manual, "Cabeçalho padrão").
 // No celular os links descem para uma barra inferior fixa, ao alcance do polegar.
-// A área dos admins não fica no menu público (decisão do operador, 17/11/2026):
-// o acesso é pelo rodapé.
+// A área dos admins não é item do menu público: é um botão "Admin" no canto
+// direito da barra de cima (decisão do operador, 18/11/2026).
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -109,6 +109,19 @@ export function Navbar() {
               })}
             </div>
           )}
+          {menuPublico && (
+            <Link
+              href="/admin"
+              className="btn-hud ml-auto !min-h-9 gap-1.5 px-3 !text-[13px] tracking-[0.06em] sm:ml-3"
+              title="Área dos admins"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="5" y="11" width="14" height="9" />
+                <path d="M8 11V8a4 4 0 018 0v3" />
+              </svg>
+              Admin
+            </Link>
+          )}
         </div>
         <div className="filete !h-[2px] opacity-80" aria-hidden="true" />
       </nav>
@@ -145,7 +158,7 @@ export function Navbar() {
   );
 }
 
-/** Rodapé discreto com o acesso dos admins (fora do menu público). */
+/** Rodapé discreto (o acesso dos admins fica no botão da barra de cima). */
 export function Rodape() {
   const pathname = usePathname();
   if (SEM_MENU_PUBLICO.test(pathname)) return null;
@@ -154,11 +167,6 @@ export function Rodape() {
       <div className="filete mb-4 w-full opacity-40" aria-hidden="true" />
       <div className="flex flex-wrap items-center justify-between gap-3 font-mono text-[13px] font-semibold uppercase tracking-[0.06em] text-text-3">
         <span>@c.r.jumentus</span>
-        <span className="flex gap-4">
-          <Link href="/admin" className="hover:text-text-1">
-            Área dos admins
-          </Link>
-        </span>
       </div>
     </footer>
   );

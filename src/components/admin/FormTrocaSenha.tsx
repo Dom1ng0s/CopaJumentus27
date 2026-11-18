@@ -3,6 +3,7 @@
 import { useActionState } from 'react';
 import { trocarMinhaSenha, type EstadoTroca } from '@/app/admin/acoes-conta';
 import { Aviso } from '@/components/campeonato/ui';
+import { CampoSenha } from './CampoSenha';
 
 const MINIMO = 10;
 
@@ -16,16 +17,16 @@ export function FormTrocaSenha({ exigirAtual, volta, autoFocus }: { exigirAtual:
       {exigirAtual && (
         <label className="block">
           <span className="rotulo-campo">Senha atual</span>
-          <input name="senhaAtual" type="password" required autoComplete="current-password" className="campo" autoFocus={autoFocus} />
+          <CampoSenha name="senhaAtual" autoComplete="current-password" autoFocus={autoFocus} />
         </label>
       )}
       <label className="block">
         <span className="rotulo-campo">Nova senha (mínimo {MINIMO} caracteres)</span>
-        <input name="nova" type="password" required minLength={MINIMO} autoComplete="new-password" className="campo" autoFocus={autoFocus && !exigirAtual} />
+        <CampoSenha name="nova" minLength={MINIMO} autoComplete="new-password" autoFocus={autoFocus && !exigirAtual} />
       </label>
       <label className="block">
         <span className="rotulo-campo">Repita a nova senha</span>
-        <input name="confirmacao" type="password" required minLength={MINIMO} autoComplete="new-password" className="campo" />
+        <CampoSenha name="confirmacao" minLength={MINIMO} autoComplete="new-password" />
       </label>
       <button type="submit" className="btn-cta w-full" disabled={enviando}>
         <span>{enviando ? 'Salvando…' : 'Salvar nova senha'}</span>
