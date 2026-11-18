@@ -120,6 +120,26 @@ export function Vazio({ texto, detalhe }: { texto: string; detalhe?: string }) {
   );
 }
 
+/** Edição encerrada sem jogos no site (as do Copa Fácil): só pódio, prêmios e rankings. */
+export function edicaoSemJogos(c: { status: string; partidas: unknown[] }): boolean {
+  return c.status === 'encerrado' && c.partidas.length === 0;
+}
+
+export function AvisoEdicaoSemJogos({ base }: { base: string }) {
+  return (
+    <div className="flex flex-col items-center justify-center gap-2 border border-dashed border-[var(--border-visible)] px-4 py-8 text-center">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src="/imagens/logo/copa-jumentus-logo.png" alt="" width={28} height={38} className="mb-1 h-9 w-auto opacity-40 grayscale" />
+      <p className="font-mono text-sm font-bold uppercase tracking-[0.06em] text-text-2">Os jogos desta edição não estão no site.</p>
+      <p className="text-sm text-text-3">Ficaram registrados o pódio, a premiação individual e os rankings.</p>
+      <div className="mt-2 flex gap-4 font-mono text-sm font-bold uppercase tracking-[0.06em]">
+        <Link href={base || '/'} className="text-[var(--accent)] hover:underline">Pódio</Link>
+        <Link href={`${base}/rankings`} className="text-[var(--accent)] hover:underline">Rankings</Link>
+      </div>
+    </div>
+  );
+}
+
 export function Secao({ titulo, children, acao }: { titulo: string; children: React.ReactNode; acao?: React.ReactNode }) {
   return (
     <section className="hud-card hud-clip modulo relative p-4 sm:p-5">

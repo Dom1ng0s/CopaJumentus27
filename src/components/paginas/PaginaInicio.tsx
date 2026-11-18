@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { AutoAtualizar } from '@/components/campeonato/AutoAtualizar';
 import { LinhaPartida, partesDaData } from '@/components/campeonato/Partidas';
 import { Premiacao } from '@/components/campeonato/Premiacao';
-import { Escudo, Numero, SeloStatus, Vazio } from '@/components/campeonato/ui';
+import { Escudo, Numero, SeloStatus, Vazio, edicaoSemJogos } from '@/components/campeonato/ui';
 import { fundoVisivel } from '@/lib/campeonato/cores';
 import { formatarData, indices, lados } from '@/lib/campeonato/consultas';
 import { andamento, projecaoMataMata, type Projecao } from '@/lib/domain/campeonato/andamento';
@@ -141,7 +141,7 @@ export function PaginaInicio({ c, base, edicoes }: CampeonatoPublico) {
           </section>
         )}
 
-        {c.partidas.length === 0 && <Vazio texto="A tabela de jogos ainda não saiu." detalhe="Os jogos aparecem aqui assim que a organização definir os confrontos." />}
+        {c.partidas.length === 0 && !edicaoSemJogos(c) && <Vazio texto="A tabela de jogos ainda não saiu." detalhe="Os jogos aparecem aqui assim que a organização definir os confrontos." />}
 
         <div className="grid gap-8 lg:grid-cols-2">
           {proximas.length > 0 && (
