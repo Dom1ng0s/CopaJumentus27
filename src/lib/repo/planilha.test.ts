@@ -52,10 +52,12 @@ describe('interpretarPlanilha', () => {
     expect(r.problemas.some((p) => p.startsWith('Linha (linha 3): estrelas vazias'))).toBe(true);
   });
 
-  it('acusa posicao vazia e nome repetido; nao cobra capitao', () => {
+  it('acusa nome repetido; nao cobra posicao nem capitao (so marca goleiro)', () => {
     const csv = [CAB, linha('Ana', '', '3'), linha('Bia', 'MEI', '4'), linha('Caio', 'ATA', '4'), linha('bia', 'ZAG', '2')].join('\n');
     const r = interpretarPlanilha(csv);
-    expect(r.problemas).toContain('Ana (linha 2): posição vazia.');
+    expect(r.problemas.some((p) => /posição/.test(p))).toBe(false);
+    expect(r.jogadores.find((j) => j.nome === 'Ana')?.posicao).toBe('LIN');
+    expect(r.jogadores.find((j) => j.nome === 'Caio')?.posicao).toBe('LIN');
     expect(r.problemas).toContain('Nome repetido: bia (linhas 3 e 5).');
     expect(r.problemas.some((p) => /capit/i.test(p))).toBe(false);
     expect(r.times).toHaveLength(8);
@@ -64,6 +66,14 @@ describe('interpretarPlanilha', () => {
   it('os times sao as equipes informadas, na ordem dada', () => {
     const r = interpretarPlanilha([CAB, linha('Ana', 'MEI', '3')].join('\n'), ['Roma', 'Milan', 'Roma']);
     expect(r.times.map((t) => t.nome)).toEqual(['Roma', 'Milan']);
+  });
+
+  it('coluna "Goleiro" marca o goleiro; sem coluna, todos sao de linha', () => {
+    const comColuna = interpretarPlanilha(['Nome,Apelido,Goleiro,Estrelas,Status', 'Ana,,sim,,Confirmado', 'Bia,,,4,Confirmado'].join('\n'));
+    expect(comColuna.problemas).toEqual([]);
+    expect(comColuna.jogadores.map((j) => j.posicao)).toEqual(['GOL', 'LIN']);
+    const semColuna = interpretarPlanilha(['Nome,Apelido,Estrelas,Status', 'Ana,,3,Confirmado'].join('\n'));
+    expect(semColuna.jogadores[0].posicao).toBe('LIN');
   });
 
   it('ignora uma coluna antiga de capitao no CSV', () => {

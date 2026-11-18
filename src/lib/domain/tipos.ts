@@ -1,6 +1,19 @@
 // Tipos de dominio. Fonte: CLAUDE.md §3.1
 
-export type Posicao = 'GOL' | 'ZAG' | 'MEI' | 'ATA';
+/**
+ * Desde 18/11/2026 a inscrição só marca quem é goleiro: 'GOL' ou 'LIN' (linha).
+ * ZAG/MEI/ATA continuam aceitos só para dados antigos e contam como linha.
+ */
+export type Posicao = 'GOL' | 'LIN' | 'ZAG' | 'MEI' | 'ATA';
+
+export function ehGoleiro(p: Posicao | string | null | undefined): boolean {
+  return p === 'GOL';
+}
+
+/** Rótulo curto para a tela: só goleiro tem; linha fica sem rótulo. */
+export function rotuloPosicao(p: Posicao | string | null | undefined): string {
+  return p === 'GOL' ? 'GOL' : p === 'LIN' || !p ? '' : p;
+}
 
 export type Estrelas = 1 | 2 | 3 | 4 | 5 | 6;
 

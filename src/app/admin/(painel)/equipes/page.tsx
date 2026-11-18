@@ -5,7 +5,6 @@ import { adicionarJogador, editarEquipe, editarJogador, removerJogador } from '.
 
 export const dynamic = 'force-dynamic';
 const VOLTA = '/admin/equipes';
-const POSICOES = ['GOL', 'ZAG', 'MEI', 'ATA'] as const;
 
 export default async function EquipesAdmin({ searchParams }: { searchParams: Promise<{ erro?: string }> }) {
   const { erro } = await searchParams;
@@ -62,11 +61,10 @@ export default async function EquipesAdmin({ searchParams }: { searchParams: Pro
                       <input name="nome" defaultValue={j.nome} aria-label="Nome" className="campo" />
                       {situacao.get(j.id)?.suspenso && <span className="hud-label text-[9px] text-error">Suspenso</span>}
                     </div>
-                    <select name="posicao" defaultValue={j.posicao} aria-label="Posição" className="campo">
-                      {POSICOES.map((p) => (
-                        <option key={p}>{p}</option>
-                      ))}
-                    </select>
+                    <label className="campo flex cursor-pointer items-center gap-2 !py-0" style={{ touchAction: 'manipulation' }}>
+                      <input name="goleiro" type="checkbox" defaultChecked={j.posicao === 'GOL'} className="h-4 w-4 accent-[var(--accent)]" />
+                      <span className="text-sm">Goleiro</span>
+                    </label>
                     <select name="equipeId" defaultValue={j.equipeId} aria-label="Equipe (transferir)" className="campo">
                       {c.equipes.map((x) => (
                         <option key={x.id} value={x.id}>
@@ -90,11 +88,10 @@ export default async function EquipesAdmin({ searchParams }: { searchParams: Pro
               <input type="hidden" name="equipeId" value={e.id} />
               <input name="numero" type="number" min={0} placeholder="Nº" aria-label="Número" className="campo w-20" />
               <input name="nome" required placeholder="Novo jogador" aria-label="Nome do novo jogador" className="campo min-w-[10rem] flex-1" />
-              <select name="posicao" defaultValue="MEI" aria-label="Posição" className="campo w-24">
-                {POSICOES.map((p) => (
-                  <option key={p}>{p}</option>
-                ))}
-              </select>
+              <label className="campo flex cursor-pointer items-center gap-2 !py-0" style={{ touchAction: 'manipulation' }}>
+                      <input name="goleiro" type="checkbox" defaultChecked={false} className="h-4 w-4 accent-[var(--accent)]" />
+                      <span className="text-sm">Goleiro</span>
+                    </label>
               <button type="submit" className="btn-mini">
                 Adicionar
               </button>

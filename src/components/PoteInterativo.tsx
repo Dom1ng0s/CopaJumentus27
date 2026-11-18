@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react';
 import { IconeLuva } from '@/components/campeonato/ui';
 import { Estrelas } from '@/components/Estrelas';
 import { HudCard } from '@/components/HudCard';
-import type { Estrelas as NivelEstrelas, Jogador, Posicao } from '@/lib/domain/tipos';
+import { rotuloPosicao, type Estrelas as NivelEstrelas, type Jogador, type Posicao } from '@/lib/domain/tipos';
 
 interface Props {
   pote: Jogador[];
@@ -14,10 +14,8 @@ interface Props {
 const NIVEIS = [6, 5, 4, 3, 2, 1] as const;
 const POSICOES: Array<{ valor: 'TODOS' | Posicao; rotulo: string }> = [
   { valor: 'TODOS', rotulo: 'Todos' },
-  { valor: 'ATA', rotulo: 'ATA · Atacantes' },
-  { valor: 'MEI', rotulo: 'MEI · Meias' },
-  { valor: 'ZAG', rotulo: 'ZAG · Zagueiros' },
-  { valor: 'GOL', rotulo: 'GOL · Goleiros' },
+  { valor: 'LIN', rotulo: 'Linha' },
+  { valor: 'GOL', rotulo: 'Goleiros' },
 ];
 
 export function PoteInterativo({ pote, goleiros }: Props) {
@@ -29,7 +27,7 @@ export function PoteInterativo({ pote, goleiros }: Props) {
   const poteFiltrado = useMemo(() => {
     if (posicaoFiltro === 'GOL') return [];
     return pote.filter((j) => {
-      if (posicaoFiltro !== 'TODOS' && j.posicao !== posicaoFiltro) return false;
+      // "Linha" mostra todo o pote (inclui dados antigos com ZAG/MEI/ATA).
       if (!termo) return true;
       return (
         j.nome.toLowerCase().includes(termo) ||
@@ -90,7 +88,7 @@ export function PoteInterativo({ pote, goleiros }: Props) {
                 ? pote.length + goleiros.length
                 : p.valor === 'GOL'
                   ? goleiros.length
-                  : pote.filter((j) => j.posicao === p.valor).length;
+                  : pote.length;
 
             return (
               <button
@@ -177,8 +175,7 @@ function FichaPote({ jogador, armor = false }: { jogador: Jogador; armor?: boole
           className="truncate font-mono text-[11px] uppercase tracking-wider"
           style={{ color: armor ? 'var(--accent-armor)' : 'var(--text3)' }}
         >
-          {jogador.posicao}
-          {temApelidoDistinto ? ` · ${jogador.nome}` : ''}
+          {[rotuloPosicao(jogador.posicao), temApelidoDistinto ? jogador.nome : ''].filter(Boolean).join(' · ')}
         </p>
       </div>
       <Estrelas nivel={jogador.estrelas as NivelEstrelas} tamanho={11} pulsar={false} />
