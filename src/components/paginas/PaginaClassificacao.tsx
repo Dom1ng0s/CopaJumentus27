@@ -13,10 +13,11 @@ export function PaginaClassificacao({ c, base }: { c: Campeonato; base: string }
   return (
     <div className="mx-auto max-w-6xl space-y-10 px-4 pb-20">
       <AutoAtualizar ativo={aoVivo} />
-      <div className="flex items-start justify-between gap-4">
-        <Cabecalho titulo="Classificação" legenda={`${c.nome}${c.edicao && !c.nome.includes(c.edicao) ? ` ${c.edicao}` : ''} · só jogos encerrados contam na tabela.`} />
-        <BotaoImprimir />
-      </div>
+      <Cabecalho
+        titulo="Classificação"
+        legenda={`${c.nome}${c.edicao && !c.nome.includes(c.edicao) ? ` ${c.edicao}` : ''} · só jogos encerrados contam na tabela.`}
+        acao={<BotaoImprimir />}
+      />
 
       {c.fases.map((fase) => {
         const partidas = partidasDaFase(c, fase.id);
@@ -32,7 +33,7 @@ export function PaginaClassificacao({ c, base }: { c: Campeonato; base: string }
                   {grupos.map((g) => (
                     <TabelaClassificacao
                       key={g.id}
-                      titulo={g.nome}
+                      titulo={grupos.length === 1 && g.nome === fase.nome ? '' : g.nome}
                       equipes={equipe}
                       zonas={fase.zonas}
                       encerrado={grupoEncerrado(c, g.id)}

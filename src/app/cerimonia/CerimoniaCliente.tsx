@@ -314,7 +314,7 @@ export function CerimoniaCliente({ jogadores, times, problemas = [] }: Props) {
     resultado.sorteio.goleiros.length > 0;
 
   return (
-    <div className="relative min-h-screen px-4 pb-20">
+    <div className="relative min-h-screen px-4 pb-20 pt-6">
       <PalmBackdrop
         className={emModoPalco ? 'opacity-90' : 'opacity-75'}
         intensidade={emModoPalco ? 'hero' : 'ambiente'}

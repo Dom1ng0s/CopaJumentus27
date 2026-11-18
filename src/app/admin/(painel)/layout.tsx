@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { GuardaAdmin } from '@/components/admin/GuardaAdmin';
+import { NavAdmin } from '@/components/admin/NavAdmin';
 import { exigirAdmin } from '@/lib/auth/servidor';
 import { idDoCampeonatoDoAdmin } from '@/lib/campeonato/selecao';
 import { ROTULO_STATUS_CAMPEONATO } from '@/lib/domain/campeonato/tipos';
@@ -25,16 +26,11 @@ export default async function LayoutAdmin({ children }: { children: React.ReactN
   const atual = lista.find((c) => c.id === idAtual);
   return (
     <GuardaAdmin>
-      <div className="mx-auto max-w-6xl px-4 pb-20">
-        <div className="mb-8 flex flex-wrap items-center gap-2 border-b border-hud pb-4">
-          <span className="hud-label mr-2" style={{ color: 'var(--accent)' }}>
-            Admin
+      <div className="mx-auto max-w-6xl px-4 pb-20 pt-4">
+        <div className="mb-3 flex items-center gap-2">
+          <span className="hud-label" style={{ color: 'var(--accent)' }}>
+            Área dos admins
           </span>
-          {ITENS.map((i) => (
-            <Link key={i.href} href={i.href} className="btn-mini">
-              {i.rotulo}
-            </Link>
-          ))}
           <div className="ml-auto flex items-center gap-2">
             <Link href="/admin/conta" className="btn-mini" title="Minha conta">
               {conta.nome}
@@ -45,6 +41,9 @@ export default async function LayoutAdmin({ children }: { children: React.ReactN
               </button>
             </form>
           </div>
+        </div>
+        <div className="mb-6 border-b border-hud">
+          <NavAdmin itens={ITENS} />
         </div>
         {atual && (
           <p className="mb-6 flex flex-wrap items-center gap-2 text-sm text-text-2">

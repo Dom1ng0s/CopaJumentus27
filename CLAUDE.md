@@ -188,6 +188,12 @@ Tokens em `src/app/globals.css` (fonte única; o Tailwind só aponta para eles):
 - **Cores dos times:** vêm de `src/lib/campeonato/marcas.ts`, iguais ao manual. Nos cards de equipe, a faixa larga usa a secundária e a fina é dourada, no canto.
 - **Brasão oficial** (`public/imagens/logo/copa-jumentus-logo.png`) na barra de navegação, nunca redesenhado. Escudos só dos arquivos oficiais.
 - **Sem emojis na interface** (manual, "Proibido"): cartões e gol são ícones desenhados (`Cartao`, `Sumula`).
+- **Sem verde e sem azul fora dos times:** confirmação (`--success`) é dourada; goleiro (`--accent-armor`) é cinza concreto. `--text4` tem no mínimo 5:1 sobre as superfícies (leitura sob sol).
+- **Texto sobre cor de time:** nunca fixo em branco. `textoSobre(cor)` (`src/lib/campeonato/cores.ts`, testado) escolhe off-white ou marinho profundo pelo contraste WCAG (≥ 4,5:1 nas 16 cores do manual), e `fundoVisivel([...])` troca a cor que some no marinho (preto do LAFC, marinho do NYC) pela outra cor do time. Nome e número ficam sempre sobre marinho nos destaques (líder dos rankings: a cor do time vira barra de 6 px à esquerda).
+- **Navegação** (decisão do operador em 17/11/2026: "tire" o Admin do menu): o menu público tem Início, Tabela, Jogos, Rankings e Equipes; no celular ele vira barra inferior fixa com ícones. A área dos admins fica no rodapé ("Área dos admins") e tem menu próprio, numa linha que rola no celular. Admin, sorteio, cerimônia e resultado não mostram o menu público.
+- **Retorno de ação:** confirmação vira toast (`Toast`, some em 4,5 s e tira o `?ok=` da URL); erro continua fixo na página (`Aviso`). Telas carregando mostram esqueleto (`app/loading.tsx`); página inexistente e erro inesperado têm tela própria.
+- **Classificação:** posição em quadrado neutro; a zona é a faixa de 6 px à esquerda, o fundo levemente tingido e a linha tracejada de corte onde a zona muda. No celular só PTS, J e SG, sem rolagem lateral.
+- **Rankings:** empatados dividem a posição (1, 1, 3).
 
 Este app é **dark-only de propósito** — a cerimônia acontece à noite.
 

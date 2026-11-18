@@ -1,5 +1,6 @@
 import { BotaoImprimir } from '@/components/campeonato/BotaoImprimir';
 import { Cabecalho, Escudo, IconeLuva, SeloCapitao } from '@/components/campeonato/ui';
+import { fundoVisivel, textoSobre } from '@/lib/campeonato/cores';
 import { suspensoes } from '@/lib/campeonato/consultas';
 import type { Campeonato } from '@/lib/domain/campeonato/tipos';
 
@@ -11,18 +12,19 @@ export function PaginaEquipes({ c }: { c: Campeonato }) {
 
   return (
     <div className="mx-auto max-w-6xl space-y-6 px-4 pb-20">
-      <div className="flex items-start justify-between gap-4">
-        <Cabecalho
-          titulo="Equipes"
-          legenda={c.sorteioOficializadoEm ? 'Elencos definidos no sorteio.' : 'Os elencos saem no sorteio.'}
-        />
-        <BotaoImprimir rotulo="Imprimir elencos" />
-      </div>
+      <Cabecalho
+        titulo="Equipes"
+        legenda={c.sorteioOficializadoEm ? 'Elencos definidos no sorteio.' : 'Os elencos saem no sorteio.'}
+        acao={<BotaoImprimir rotulo="Imprimir elencos" />}
+      />
       <div className="imprimivel grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {c.equipes.map((e) => {
           const elenco = c.jogadores
             .filter((j) => j.equipeId === e.id)
             .sort((a, b) => ORDEM_POSICAO[a.posicao] - ORDEM_POSICAO[b.posicao] || (a.numero ?? 99) - (b.numero ?? 99));
+          // Caixa do número: a secundária do time (manual), ou a primária quando a secundária some no marinho.
+          const fundoNumero = fundoVisivel([e.corSecundaria, e.corPrimaria]);
+          const textoNumero = fundoNumero ? textoSobre(fundoNumero) : 'var(--text1)';
           return (
             <section key={e.id} className="hud-card hud-clip modulo relative overflow-hidden">
               {/* Faixa larga na secundária e fina dourada, a 45° + textura de malha (manual §7.3) */}
@@ -38,7 +40,7 @@ export function PaginaEquipes({ c }: { c: Campeonato }) {
                   <span className="block font-mono text-[11px] font-bold uppercase tracking-wider opacity-85" style={{ color: e.corTexto }}>
                     {e.sigla}
                   </span>
-                  <h2 className="titulo-hero t-sm truncate text-2xl" style={{ color: e.corTexto }}>
+                  <h2 className="titulo-hero t-sm line-clamp-2 text-2xl leading-[0.95]" style={{ color: e.corTexto }}>
                     {e.nome}
                   </h2>
                 </div>
@@ -67,8 +69,8 @@ export function PaginaEquipes({ c }: { c: Campeonato }) {
                       <span
                         className="numero corte-direita inline-flex h-7 w-9 shrink-0 items-center justify-center pr-1 text-lg"
                         style={{
-                          background: j.numero !== undefined ? e.corSecundaria : 'var(--surface2)',
-                          color: j.numero !== undefined ? '#ffffff' : 'var(--text3)',
+                          background: j.numero !== undefined ? (fundoNumero ?? 'var(--surface3)') : 'var(--surface2)',
+                          color: j.numero !== undefined ? textoNumero : 'var(--text3)',
                         }}
                       >
                         {j.numero ?? '—'}
@@ -80,8 +82,8 @@ export function PaginaEquipes({ c }: { c: Campeonato }) {
 
                       {situacao.get(j.id)?.suspenso && (
                         <span
-                          className="corte-direita hud-label px-2 py-0.5 !text-[9px]"
-                          style={{ background: 'var(--error-bg)', color: 'var(--error-text)' }}
+                          className="corte-direita hud-label px-2 py-0.5 !text-[11px]"
+                          style={{ background: 'var(--vermelho)', color: '#ffffff' }}
                         >
                           Suspenso
                         </span>
@@ -90,7 +92,7 @@ export function PaginaEquipes({ c }: { c: Campeonato }) {
                       {ehGoleiro && <IconeLuva tamanho={16} cor="var(--accent-armor)" />}
                       {ehCapitao && <SeloCapitao tamanho={22} />}
 
-                      <span className="hud-label w-8 text-right !text-[10px] text-text-3">
+                      <span className="hud-label w-9 text-right !text-[12px] text-text-2">
                         {j.posicao}
                       </span>
                     </li>

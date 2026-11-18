@@ -1,5 +1,6 @@
 import Link from 'next/link';
-import { Cabecalho, Cartao, Escudo, Secao } from '@/components/campeonato/ui';
+import { Cabecalho, Cartao, Escudo, Secao, Vazio } from '@/components/campeonato/ui';
+import { fundoVisivel } from '@/lib/campeonato/cores';
 import { indices } from '@/lib/campeonato/consultas';
 import { artilharia, assistencias, cartoes, goleiros, penalidades } from '@/lib/domain/campeonato/rankings';
 import type { Campeonato } from '@/lib/domain/campeonato/tipos';
@@ -23,30 +24,31 @@ export function PaginaRankings({ c, base, fase }: { c: Campeonato; base: string;
   };
 
   const lista = (
-    itens: Array<{ jogadorId: string; valor: React.ReactNode; detalhe?: string }>,
+    itens: Array<{ jogadorId: string; valor: React.ReactNode; detalhe?: string; /** Igualdade de chave = mesma posição. */ chave?: string }>,
     vazio: string,
     destacarLider = true,
   ) => {
     if (itens.length === 0) {
-      return <p className="text-sm text-text-3">{vazio}</p>;
+      return <Vazio texto={vazio} />;
     }
+
+    // Empatados dividem a posição (1, 1, 3...), em vez de uma ordem arbitrária.
+    const chave = (i: number) => itens[i].chave ?? String(itens[i].valor);
+    const posicoes: number[] = [];
+    itens.forEach((_, i) => posicoes.push(i > 0 && chave(i) === chave(i - 1) ? posicoes[i - 1] : i + 1));
 
     const [lider, ...resto] = itens.slice(0, 10);
     const jLider = jogador.get(lider.jogadorId);
     const eqLider = jLider ? equipe.get(jLider.equipeId) : undefined;
+    const corLider = eqLider ? fundoVisivel([eqLider.corPrimaria, eqLider.corSecundaria]) : undefined;
 
     return (
       <div className="space-y-2">
         {destacarLider ? (
-          /* Líder em destaque com barra na cor do time e número em Big Shoulders dourado (manual §7.3) */
-          <div
-            className="malha-camisa relative overflow-hidden border border-hud p-3"
-            style={{
-              backgroundImage: eqLider
-                ? `linear-gradient(135deg, rgba(11, 31, 63, 0.92) 0% 68%, ${eqLider.corPrimaria} 68% 94%, #D4A12A 94% 96%, ${eqLider.corSecundaria} 96% 100%)`
-                : 'var(--surface2)',
-            }}
-          >
+          /* Líder em destaque: barra na cor do time à esquerda e número em Big Shoulders dourado (manual §7.3).
+             O texto fica sempre sobre o marinho: a cor do time nunca vai atrás de nome ou número. */
+          <div className="relative overflow-hidden border border-hud bg-[var(--surface2)] p-3 pl-5">
+            <span className="absolute inset-y-0 left-0 w-[6px]" style={{ background: corLider ?? 'var(--accent)' }} aria-hidden="true" />
             <div className="flex items-center gap-3">
               <span
                 className="numero corte-direita inline-flex h-8 w-8 shrink-0 items-center justify-center pr-1 text-lg"
@@ -59,11 +61,11 @@ export function PaginaRankings({ c, base, fase }: { c: Campeonato; base: string;
                 <p className="titulo-hero t-sm truncate text-xl text-text-1">
                   {jLider?.nome ?? '—'}
                 </p>
-                <p className="truncate font-mono text-xs font-bold uppercase tracking-wider text-text-2">
+                <p className="truncate font-mono text-[13px] font-bold uppercase tracking-wider text-text-2">
                   {eqLider?.nome}
                 </p>
                 {lider.detalhe && (
-                  <p className="mt-0.5 font-mono text-xs text-text-3">{lider.detalhe}</p>
+                  <p className="mt-0.5 font-mono text-[13px] text-text-2">{lider.detalhe}</p>
                 )}
               </div>
               <div className="rounded-component bg-[rgba(6,18,42,0.86)] px-3 py-1.5 text-right shadow-1">
@@ -77,14 +79,14 @@ export function PaginaRankings({ c, base, fase }: { c: Campeonato; base: string;
 
         <ol className="divide-y divide-[var(--panel-stroke)]">
           {(destacarLider ? resto : itens.slice(0, 10)).map((it, idx) => {
-            const pos = destacarLider ? idx + 2 : idx + 1;
+            const pos = posicoes[destacarLider ? idx + 1 : idx];
             return (
               <li key={it.jogadorId} className="flex items-center gap-3 py-2">
-                <span className="w-6 font-mono text-sm font-bold text-text-3">{pos}</span>
+                <span className="numero w-7 text-lg text-text-2">{pos}</span>
                 <span className="min-w-0 flex-1">
                   {linhaJogador(it.jogadorId)}
                   {it.detalhe && (
-                    <span className="mt-0.5 block font-mono text-xs text-text-3">{it.detalhe}</span>
+                    <span className="mt-0.5 block font-mono text-[13px] text-text-3">{it.detalhe}</span>
                   )}
                 </span>
                 <span className="numero text-3xl" style={{ color: 'var(--accent)' }}>
@@ -103,12 +105,12 @@ export function PaginaRankings({ c, base, fase }: { c: Campeonato; base: string;
   return (
     <div className="mx-auto max-w-6xl space-y-6 px-4 pb-20">
       <Cabecalho titulo="Rankings" />
-      <nav className="flex flex-wrap gap-2" aria-label="Filtrar por fase">
-        <Link href={filtro()} className="btn-hud !py-1.5 !text-sm" aria-current={!fase ? 'page' : undefined}>
+      <nav className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 [&>*]:flex-none" aria-label="Filtrar por fase">
+        <Link href={filtro()} className="btn-hud !min-h-[2.75rem] !text-sm" aria-current={!fase ? 'page' : undefined}>
           Todas as fases
         </Link>
         {c.fases.map((f) => (
-          <Link key={f.id} href={filtro(f.id)} className="btn-hud !py-1.5 !text-sm" aria-current={fase === f.id ? 'page' : undefined}>
+          <Link key={f.id} href={filtro(f.id)} className="btn-hud !min-h-[2.75rem] !text-sm" aria-current={fase === f.id ? 'page' : undefined}>
             {f.nome}
           </Link>
         ))}
@@ -141,6 +143,7 @@ export function PaginaRankings({ c, base, fase }: { c: Campeonato; base: string;
           {lista(
             cartoes(partidas).map((x) => ({
               jogadorId: x.jogadorId,
+              chave: `${x.vermelhos}-${x.amarelos}`,
               valor: (
                 <span className="flex gap-3">
                   {x.amarelos > 0 && <Cartao cor="amarelo" quantidade={x.amarelos} />}

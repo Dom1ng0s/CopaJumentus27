@@ -90,10 +90,11 @@ export default async function PaginaPote() {
            Dados vivem no campo escuro, nunca sobre o ceu aceso. */}
       <section className="relative px-4 pt-6">
         <div className="mx-auto grid max-w-2xl grid-cols-2 gap-3 sm:grid-cols-4">
-          <Metrica rotulo="Times" valor={String(times.length)} cor="var(--accent-orange)" />
-          <Metrica rotulo="No pote" valor={String(pote.length)} cor="var(--success)" />
-          <Metrica rotulo="Goleiros" valor={String(goleiros.length)} cor="var(--accent-armor)" />
-          <Metrica rotulo="Tolerância" valor={`±${TOLERANCIA_ESTRELAS}`} cor="var(--warning)" />
+          {/* Números em off-white e dourado, sem cores fora do manual. */}
+          <Metrica rotulo="Times" valor={String(times.length)} cor="var(--text1)" />
+          <Metrica rotulo="No pote" valor={String(pote.length)} cor="var(--text1)" />
+          <Metrica rotulo="Goleiros" valor={String(goleiros.length)} cor="var(--text1)" />
+          <Metrica rotulo="Tolerância" valor={`±${TOLERANCIA_ESTRELAS}`} cor="var(--accent)" />
         </div>
       </section>
 
