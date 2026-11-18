@@ -226,7 +226,7 @@ export function CardPartida({
         </div>
         <div className="text-center">
           <p className="numero text-4xl">
-            {mostraPlacar ? `${partida.golsMandante} : ${partida.golsVisitante}` : 'x'}
+            {mostraPlacar ? `${partida.golsMandante} : ${partida.golsVisitante}` : (partida.dataHora?.split('T')[1] ?? 'x')}
           </p>
           {mostraPlacar && penaltis && (
             <p className="font-mono text-xs font-semibold" style={{ color: 'var(--error-text)' }}>

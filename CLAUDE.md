@@ -194,6 +194,10 @@ Tokens em `src/app/globals.css` (fonte única; o Tailwind só aponta para eles):
 - **Retorno de ação:** confirmação vira toast (`Toast`, some em 4,5 s e tira o `?ok=` da URL); erro continua fixo na página (`Aviso`). Telas carregando mostram esqueleto (`app/loading.tsx`); página inexistente e erro inesperado têm tela própria.
 - **Classificação:** posição em quadrado neutro; a zona é a faixa de 6 px à esquerda, o fundo levemente tingido e a linha tracejada de corte onde a zona muda. No celular só PTS, J e SG, sem rolagem lateral.
 - **Rankings:** empatados dividem a posição (1, 1, 3).
+- **Jogos** (`components/campeonato/Partidas.tsx`): lista em linhas compactas (horário, AO VIVO ou FIM à esquerda; um time por linha; placar do vencedor em dourado; pênaltis entre parênteses em vermelho), com atalhos fixos no topo para o jogo de agora e cada rodada. "Rodada N" não se repete dentro da linha.
+- **Mata-mata do modelo:** chave em 3 etapas (Repescagem → Semifinais → Final e 3º lugar), em colunas no desktop e empilhada no celular, com "Vencedor → Semifinal 2" sob cada jogo. Vaga ainda aberta mostra a origem e quem ocupa a posição hoje ("3º do Grupo Único · hoje HOU", `projecaoMataMata`, só jogos encerrados).
+- **Início:** andamento ("22 de 34 jogos", barra dourada, dia), o jogo ao vivo ou o próximo em destaque no palco do Matchday (escudos grandes, placar ou horário no centro, cores dos times só nas bordas), "Na sequência" e "Últimos resultados". O pódio tem forma de pódio: campeão no centro e mais alto, só ele em dourado.
+- **Andamento e projeção** ficam em `lib/domain/campeonato/andamento.ts` (puro, testado).
 
 Este app é **dark-only de propósito** — a cerimônia acontece à noite.
 
