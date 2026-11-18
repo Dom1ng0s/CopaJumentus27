@@ -37,7 +37,8 @@ export function CerimoniaCliente({ jogadores, times, problemas = [] }: Props) {
   // "Sortear jogador" mostra só o nome; depois "Sortear time" mostra o destino e
   // só então o jogador entra no elenco.
   const [timeRevelado, setTimeRevelado] = useState(true);
-  const [girando, setGirando] = useState(false);
+  // Roleta em andamento: no nome (passo 1) ou no time (passo 2).
+  const [girando, setGirando] = useState<'nome' | 'time' | null>(null);
   const [link, setLink] = useState<string | null>(null);
   const [copiadoLink, setCopiadoLink] = useState(false);
   const [copiadoResumo, setCopiadoResumo] = useState(false);
@@ -118,7 +119,7 @@ export function CerimoniaCliente({ jogadores, times, problemas = [] }: Props) {
     setCopiadoResumo(false);
     setOficial({ estado: 'ocioso' });
     setTimeRevelado(true);
-    setGirando(false);
+    setGirando(null);
     setFase(r.sorteio.goleiros.length > 0 ? 'goleiros' : 'linha');
   }, [jogadores, times, bloqueado]);
 
@@ -130,7 +131,7 @@ export function CerimoniaCliente({ jogadores, times, problemas = [] }: Props) {
     setLink(null);
     setOficial({ estado: 'ocioso' });
     setTimeRevelado(true);
-    setGirando(false);
+    setGirando(null);
     setFase('pronto');
   }, []);
 
@@ -138,6 +139,14 @@ export function CerimoniaCliente({ jogadores, times, problemas = [] }: Props) {
   // em ordem aleatória (decisão do operador em 18/11/2026).
   const emEtapa = fase === 'goleiros' || fase === 'linha';
   const aguardandoTime = emEtapa && !timeRevelado && reveladasLinha + reveladasGol > 0;
+
+  /** Roda a roleta do nome; sem animação quando o sistema pede menos movimento. */
+  const girarNome = useCallback(() => {
+    if (typeof window === 'undefined') return;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    setGirando('nome');
+    window.setTimeout(() => setGirando(null), DURACAO_ROLETA_MS);
+  }, []);
 
   /** Passo 1: sorteia o próximo nome (ou passa de etapa / conclui). */
   const sortearJogador = useCallback(() => {
@@ -148,6 +157,7 @@ export function CerimoniaCliente({ jogadores, times, problemas = [] }: Props) {
       if (reveladasGol < goleiros.length) {
         setReveladasGol((n) => n + 1);
         setTimeRevelado(false);
+        girarNome();
         return;
       }
       setFase(linha.length > 0 ? 'pre-linha' : 'fim');
@@ -157,17 +167,19 @@ export function CerimoniaCliente({ jogadores, times, problemas = [] }: Props) {
       setFase('linha');
       setReveladasLinha(1);
       setTimeRevelado(false);
+      girarNome();
       return;
     }
     if (fase === 'linha') {
       if (reveladasLinha < linha.length) {
         setReveladasLinha((n) => n + 1);
         setTimeRevelado(false);
+        girarNome();
         return;
       }
       setFase('fim');
     }
-  }, [resultado, girando, aguardandoTime, fase, reveladasLinha, reveladasGol]);
+  }, [resultado, girando, aguardandoTime, fase, reveladasLinha, reveladasGol, girarNome]);
 
   /** Passo 2: sorteia o time do nome que está na tela e o coloca no elenco. */
   const sortearTime = useCallback(() => {
@@ -179,17 +191,18 @@ export function CerimoniaCliente({ jogadores, times, problemas = [] }: Props) {
       setTimeRevelado(true);
       return;
     }
-    setGirando(true);
+    setGirando('time');
     window.setTimeout(() => {
-      setGirando(false);
+      setGirando(null);
       setTimeRevelado(true);
-    }, 1100);
+    }, DURACAO_ROLETA_MS);
   }, [aguardandoTime, girando]);
 
   const avancar = useCallback(() => {
+    if (girando) return;
     if (aguardandoTime) sortearTime();
     else sortearJogador();
-  }, [aguardandoTime, sortearTime, sortearJogador]);
+  }, [girando, aguardandoTime, sortearTime, sortearJogador]);
 
   /** Volta um passo: fecha o time do último sorteado; se já estava fechado, tira o nome. */
   const voltarPasso = useCallback(() => {
@@ -224,7 +237,7 @@ export function CerimoniaCliente({ jogadores, times, problemas = [] }: Props) {
     setReveladasLinha(resultado.sorteio.linha.length);
     setReveladasGol(resultado.sorteio.goleiros.length);
     setTimeRevelado(true);
-    setGirando(false);
+    setGirando(null);
     setFase('fim');
   }, [resultado]);
 
@@ -347,6 +360,19 @@ export function CerimoniaCliente({ jogadores, times, problemas = [] }: Props) {
         : etapaGoleiros
           ? 'Sortear goleiro'
           : 'Sortear jogador';
+  // Nomes que ainda estavam no pote desta etapa quando o atual saiu: é por eles
+  // que a roleta do nome passa.
+  const nomesNoPote = useMemo(() => {
+    if (!resultado) return [];
+    const lista = etapaGoleiros ? resultado.sorteio.goleiros : resultado.sorteio.linha;
+    const inicio = Math.max(0, (etapaGoleiros ? reveladasGol : reveladasLinha) - 1);
+    return lista
+      .slice(inicio)
+      .map((a) => porId.get(a.jogadorId))
+      .filter((j): j is Jogador => Boolean(j))
+      .map((j) => j.apelido ?? j.nome);
+  }, [resultado, etapaGoleiros, reveladasGol, reveladasLinha, porId]);
+
   // Times que ainda têm vaga nesta etapa: é por eles que a roleta passa.
   const timesComVaga = useMemo(() => {
     if (!resultado || times.length === 0) return [];
@@ -492,13 +518,24 @@ export function CerimoniaCliente({ jogadores, times, problemas = [] }: Props) {
                     {atual.etapa === 'goleiro' ? 'Goleiro sorteado' : 'Jogador sorteado'} · #{feitas}
                   </p>
 
-                  <p className="titulo-hero t-xl text-[clamp(2.2rem,8vw,5rem)] text-text-1">
-                    {atual.jogador.apelido ?? atual.jogador.nome}
-                  </p>
-                  <p className="mt-1 font-mono text-sm font-bold uppercase tracking-wider text-text-2">
-                    {atual.jogador.nome} ·{' '}
-                    <span style={{ color: 'var(--accent)' }}>{atual.jogador.posicao}</span>
-                  </p>
+                  {girando === 'nome' ? (
+                    <>
+                      <RoletaNomes nomes={nomesNoPote} />
+                      <p className="mt-1 font-mono text-sm font-bold uppercase tracking-wider text-text-3">
+                        Sorteando…
+                      </p>
+                    </>
+                  ) : (
+                    <div key="nome" className="animar-revelar">
+                      <p className="titulo-hero t-xl text-[clamp(2.2rem,8vw,5rem)] text-text-1">
+                        {atual.jogador.apelido ?? atual.jogador.nome}
+                      </p>
+                      <p className="mt-1 font-mono text-sm font-bold uppercase tracking-wider text-text-2">
+                        {atual.jogador.nome} ·{' '}
+                        <span style={{ color: 'var(--accent)' }}>{atual.jogador.posicao}</span>
+                      </p>
+                    </div>
+                  )}
 
                   <div className="mx-auto mt-7 max-w-lg border-t border-hud pt-5">
                     <p className="hud-label mb-3 text-[11px]">Vai para</p>
@@ -509,7 +546,7 @@ export function CerimoniaCliente({ jogadores, times, problemas = [] }: Props) {
                           {atual.time.nome}
                         </p>
                       </div>
-                    ) : girando ? (
+                    ) : girando === 'time' ? (
                       <Roleta times={timesComVaga.length > 0 ? timesComVaga : times} />
                     ) : (
                       <p className="titulo-hero t-xl text-[clamp(1.8rem,6vw,3.2rem)] text-text-3">
@@ -537,18 +574,18 @@ export function CerimoniaCliente({ jogadores, times, problemas = [] }: Props) {
                     {/* Dois botões: primeiro o nome, depois o time. */}
                     <button
                       onClick={sortearJogador}
-                      disabled={aguardandoTime || girando}
-                      className={aguardandoTime || girando ? 'btn-hud' : 'btn-cta'}
+                      disabled={aguardandoTime || girando !== null}
+                      className={aguardandoTime || girando !== null ? 'btn-hud' : 'btn-cta'}
                     >
-                      <span>{rotuloJogador}</span>
+                      <span>{girando === 'nome' ? 'Sorteando…' : rotuloJogador}</span>
                     </button>
                     {(emEtapa || fase === 'pre-linha') && (
                       <button
                         onClick={sortearTime}
-                        disabled={!aguardandoTime || girando}
-                        className={aguardandoTime && !girando ? 'btn-cta' : 'btn-hud'}
+                        disabled={!aguardandoTime || girando !== null}
+                        className={aguardandoTime && girando === null ? 'btn-cta' : 'btn-hud'}
                       >
-                        <span>{girando ? 'Sorteando…' : 'Sortear time'}</span>
+                        <span>{girando === 'time' ? 'Sorteando…' : 'Sortear time'}</span>
                       </button>
                     )}
 
@@ -792,6 +829,23 @@ export function CerimoniaCliente({ jogadores, times, problemas = [] }: Props) {
         )}
       </div>
     </div>
+  );
+}
+
+const DURACAO_ROLETA_MS = 1100;
+
+/** Roleta curta pelos nomes que ainda estão no pote, antes de mostrar o sorteado. */
+function RoletaNomes({ nomes }: { nomes: readonly string[] }) {
+  const [i, setI] = useState(0);
+  useEffect(() => {
+    const id = window.setInterval(() => setI((n) => n + 1), 80);
+    return () => window.clearInterval(id);
+  }, []);
+  const nome = nomes.length > 0 ? nomes[(i * 7) % nomes.length] : '';
+  return (
+    <p className="titulo-hero t-xl text-[clamp(2.2rem,8vw,5rem)] text-text-2 opacity-80" aria-live="off">
+      {nome}
+    </p>
   );
 }
 
