@@ -1,20 +1,27 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { AutoAtualizar } from '@/components/campeonato/AutoAtualizar';
-import { CardPartida, Escudo, Numero } from '@/components/campeonato/ui';
+import { LinhaPartida, partesDaData } from '@/components/campeonato/Partidas';
+import { Escudo, Numero, SeloStatus, Vazio } from '@/components/campeonato/ui';
+import { fundoVisivel } from '@/lib/campeonato/cores';
 import { formatarData, indices, lados } from '@/lib/campeonato/consultas';
+import { andamento, projecaoMataMata, type Projecao } from '@/lib/domain/campeonato/andamento';
 import type { CampeonatoPublico } from '@/lib/campeonato/selecao';
 import { podio } from '@/lib/domain/campeonato/chaveamento';
 import { resumirJogos } from '@/lib/domain/campeonato/classificacao';
 import { ordenarPartidas } from '@/lib/domain/campeonato/suspensoes';
-import { ROTULO_STATUS_CAMPEONATO, type Equipe } from '@/lib/domain/campeonato/tipos';
+import { ROTULO_STATUS_CAMPEONATO, type Campeonato, type Equipe, type Partida } from '@/lib/domain/campeonato/tipos';
 
 /** Início de uma edição: banner, escudo, status, período, pódio, franquias e jogos. */
 export function PaginaInicio({ c, base, edicoes }: CampeonatoPublico) {
   const { equipe } = indices(c);
   const ordenadas = ordenarPartidas(c.partidas);
   const aoVivo = ordenadas.filter((p) => p.status === 'ao-vivo');
-  const proximas = ordenadas.filter((p) => p.status === 'agendada').slice(0, 4);
+  const a = andamento(c.partidas);
+  const projecao = projecaoMataMata(c);
+  // O jogo em destaque é o ao vivo ou, sem ele, o próximo; a lista começa depois dele.
+  const destaque = aoVivo[0] ?? a.proxima;
+  const proximas = ordenadas.filter((p) => p.status === 'agendada' && p.id !== destaque?.id).slice(0, 4);
   const ultimas = ordenadas.filter((p) => p.status === 'encerrada').slice(-4).reverse();
   const resumo = resumirJogos(c.partidas);
   const resultado = podio(c);
@@ -77,11 +84,20 @@ export function PaginaInicio({ c, base, edicoes }: CampeonatoPublico) {
 
         {resultado && <Podio primeiro={equipe.get(resultado.primeiro)} segundo={equipe.get(resultado.segundo)} terceiro={resultado.terceiro ? equipe.get(resultado.terceiro) : undefined} />}
 
-        <div className="hud-card hud-clip modulo relative grid grid-cols-4 gap-2 px-4 py-4">
-          <Numero valor={c.equipes.length} rotulo="Equipes" />
-          <Numero valor={resumo.jogos} rotulo="Jogos" />
+        {/* Andamento: quantos jogos já foram, de quantos, e os números do campeonato */}
+        <div className="hud-card hud-clip modulo relative grid grid-cols-2 items-center gap-4 px-4 py-4 sm:grid-cols-4">
+          <div className="col-span-2">
+            <p className="hud-label !text-[12px]">{a.terminou ? 'Campeonato encerrado' : a.dia ? `Andamento · Dia ${a.dia}` : 'Andamento'}</p>
+            <p className="mt-1 flex items-baseline gap-2">
+              <span className="numero text-5xl text-text-1">{a.encerrados}</span>
+              <span className="font-mono text-base font-bold uppercase tracking-wider text-text-2">de {a.total} jogos</span>
+            </p>
+            <div className="mt-2 h-2 w-full bg-[var(--surface3)]" role="progressbar" aria-valuemin={0} aria-valuemax={a.total} aria-valuenow={a.encerrados} aria-label="Jogos encerrados">
+              <div className="h-full" style={{ width: `${a.total ? (a.encerrados / a.total) * 100 : 0}%`, backgroundImage: 'var(--gradient-leonida)' }} />
+            </div>
+          </div>
           <Numero valor={resumo.gols} rotulo="Gols" />
-          <Numero valor={resumo.mediaGols.toLocaleString('pt-BR')} rotulo="Média" />
+          <Numero valor={resumo.mediaGols.toLocaleString('pt-BR')} rotulo="Média por jogo" />
         </div>
 
         {/* Faixa de escudos das franquias participantes */}
@@ -92,7 +108,7 @@ export function PaginaInicio({ c, base, edicoes }: CampeonatoPublico) {
                 key={eq.id}
                 href={`${base}/equipes`}
                 className="hud-card flex flex-col items-center gap-1.5 px-2 py-3 text-center transition-transform hover:-translate-y-0.5"
-                style={{ borderBottom: `3px solid ${eq.corPrimaria}` }}
+                style={{ borderBottom: `3px solid ${fundoVisivel([eq.corPrimaria, eq.corSecundaria]) ?? 'var(--border-visible)'}` }}
                 title={eq.nome}
               >
                 <Escudo equipe={eq} tamanho={36} />
@@ -104,41 +120,49 @@ export function PaginaInicio({ c, base, edicoes }: CampeonatoPublico) {
           </div>
         )}
 
-        {aoVivo.length > 0 && (
-          <Lista titulo="Ao vivo">
-            {aoVivo.map((p) => (
-              <CardPartida key={p.id} partida={p} {...lados(c, p, equipe)} href={`${base}/jogos/${p.id}`} />
-            ))}
-          </Lista>
+        {destaque && (
+          <section>
+            <h3 className="titulo-hero t-sm mb-4 text-2xl">{destaque.status === 'ao-vivo' ? 'Ao vivo' : 'Próximo jogo'}</h3>
+            <PalcoJogo c={c} partida={destaque} equipe={equipe} href={`${base}/jogos/${destaque.id}`} projecao={projecao.get(destaque.id)} />
+            {aoVivo.length > 1 && (
+              <div className="mt-3 grid grid-cols-1 gap-2 lg:grid-cols-2">
+                {aoVivo.slice(1).map((p) => (
+                  <LinhaPartida key={p.id} c={c} partida={p} equipe={equipe} href={`${base}/jogos/${p.id}`} projecao={projecao.get(p.id)} />
+                ))}
+              </div>
+            )}
+          </section>
         )}
 
-        {c.status !== 'encerrado' && (
-          <Lista titulo="Próximos jogos" vazio="A tabela de jogos ainda não saiu.">
-            {proximas.map((p) => (
-              <CardPartida key={p.id} partida={p} {...lados(c, p, equipe)} href={`${base}/jogos/${p.id}`} />
-            ))}
-          </Lista>
-        )}
+        {c.partidas.length === 0 && <Vazio texto="A tabela de jogos ainda não saiu." detalhe="Os jogos aparecem aqui assim que a organização definir os confrontos." />}
 
-        {ultimas.length > 0 && (
-          <Lista titulo="Últimos resultados">
-            {ultimas.map((p) => (
-              <CardPartida key={p.id} partida={p} {...lados(c, p, equipe)} href={`${base}/jogos/${p.id}`} />
-            ))}
-          </Lista>
-        )}
-
-        <div className="flex flex-wrap gap-3">
-          <Link href={`${base}/classificacao`} className="btn-cta">
-            <span>Ver classificação</span>
-          </Link>
-          <Link href={`${base}/equipes`} className="btn-hud">
-            Elencos
-          </Link>
-          <Link href={`${base}/jogos`} className="btn-hud">
-            Tabela de jogos
-          </Link>
+        <div className="grid gap-8 lg:grid-cols-2">
+          {proximas.length > 0 && (
+            <Lista titulo="Na sequência" href={`${base}/jogos`}>
+              {proximas.map((p) => (
+                <LinhaPartida key={p.id} c={c} partida={p} equipe={equipe} href={`${base}/jogos/${p.id}`} projecao={projecao.get(p.id)} />
+              ))}
+            </Lista>
+          )}
+          {ultimas.length > 0 && (
+            <Lista titulo="Últimos resultados" href={`${base}/jogos`}>
+              {ultimas.map((p) => (
+                <LinhaPartida key={p.id} c={c} partida={p} equipe={equipe} href={`${base}/jogos/${p.id}`} />
+              ))}
+            </Lista>
+          )}
         </div>
+
+        {c.partidas.length > 0 && (
+          <div className="flex flex-wrap gap-3">
+            <Link href={`${base}/classificacao`} className="btn-cta">
+              <span>Ver classificação</span>
+            </Link>
+            <Link href={`${base}/jogos`} className="btn-hud">
+              Todos os jogos
+            </Link>
+          </div>
+        )}
 
         {outras.length > 0 && (
           <section>
@@ -160,25 +184,35 @@ export function PaginaInicio({ c, base, edicoes }: CampeonatoPublico) {
   );
 }
 
+/**
+ * Pódio no formato de pódio: campeão no centro e mais alto, vice à esquerda,
+ * 3º à direita. Só o campeão leva o dourado metálico (exclusivo da Copa).
+ */
 function Podio({ primeiro, segundo, terceiro }: { primeiro?: Equipe; segundo?: Equipe; terceiro?: Equipe }) {
-  const degraus: Array<[string, Equipe | undefined, number]> = [
-    ['Campeão', primeiro, 72],
-    ['Vice', segundo, 52],
-    ['3º lugar', terceiro, 44],
+  const degraus: Array<{ pos: number; rotulo: string; e?: Equipe; escudo: number; altura: string }> = [
+    { pos: 2, rotulo: 'Vice', e: segundo, escudo: 56, altura: 'h-16 sm:h-20' },
+    { pos: 1, rotulo: 'Campeão', e: primeiro, escudo: 88, altura: 'h-24 sm:h-28' },
+    { pos: 3, rotulo: '3º lugar', e: terceiro, escudo: 48, altura: 'h-10 sm:h-14' },
   ];
   return (
-    <section className="hud-card hud-clip modulo relative px-4 pb-6 pt-4" aria-label="Pódio">
-      <h3 className="titulo-hero t-sm mb-4 text-2xl">Pódio</h3>
-      <ol className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        {degraus.map(([rotulo, e, tamanho], i) => (
-          <li key={rotulo} className="flex items-center gap-3">
-            <span className="numero text-5xl" style={{ color: i === 0 ? 'var(--accent)' : 'var(--text2)' }}>
-              {i + 1}
+    <section className="hud-card hud-clip modulo relative px-3 pb-0 pt-4 sm:px-6" aria-label="Pódio">
+      <h3 className="titulo-hero t-sm mb-2 text-2xl">Pódio</h3>
+      <ol className="grid grid-cols-3 items-end gap-2 sm:gap-4">
+        {degraus.map(({ pos, rotulo, e, escudo, altura }) => (
+          <li key={pos} className="flex min-w-0 flex-col items-center text-center">
+            <Escudo equipe={e} tamanho={escudo} />
+            <span className="hud-label mt-2 !text-[12px]" style={pos === 1 ? { color: 'var(--dourado-claro)' } : undefined}>
+              {rotulo}
             </span>
-            <Escudo equipe={e} tamanho={tamanho} />
-            <span>
-              <span className="hud-label block !text-[11px]">{rotulo}</span>
-              <span className="titulo-hero t-sm block text-2xl">{e?.nome ?? 'A definir'}</span>
+            <span className={`titulo-hero t-sm mb-2 line-clamp-2 leading-none ${pos === 1 ? 'text-2xl sm:text-3xl' : 'text-lg sm:text-xl'}`}>
+              {e?.nome ?? 'A definir'}
+            </span>
+            <span
+              className={`numero flex w-full items-start justify-center pt-1 text-4xl ${altura}`}
+              style={pos === 1 ? { backgroundImage: 'var(--gradient-leonida)', color: '#06122a' } : { background: 'var(--surface3)', color: 'var(--text1)' }}
+              aria-hidden="true"
+            >
+              {pos}
             </span>
           </li>
         ))}
@@ -196,16 +230,78 @@ function Info({ rotulo, valor }: { rotulo: string; valor: string }) {
   );
 }
 
-function Lista({ titulo, children, vazio }: { titulo: string; children: React.ReactNode; vazio?: string }) {
-  const itens = Array.isArray(children) ? children : [children];
+function Lista({ titulo, children, href }: { titulo: string; children: React.ReactNode; href?: string }) {
   return (
     <section>
-      <h3 className="titulo-hero t-sm mb-4 text-2xl">{titulo}</h3>
-      {itens.length === 0 && vazio ? (
-        <p className="text-sm text-text-3">{vazio}</p>
-      ) : (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">{children}</div>
-      )}
+      <div className="mb-4 flex items-baseline justify-between gap-3">
+        <h3 className="titulo-hero t-sm text-2xl">{titulo}</h3>
+        {href && (
+          <Link href={href} className="hud-label !text-[13px] hover:text-text-1">
+            Ver todos
+          </Link>
+        )}
+      </div>
+      <div className="grid grid-cols-1 gap-2">{children}</div>
     </section>
+  );
+}
+
+/**
+ * Jogo em destaque (ao vivo ou próximo), no palco do Matchday do manual: metade de
+ * cada time, escudos grandes, placar ou horário no centro. O texto fica sempre sobre
+ * marinho; as cores dos times entram só nas faixas laterais.
+ */
+function PalcoJogo({ c, partida, equipe, href, projecao }: { c: Campeonato; partida: Partida; equipe: Map<string, Equipe>; href: string; projecao?: Projecao }) {
+  const l = lados(c, partida, equipe);
+  const mandante = l.mandante ?? (projecao?.mandanteId ? equipe.get(projecao.mandanteId) : undefined);
+  const visitante = l.visitante ?? (projecao?.visitanteId ? equipe.get(projecao.visitanteId) : undefined);
+  const cor = (e?: Equipe) => (e ? (fundoVisivel([e.corPrimaria, e.corSecundaria]) ?? 'var(--surface3)') : 'var(--surface3)');
+  const { hora, dia } = partesDaData(partida.dataHora);
+  const aoVivo = partida.status === 'ao-vivo';
+  const penaltis = partida.golsMandante === partida.golsVisitante && (partida.penaltisMandante !== undefined || partida.penaltisVisitante !== undefined);
+  const lado = (e: Equipe | undefined, rotulo: string | undefined, definido: boolean) => (
+    <div className="flex min-w-0 flex-col items-center gap-2 text-center">
+      <Escudo equipe={e} tamanho={72} />
+      <span className={`titulo-hero t-sm line-clamp-2 text-xl leading-none sm:text-2xl ${definido ? 'text-text-1' : 'text-text-2'}`}>
+        {definido ? e?.nome : (rotulo ?? 'A definir')}
+      </span>
+      {!definido && e && <span className="font-mono text-[12px] font-semibold uppercase tracking-wider text-text-3">hoje: {e.nome}</span>}
+    </div>
+  );
+  return (
+    <Link href={href} className="hud-card hud-clip modulo relative block overflow-hidden px-4 pb-6 pt-4 transition-colors hover:bg-[var(--row-hover)]">
+      <span className="absolute inset-y-0 left-0 w-[6px]" style={{ background: cor(mandante) }} aria-hidden="true" />
+      <span className="absolute inset-y-0 right-0 w-[6px]" style={{ background: cor(visitante) }} aria-hidden="true" />
+      <div className="mb-4 flex items-center justify-between gap-2">
+        <span className="hud-label truncate !text-[13px]">
+          {partida.numero !== undefined && <span style={{ color: 'var(--accent)' }}>J{partida.numero} · </span>}
+          {partida.rotulo ?? ''}
+        </span>
+        <SeloStatus status={partida.status} />
+      </div>
+      <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
+        {lado(mandante, l.rotuloMandante, !!l.mandante)}
+        <div className="text-center">
+          {partida.status === 'agendada' ? (
+            <>
+              <p className="numero text-5xl text-text-1 sm:text-6xl">{hora ?? 'vs'}</p>
+              {dia && <p className="mt-1 font-mono text-[13px] font-bold uppercase tracking-wider text-text-2">{dia}</p>}
+            </>
+          ) : (
+            <>
+              <p className="numero text-6xl sm:text-7xl" style={{ color: aoVivo ? 'var(--text1)' : 'var(--accent)' }}>
+                {partida.golsMandante}:{partida.golsVisitante}
+              </p>
+              {penaltis && (
+                <p className="font-mono text-sm font-bold text-[var(--error-text)]">
+                  pên. {partida.penaltisMandante ?? 0}–{partida.penaltisVisitante ?? 0}
+                </p>
+              )}
+            </>
+          )}
+        </div>
+        {lado(visitante, l.rotuloVisitante, !!l.visitante)}
+      </div>
+    </Link>
   );
 }

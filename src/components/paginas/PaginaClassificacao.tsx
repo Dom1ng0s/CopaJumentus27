@@ -1,14 +1,17 @@
 import { AutoAtualizar } from '@/components/campeonato/AutoAtualizar';
 import { BotaoImprimir } from '@/components/campeonato/BotaoImprimir';
+import { ChaveMataMata, LinhaPartida } from '@/components/campeonato/Partidas';
 import { TabelaClassificacao } from '@/components/campeonato/TabelaClassificacao';
-import { Cabecalho, CardPartida } from '@/components/campeonato/ui';
-import { grupoEncerrado, indices, lados, partidasDaFase } from '@/lib/campeonato/consultas';
+import { Cabecalho, Vazio } from '@/components/campeonato/ui';
+import { grupoEncerrado, indices, partidasDaFase } from '@/lib/campeonato/consultas';
+import { projecaoMataMata } from '@/lib/domain/campeonato/andamento';
 import { calcularClassificacao } from '@/lib/domain/campeonato/classificacao';
 import type { Campeonato } from '@/lib/domain/campeonato/tipos';
 
 export function PaginaClassificacao({ c, base }: { c: Campeonato; base: string }) {
   const { equipe } = indices(c);
   const aoVivo = c.partidas.some((p) => p.status === 'ao-vivo');
+  const projecao = projecaoMataMata(c);
 
   return (
     <div className="mx-auto max-w-6xl space-y-10 px-4 pb-20">
@@ -27,7 +30,7 @@ export function PaginaClassificacao({ c, base }: { c: Campeonato; base: string }
             <h2 className="titulo-hero t-sm mb-4 text-2xl">{fase.nome}</h2>
             {fase.tipo === 'grupos' ? (
               grupos.length === 0 ? (
-                <p className="text-sm text-text-3">Grupos ainda não definidos.</p>
+                <Vazio texto="Grupos ainda não definidos." />
               ) : (
                 <div className="grid gap-4">
                   {grupos.map((g) => (
@@ -49,11 +52,13 @@ export function PaginaClassificacao({ c, base }: { c: Campeonato; base: string }
                 </div>
               )
             ) : partidas.length === 0 ? (
-              <p className="text-sm text-text-3">Confrontos ainda não definidos.</p>
+              <Vazio texto="Confrontos ainda não definidos." />
+            ) : c.modelo === 'copa-jumentus-8' && partidas.some((p) => p.numero === 34) ? (
+              <ChaveMataMata c={c} equipe={equipe} base={base} projecao={projecao} />
             ) : (
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="grid grid-cols-1 gap-2 lg:grid-cols-2">
                 {partidas.map((p) => (
-                  <CardPartida key={p.id} partida={p} {...lados(c, p, equipe)} href={`${base}/jogos/${p.id}`} />
+                  <LinhaPartida key={p.id} c={c} partida={p} equipe={equipe} href={`${base}/jogos/${p.id}`} projecao={projecao.get(p.id)} />
                 ))}
               </div>
             )}
