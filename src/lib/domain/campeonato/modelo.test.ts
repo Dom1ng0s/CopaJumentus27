@@ -44,6 +44,11 @@ function jogo(c: Campeonato, numero: number): Partida {
   return c.partidas.find((p) => p.numero === numero)!;
 }
 
+/** Número do jogo TmxTv da 1ª fase, para os testes não dependerem da ordem da tabela. */
+function numeroDe(m: number, v: number): number {
+  return TABELA_GRUPO_UNICO.findIndex(([, , a, b]) => a === m && b === v) + 1;
+}
+
 /** Encerra o jogo com o placar e recalcula o chaveamento (como o repositório faz ao gravar). */
 function jogar(c: Campeonato, numero: number, gm: number, gv: number, pen?: [number, number], eventos: EventoPartida[] = []): void {
   const p = jogo(c, numero);
@@ -83,13 +88,30 @@ describe('modelo Copa Jumentus · 8 times · 34 jogos', () => {
     expect(c.partidas.slice(28).map((p) => p.rotulo)).toEqual(['Repescagem 1', 'Repescagem 2', 'Semifinal 1', 'Semifinal 2', 'Disputa de 3º lugar', 'Final']);
   });
 
-  it('tabela: todos se enfrentam uma vez e ninguém joga duas partidas seguidas', () => {
+  it('tabela: todos se enfrentam uma vez, mantendo a rodada e o mando de Berger', () => {
     const pares = new Set(TABELA_GRUPO_UNICO.map(([, , m, v]) => [m, v].sort().join('x')));
     expect(pares.size).toBe(28);
-    for (let i = 0; i + 1 < TABELA_GRUPO_UNICO.length; i++) {
-      const [, , m1, v1] = TABELA_GRUPO_UNICO[i];
-      const [, , m2, v2] = TABELA_GRUPO_UNICO[i + 1];
-      expect([m2, v2].some((t) => t === m1 || t === v1)).toBe(false);
+    const berger = [
+      ['1x8', '2x7', '3x6', '4x5'], ['7x3', '8x5', '6x4', '1x2'], ['4x7', '2x8', '3x1', '5x6'], ['1x4', '8x6', '7x5', '2x3'],
+      ['5x1', '3x8', '4x2', '6x7'], ['2x5', '8x7', '1x6', '3x4'], ['6x2', '4x8', '5x3', '7x1'],
+    ];
+    berger.forEach((jogos, r) => {
+      const daRodada = TABELA_GRUPO_UNICO.filter(([rodada]) => rodada === r + 1).map(([, , m, v]) => `${m}x${v}`);
+      expect([...daRodada].sort()).toEqual([...jogos].sort());
+    });
+    expect(TABELA_GRUPO_UNICO.map(([, dia]) => dia)).toEqual([...Array(16).fill(1), ...Array(12).fill(2)]);
+  });
+
+  it('tabela: isonomia de descanso na 1ª fase', () => {
+    const descansos = new Map<number, number[]>();
+    for (let t = 1; t <= 8; t++) {
+      const jogos = TABELA_GRUPO_UNICO.flatMap(([, dia, m, v], i) => (m === t || v === t ? [{ i, dia }] : []));
+      descansos.set(t, jogos.slice(1).flatMap((j, k) => (j.dia === jogos[k].dia ? [j.i - jogos[k].i - 1] : [])));
+    }
+    for (const d of descansos.values()) {
+      expect(Math.min(...d)).toBeGreaterThanOrEqual(2); // nunca dois jogos seguidos, nem com um só de intervalo
+      expect(Math.max(...d)).toBeLessThanOrEqual(5); // sem esperas longas
+      expect(d.filter((x) => x === 2).length).toBeLessThanOrEqual(2); // descansos curtos repartidos
     }
   });
 
@@ -170,9 +192,10 @@ describe('modelo Copa Jumentus · 8 times · 34 jogos', () => {
     const c = comTabela(campeonato());
     grupoEmOrdem(c);
     const antes = structuredClone(c);
-    // Jogo 18 (T3 x T8 = c x h): h vence por 5 a 0. c cai de 3º para 4º.
-    expect([jogo(c, 18).mandanteId, jogo(c, 18).visitanteId]).toEqual(['c', 'h']);
-    jogar(c, 18, 0, 5);
+    // T3 x T8 = c x h: h vence por 5 a 0. c cai de 3º para 4º.
+    const n = numeroDe(3, 8);
+    expect([jogo(c, n).mandanteId, jogo(c, n).visitanteId]).toEqual(['c', 'h']);
+    jogar(c, n, 0, 5);
     expect(violacaoDaTrava(antes, c)).toBeNull();
     expect([jogo(c, 29).mandanteId, jogo(c, 30).mandanteId]).toEqual(['d', 'c']);
   });
@@ -183,7 +206,7 @@ describe('modelo Copa Jumentus · 8 times · 34 jogos', () => {
     jogo(c, 29).status = 'ao-vivo';
     const antes = structuredClone(c);
     const depois = structuredClone(c);
-    Object.assign(jogo(depois, 18), { golsMandante: 0, golsVisitante: 5 });
+    Object.assign(jogo(depois, numeroDe(3, 8)), { golsMandante: 0, golsVisitante: 5 });
     aplicarChaveamento(depois);
     expect(violacaoDaTrava(antes, depois)).toMatch(/Jogo 29 \(Repescagem 1\)/);
 
@@ -196,25 +219,28 @@ describe('modelo Copa Jumentus · 8 times · 34 jogos', () => {
 
   it('trava também vale para súmula preenchida em jogo ainda agendado e para T1–T8', () => {
     const c = comTabela(campeonato());
-    jogo(c, 5).eventos.push({ id: 'e1', tipo: 'amarelo', jogadorId: 'g-ata', equipeId: 'g' });
+    const n = numeroDe(7, 3);
+    jogo(c, n).eventos.push({ id: 'e1', tipo: 'amarelo', jogadorId: 'g-ata', equipeId: 'g' });
     const antes = structuredClone(c);
     const depois = structuredClone(c);
-    // Troca T1 e T7: o jogo 5 (T7 x T3) já tem cartão na súmula.
+    // Troca T1 e T7: o jogo T7 x T3 já tem cartão na súmula.
     [depois.equipes[0].numeroTabela, depois.equipes[6].numeroTabela] = [7, 1];
     aplicarChaveamento(depois);
-    expect(violacaoDaTrava(antes, depois)).toMatch(/Jogo 5 \(Rodada 2\)/);
+    expect(violacaoDaTrava(antes, depois)).toMatch(new RegExp(`Jogo ${n} \\(Rodada 2\\)`));
   });
 
   it('suspensão segue a ordem dos jogos do modelo (número), não a de cadastro', () => {
     const c = comTabela(campeonato());
-    // T7 = g joga o 2 (T2xT7) e o 5 (T7xT3). Vermelho no 2: cumpre no 5.
-    jogar(c, 2, 0, 0, undefined, [{ id: 'v', tipo: 'vermelho', jogadorId: 'g-ata', equipeId: 'g' }]);
+    // T7 = g joga T2xT7 e, em seguida, T7xT3. Vermelho no primeiro: cumpre no seguinte.
+    const [primeiro, seguinte] = [numeroDe(2, 7), numeroDe(7, 3)];
+    expect(primeiro).toBeLessThan(seguinte);
+    jogar(c, primeiro, 0, 0, undefined, [{ id: 'v', tipo: 'vermelho', jogadorId: 'g-ata', equipeId: 'g' }]);
     c.partidas.reverse();
     const s1 = calcularSuspensoes(c.partidas, new Map(c.jogadores.map((j) => [j.id, j.equipeId])));
     expect(s1.get('g-ata')?.suspenso).toBe(true);
-    jogar(c, 5, 0, 0);
+    jogar(c, seguinte, 0, 0);
     const s2 = calcularSuspensoes(c.partidas, new Map(c.jogadores.map((j) => [j.id, j.equipeId])));
-    expect(s2.get('g-ata')).toMatchObject({ suspenso: false, cumpridas: [jogo(c, 5).id] });
+    expect(s2.get('g-ata')).toMatchObject({ suspenso: false, cumpridas: [jogo(c, seguinte).id] });
   });
 });
 
@@ -332,7 +358,7 @@ describe('rankings novos', () => {
     { id: '5', tipo: 'defesa', jogadorId: 'a-gol', equipeId: 'a' },
     { id: '6', tipo: 'defesa', jogadorId: 'a-gol', equipeId: 'a' },
   ]);
-  jogar(c, 4, 0, 0);
+  jogar(c, numeroDe(4, 5), 0, 0);
 
   it('artilharia soma gol e gol de pênalti', () => {
     expect(artilharia(c.partidas)[0]).toEqual({ jogadorId: 'a-ata', valor: 2 });
@@ -353,7 +379,7 @@ describe('rankings novos', () => {
   });
 
   it('goleiro registrado na súmula vale mais que o goleiro do elenco', () => {
-    const p = jogo(c, 4);
+    const p = jogo(c, numeroDe(4, 5));
     p.goleiroMandanteId = 'd-ata';
     expect(goleiros([p], c.jogadores).map((x) => x.jogadorId).sort()).toEqual(['d-ata', 'e-gol']);
   });
