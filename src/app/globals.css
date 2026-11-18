@@ -498,6 +498,11 @@ select.campo option {
   color: var(--dourado-claro);
 }
 
+/* Cerimônia projetada: sem a barra do site, o palco começa no topo. */
+main:has(.tela-cheia) {
+  padding-top: 0;
+}
+
 /* ---------- Esqueleto de carregamento ---------- */
 .esqueleto {
   background: linear-gradient(90deg, var(--surface1) 0%, var(--surface2) 50%, var(--surface1) 100%);

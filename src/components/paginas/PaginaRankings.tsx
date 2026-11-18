@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { AbasRankings } from '@/components/campeonato/AbasRankings';
 import { Cabecalho, Cartao, Escudo, Secao, Vazio } from '@/components/campeonato/ui';
 import { fundoVisivel } from '@/lib/campeonato/cores';
 import { indices } from '@/lib/campeonato/consultas';
@@ -115,47 +116,79 @@ export function PaginaRankings({ c, base, fase }: { c: Campeonato; base: string;
           </Link>
         ))}
       </nav>
-      <div className="grid gap-4 lg:grid-cols-3">
-        <Secao titulo="Artilharia">{lista(artilharia(partidas), 'Nenhum gol registrado.')}</Secao>
-        <Secao titulo="Assistências">{lista(assistencias(partidas), 'Nenhuma assistência registrada.')}</Secao>
-        <Secao titulo="Penalidades">
-          {lista(
-            penalidades(partidas).map((x) => ({
-              jogadorId: x.jogadorId,
-              valor: x.convertidos,
-              detalhe: `${x.convertidos} ${x.convertidos === 1 ? 'convertido' : 'convertidos'} · ${x.perdidos} ${x.perdidos === 1 ? 'perdido' : 'perdidos'}`,
-            })),
-            'Nenhum pênalti cobrado em jogo.',
-          )}
-        </Secao>
-        <Secao titulo="Goleiros">
-          {lista(
-            goleiros(partidas, c.jogadores).map((g) => ({
-              jogadorId: g.jogadorId,
-              valor: g.media.toLocaleString('pt-BR'),
-              detalhe: `${g.golsSofridos} sofridos em ${g.jogos} ${g.jogos === 1 ? 'jogo' : 'jogos'} · ${g.semSofrerGol} sem sofrer gol · ${g.defesas} ${g.defesas === 1 ? 'defesa' : 'defesas'}`,
-            })),
-            'Nenhum jogo encerrado com goleiro definido.',
-          )}
-          <p className="mt-2 text-xs text-text-3">Número grande: média de gols sofridos por jogo (menos é melhor).</p>
-        </Secao>
-        <Secao titulo="Cartões">
-          {lista(
-            cartoes(partidas).map((x) => ({
-              jogadorId: x.jogadorId,
-              chave: `${x.vermelhos}-${x.amarelos}`,
-              valor: (
-                <span className="flex gap-3">
-                  {x.amarelos > 0 && <Cartao cor="amarelo" quantidade={x.amarelos} />}
-                  {x.vermelhos > 0 && <Cartao cor="vermelho" quantidade={x.vermelhos} />}
-                </span>
-              ),
-            })),
-            'Nenhum cartão registrado.',
-            false,
-          )}
-        </Secao>
-      </div>
+      <AbasRankings
+        abas={[
+          {
+            id: 'artilharia',
+            titulo: 'Artilharia',
+            conteudo: (
+              <Secao titulo="Artilharia">{lista(artilharia(partidas), 'Nenhum gol registrado.')}</Secao>
+            ),
+          },
+          {
+            id: 'assistencias',
+            titulo: 'Assistências',
+            conteudo: (
+              <Secao titulo="Assistências">{lista(assistencias(partidas), 'Nenhuma assistência registrada.')}</Secao>
+            ),
+          },
+          {
+            id: 'penalidades',
+            titulo: 'Penalidades',
+            conteudo: (
+              <Secao titulo="Penalidades">
+                {lista(
+                  penalidades(partidas).map((x) => ({
+                    jogadorId: x.jogadorId,
+                    valor: x.convertidos,
+                    detalhe: `${x.convertidos} ${x.convertidos === 1 ? 'convertido' : 'convertidos'} · ${x.perdidos} ${x.perdidos === 1 ? 'perdido' : 'perdidos'}`,
+                  })),
+                  'Nenhum pênalti cobrado em jogo.',
+                )}
+              </Secao>
+            ),
+          },
+          {
+            id: 'goleiros',
+            titulo: 'Goleiros',
+            conteudo: (
+              <Secao titulo="Goleiros">
+                {lista(
+                  goleiros(partidas, c.jogadores).map((g) => ({
+                    jogadorId: g.jogadorId,
+                    valor: g.media.toLocaleString('pt-BR'),
+                    detalhe: `${g.golsSofridos} sofridos em ${g.jogos} ${g.jogos === 1 ? 'jogo' : 'jogos'} · ${g.semSofrerGol} sem sofrer gol · ${g.defesas} ${g.defesas === 1 ? 'defesa' : 'defesas'}`,
+                  })),
+                  'Nenhum jogo encerrado com goleiro definido.',
+                )}
+                <p className="mt-2 text-xs text-text-3">Número grande: média de gols sofridos por jogo (menos é melhor).</p>
+              </Secao>
+            ),
+          },
+          {
+            id: 'cartoes',
+            titulo: 'Cartões',
+            conteudo: (
+              <Secao titulo="Cartões">
+                {lista(
+                  cartoes(partidas).map((x) => ({
+                    jogadorId: x.jogadorId,
+                    chave: `${x.vermelhos}-${x.amarelos}`,
+                    valor: (
+                      <span className="flex gap-3">
+                        {x.amarelos > 0 && <Cartao cor="amarelo" quantidade={x.amarelos} />}
+                        {x.vermelhos > 0 && <Cartao cor="vermelho" quantidade={x.vermelhos} />}
+                      </span>
+                    ),
+                  })),
+                  'Nenhum cartão registrado.',
+                  false,
+                )}
+              </Secao>
+            ),
+          },
+        ]}
+      />
     </div>
   );
 }
