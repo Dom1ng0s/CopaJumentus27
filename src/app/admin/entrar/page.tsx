@@ -1,3 +1,4 @@
+import { CampoSenha } from '@/components/admin/CampoSenha';
 import { Aviso } from '@/components/campeonato/ui';
 import { destinoSeguro } from '@/lib/auth/sessao';
 import { entrar } from '../acoes-conta';
@@ -28,7 +29,7 @@ export default async function Entrar({ searchParams }: { searchParams: Promise<{
         </label>
         <label className="block">
           <span className="rotulo-campo">Senha</span>
-          <input name="senha" type="password" required autoComplete="current-password" className="campo" />
+          <CampoSenha name="senha" autoComplete="current-password" />
         </label>
         <button type="submit" className="btn-cta w-full">
           <span>Entrar</span>
