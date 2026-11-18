@@ -2,6 +2,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { AutoAtualizar } from '@/components/campeonato/AutoAtualizar';
 import { LinhaPartida, partesDaData } from '@/components/campeonato/Partidas';
+import { Premiacao } from '@/components/campeonato/Premiacao';
 import { Escudo, Numero, SeloStatus, Vazio } from '@/components/campeonato/ui';
 import { fundoVisivel } from '@/lib/campeonato/cores';
 import { formatarData, indices, lados } from '@/lib/campeonato/consultas';
@@ -24,7 +25,9 @@ export function PaginaInicio({ c, base, edicoes }: CampeonatoPublico) {
   const proximas = ordenadas.filter((p) => p.status === 'agendada' && p.id !== destaque?.id).slice(0, 4);
   const ultimas = ordenadas.filter((p) => p.status === 'encerrada').slice(-4).reverse();
   const resumo = resumirJogos(c.partidas);
-  const resultado = podio(c);
+  // Pódio das súmulas (modelo) ou, em edição antiga, o lançado à mão.
+  const manual = c.historico?.podio;
+  const resultado = podio(c) ?? (manual?.primeiro ? { primeiro: manual.primeiro, segundo: manual.segundo, terceiro: manual.terceiro } : null);
   // Status é do campeonato; o vermelho "ao vivo" fica só com os jogos (manual: vermelho só para ao vivo, erro e eliminado).
   const status = ROTULO_STATUS_CAMPEONATO[c.status];
   const outras = edicoes.filter((e) => e.id !== c.id);
@@ -82,23 +85,27 @@ export function PaginaInicio({ c, base, edicoes }: CampeonatoPublico) {
           </div>
         </div>
 
-        {resultado && <Podio primeiro={equipe.get(resultado.primeiro)} segundo={equipe.get(resultado.segundo)} terceiro={resultado.terceiro ? equipe.get(resultado.terceiro) : undefined} />}
+        {resultado && <Podio primeiro={equipe.get(resultado.primeiro)} segundo={resultado.segundo ? equipe.get(resultado.segundo) : undefined} terceiro={resultado.terceiro ? equipe.get(resultado.terceiro) : undefined} />}
 
-        {/* Andamento: quantos jogos já foram, de quantos, e os números do campeonato */}
-        <div className="hud-card hud-clip modulo relative grid grid-cols-2 items-center gap-4 px-4 py-4 sm:grid-cols-4">
-          <div className="col-span-2">
-            <p className="hud-label !text-[12px]">{a.terminou ? 'Campeonato encerrado' : a.dia ? `Andamento · Dia ${a.dia}` : 'Andamento'}</p>
-            <p className="mt-1 flex items-baseline gap-2">
-              <span className="numero text-5xl text-text-1">{a.encerrados}</span>
-              <span className="font-mono text-base font-bold uppercase tracking-wider text-text-2">de {a.total} jogos</span>
-            </p>
-            <div className="mt-2 h-2 w-full bg-[var(--surface3)]" role="progressbar" aria-valuemin={0} aria-valuemax={a.total} aria-valuenow={a.encerrados} aria-label="Jogos encerrados">
-              <div className="h-full" style={{ width: `${a.total ? (a.encerrados / a.total) * 100 : 0}%`, backgroundImage: 'var(--gradient-leonida)' }} />
+        <Premiacao premios={c.premios ?? []} equipe={equipe} />
+
+        {/* Andamento: quantos jogos já foram, de quantos. Edição antiga sem jogos no sistema não mostra. */}
+        {a.total > 0 && (
+          <div className="hud-card hud-clip modulo relative grid grid-cols-2 items-center gap-4 px-4 py-4 sm:grid-cols-4">
+            <div className="col-span-2">
+              <p className="hud-label !text-[12px]">{a.terminou ? 'Campeonato encerrado' : a.dia ? `Andamento · Dia ${a.dia}` : 'Andamento'}</p>
+              <p className="mt-1 flex items-baseline gap-2">
+                <span className="numero text-5xl text-text-1">{a.encerrados}</span>
+                <span className="font-mono text-base font-bold uppercase tracking-wider text-text-2">de {a.total} jogos</span>
+              </p>
+              <div className="mt-2 h-2 w-full bg-[var(--surface3)]" role="progressbar" aria-valuemin={0} aria-valuemax={a.total} aria-valuenow={a.encerrados} aria-label="Jogos encerrados">
+                <div className="h-full" style={{ width: `${a.total ? (a.encerrados / a.total) * 100 : 0}%`, backgroundImage: 'var(--gradient-leonida)' }} />
+              </div>
             </div>
+            <Numero valor={resumo.gols} rotulo="Gols" />
+            <Numero valor={resumo.mediaGols.toLocaleString('pt-BR')} rotulo="Média por jogo" />
           </div>
-          <Numero valor={resumo.gols} rotulo="Gols" />
-          <Numero valor={resumo.mediaGols.toLocaleString('pt-BR')} rotulo="Média por jogo" />
-        </div>
+        )}
 
         {/* Faixa de escudos das franquias participantes */}
         {c.equipes.length > 0 && (

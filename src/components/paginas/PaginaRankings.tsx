@@ -1,23 +1,30 @@
 import Link from 'next/link';
 import { AbasRankings } from '@/components/campeonato/AbasRankings';
+import { Premiacao } from '@/components/campeonato/Premiacao';
 import { Cabecalho, Cartao, Escudo, Secao, Vazio } from '@/components/campeonato/ui';
 import { fundoVisivel } from '@/lib/campeonato/cores';
 import { indices } from '@/lib/campeonato/consultas';
 import { artilharia, assistencias, cartoes, goleiros, penalidades } from '@/lib/domain/campeonato/rankings';
-import type { Campeonato } from '@/lib/domain/campeonato/tipos';
+import type { Campeonato, LinhaRankingManual } from '@/lib/domain/campeonato/tipos';
 
 export function PaginaRankings({ c, base, fase }: { c: Campeonato; base: string; fase?: string }) {
   const { equipe, jogador } = indices(c);
   const partidas = fase ? c.partidas.filter((p) => p.faseId === fase) : c.partidas;
 
-  const linhaJogador = (id: string) => {
-    const j = jogador.get(id);
-    const e = j ? equipe.get(j.equipeId) : undefined;
+  /** Nome e equipe de um item: do elenco (súmulas) ou do próprio item (ranking lançado à mão). */
+  const quem = (it: { jogadorId: string; nome?: string; equipeId?: string }) => {
+    const j = jogador.get(it.jogadorId);
+    const equipeId = it.equipeId ?? j?.equipeId;
+    return { nome: it.nome ?? j?.nome, e: equipeId ? equipe.get(equipeId) : undefined };
+  };
+
+  const linhaJogador = (it: { jogadorId: string; nome?: string; equipeId?: string }) => {
+    const { nome, e } = quem(it);
     return (
       <span className="flex min-w-0 items-center gap-2">
         <Escudo equipe={e} tamanho={22} />
         <span className="min-w-0">
-          <span className="block truncate font-semibold">{j?.nome ?? '—'}</span>
+          <span className="block truncate font-semibold">{nome ?? '—'}</span>
           <span className="block truncate text-xs text-text-3">{e?.nome}</span>
         </span>
       </span>
@@ -25,7 +32,16 @@ export function PaginaRankings({ c, base, fase }: { c: Campeonato; base: string;
   };
 
   const lista = (
-    itens: Array<{ jogadorId: string; valor: React.ReactNode; detalhe?: string; /** Igualdade de chave = mesma posição. */ chave?: string }>,
+    itens: Array<{
+      jogadorId: string;
+      valor: React.ReactNode;
+      detalhe?: string;
+      /** Igualdade de chave = mesma posição. */
+      chave?: string;
+      /** Ranking lançado à mão: nome e equipe vêm do item. */
+      nome?: string;
+      equipeId?: string;
+    }>,
     vazio: string,
     destacarLider = true,
   ) => {
@@ -39,8 +55,7 @@ export function PaginaRankings({ c, base, fase }: { c: Campeonato; base: string;
     itens.forEach((_, i) => posicoes.push(i > 0 && chave(i) === chave(i - 1) ? posicoes[i - 1] : i + 1));
 
     const [lider, ...resto] = itens.slice(0, 10);
-    const jLider = jogador.get(lider.jogadorId);
-    const eqLider = jLider ? equipe.get(jLider.equipeId) : undefined;
+    const { nome: nomeLider, e: eqLider } = quem(lider);
     const corLider = eqLider ? fundoVisivel([eqLider.corPrimaria, eqLider.corSecundaria]) : undefined;
 
     return (
@@ -60,7 +75,7 @@ export function PaginaRankings({ c, base, fase }: { c: Campeonato; base: string;
               <Escudo equipe={eqLider} tamanho={38} />
               <div className="min-w-0 flex-1">
                 <p className="titulo-hero t-sm truncate text-xl text-text-1">
-                  {jLider?.nome ?? '—'}
+                  {nomeLider ?? '—'}
                 </p>
                 <p className="truncate font-mono text-[13px] font-bold uppercase tracking-wider text-text-2">
                   {eqLider?.nome}
@@ -82,10 +97,10 @@ export function PaginaRankings({ c, base, fase }: { c: Campeonato; base: string;
           {(destacarLider ? resto : itens.slice(0, 10)).map((it, idx) => {
             const pos = posicoes[destacarLider ? idx + 1 : idx];
             return (
-              <li key={it.jogadorId} className="flex items-center gap-3 py-2">
+              <li key={`${it.jogadorId}-${it.nome ?? ''}`} className="flex items-center gap-3 py-2">
                 <span className="numero w-7 text-lg text-text-2">{pos}</span>
                 <span className="min-w-0 flex-1">
-                  {linhaJogador(it.jogadorId)}
+                  {linhaJogador(it)}
                   {it.detalhe && (
                     <span className="mt-0.5 block font-mono text-[13px] text-text-3">{it.detalhe}</span>
                   )}
@@ -101,11 +116,22 @@ export function PaginaRankings({ c, base, fase }: { c: Campeonato; base: string;
     );
   };
 
+  /**
+   * Edição antiga sem súmulas: vale o ranking lançado à mão (resultado oficial).
+   * Com gols nas súmulas, o cálculo do sistema prevalece. Só sem filtro de fase.
+   */
+  const comHistorico = (calculado: Array<{ jogadorId: string; valor: number }>, manual?: LinhaRankingManual[]) =>
+    calculado.length === 0 && !fase && manual?.length
+      ? manual.map((l, i) => ({ jogadorId: `manual-${i}`, nome: l.jogador, equipeId: l.equipeId, valor: l.valor }))
+      : calculado;
+
   const filtro = (id?: string) => `${base}/rankings${id ? `?fase=${id}` : ''}`;
 
   return (
     <div className="mx-auto max-w-6xl space-y-6 px-4 pb-20">
       <Cabecalho titulo="Rankings" />
+      <Premiacao premios={c.premios ?? []} equipe={equipe} titulo="Premiação individual" />
+      {c.fases.length > 0 && (
       <nav className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 [&>*]:flex-none" aria-label="Filtrar por fase">
         <Link href={filtro()} className="btn-hud !min-h-[2.75rem] !text-sm" aria-current={!fase ? 'page' : undefined}>
           Todas as fases
@@ -116,20 +142,21 @@ export function PaginaRankings({ c, base, fase }: { c: Campeonato; base: string;
           </Link>
         ))}
       </nav>
+      )}
       <AbasRankings
         abas={[
           {
             id: 'artilharia',
             titulo: 'Artilharia',
             conteudo: (
-              <Secao titulo="Artilharia">{lista(artilharia(partidas), 'Nenhum gol registrado.')}</Secao>
+              <Secao titulo="Artilharia">{lista(comHistorico(artilharia(partidas), c.historico?.artilharia), 'Nenhum gol registrado.')}</Secao>
             ),
           },
           {
             id: 'assistencias',
             titulo: 'Assistências',
             conteudo: (
-              <Secao titulo="Assistências">{lista(assistencias(partidas), 'Nenhuma assistência registrada.')}</Secao>
+              <Secao titulo="Assistências">{lista(comHistorico(assistencias(partidas), c.historico?.assistencias), 'Nenhuma assistência registrada.')}</Secao>
             ),
           },
           {

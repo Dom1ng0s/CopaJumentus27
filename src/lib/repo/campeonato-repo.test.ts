@@ -184,6 +184,7 @@ describe('vários campeonatos', () => {
         c.criterios = ['pontos', 'saldo', 'vitorias', 'golsPro', 'golsContra', 'confronto', 'cartoes'];
         c.jogadores.push({ id: 'j1', nome: 'Digão', equipeId: c.equipes[0].id, posicao: 'ATA', pago: true });
         c.equipes[0].capitaoId = 'j1';
+        c.premios = [{ id: 'p1', titulo: 'Artilheiro', jogador: 'Digão', equipeId: c.equipes[0].id, detalhe: '9 gols' }];
         sortearNumerosTabela(c);
       },
       db,
@@ -200,6 +201,9 @@ describe('vários campeonatos', () => {
     expect(a.equipes.every((e) => e.numeroTabela === undefined && e.capitaoId === undefined)).toBe(true);
     expect(a.partidas).toHaveLength(0);
     expect(a.jogadores).toHaveLength(0);
+    // Prêmios são gravados e lidos de volta, mas não passam para a cópia.
+    expect(o.premios).toEqual([{ id: 'p1', titulo: 'Artilheiro', jogador: 'Digão', equipeId: o.equipes[0].id, detalhe: '9 gols' }]);
+    expect(a.premios).toBeUndefined();
     expect(b.jogadores).toHaveLength(1);
     expect(b.jogadores[0]).toMatchObject({ nome: 'Digão', pago: false });
     expect(b.equipes[0].capitaoId).toBe(b.jogadores[0].id);

@@ -29,6 +29,13 @@
       "when": 1794967117389,
       "tag": "0003_programacao",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1794970091914,
+      "tag": "0004_premios_historico",
+      "breakpoints": true
     }
   ]
 }
