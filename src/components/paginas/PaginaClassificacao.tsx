@@ -2,7 +2,7 @@ import { AutoAtualizar } from '@/components/campeonato/AutoAtualizar';
 import { BotaoImprimir } from '@/components/campeonato/BotaoImprimir';
 import { ChaveMataMata, LinhaPartida } from '@/components/campeonato/Partidas';
 import { TabelaClassificacao } from '@/components/campeonato/TabelaClassificacao';
-import { Cabecalho, Vazio } from '@/components/campeonato/ui';
+import { AvisoEdicaoSemJogos, Cabecalho, Vazio, edicaoSemJogos } from '@/components/campeonato/ui';
 import { grupoEncerrado, indices, partidasDaFase } from '@/lib/campeonato/consultas';
 import { projecaoMataMata } from '@/lib/domain/campeonato/andamento';
 import { calcularClassificacao } from '@/lib/domain/campeonato/classificacao';
@@ -18,11 +18,13 @@ export function PaginaClassificacao({ c, base }: { c: Campeonato; base: string }
       <AutoAtualizar ativo={aoVivo} />
       <Cabecalho
         titulo="Classificação"
-        legenda={`${c.nome}${c.edicao && !c.nome.includes(c.edicao) ? ` ${c.edicao}` : ''} · só jogos encerrados contam na tabela.`}
+        legenda={`${c.nome}${c.edicao && !c.nome.includes(c.edicao) ? ` ${c.edicao}` : ''}${edicaoSemJogos(c) ? '' : ' · só jogos encerrados contam na tabela.'}`}
         acao={<BotaoImprimir />}
       />
 
-      {c.fases.map((fase) => {
+      {edicaoSemJogos(c) && <AvisoEdicaoSemJogos base={base} />}
+
+      {!edicaoSemJogos(c) && c.fases.map((fase) => {
         const partidas = partidasDaFase(c, fase.id);
         const grupos = c.grupos.filter((g) => g.faseId === fase.id);
         return (

@@ -1,6 +1,6 @@
 import { AutoAtualizar } from '@/components/campeonato/AutoAtualizar';
 import { ChaveMataMata, LinhaPartida } from '@/components/campeonato/Partidas';
-import { Cabecalho, Numero, Vazio } from '@/components/campeonato/ui';
+import { AvisoEdicaoSemJogos, Cabecalho, Numero, Vazio, edicaoSemJogos } from '@/components/campeonato/ui';
 import { indices, partidasDaFase } from '@/lib/campeonato/consultas';
 import { andamento, projecaoMataMata } from '@/lib/domain/campeonato/andamento';
 import { resumirJogos, type ResumoJogos } from '@/lib/domain/campeonato/classificacao';
@@ -75,7 +75,9 @@ export function PaginaJogos({ c, base }: { c: Campeonato; base: string }) {
         }
       />
 
-      {c.partidas.length === 0 ? (
+      {edicaoSemJogos(c) ? (
+        <AvisoEdicaoSemJogos base={base} />
+      ) : c.partidas.length === 0 ? (
         <Vazio texto="A tabela de jogos ainda não saiu." detalhe="Os jogos aparecem aqui assim que a organização definir os confrontos." />
       ) : (
         <>
