@@ -183,6 +183,7 @@ describe('vários campeonatos', () => {
         c.jogadores.push({ id: 'j1', nome: 'Digão', equipeId: c.equipes[0].id, posicao: 'ATA', pago: true });
         c.equipes[0].capitaoId = 'j1';
         c.premios = [{ id: 'p1', titulo: 'Artilheiro', jogador: 'Digão', equipeId: c.equipes[0].id, detalhe: '9 gols' }];
+        c.financeiro = { atletas: 64, metaPorAtleta: 7000, gastos: [], patrocinios: [{ id: 'x', patrocinador: 'Padaria', cota: 'Mangas', valor: 50000, status: 'confirmado', exibir: true }], entradas: [] };
         sortearNumerosTabela(c);
       },
       db,
@@ -202,6 +203,9 @@ describe('vários campeonatos', () => {
     // Prêmios são gravados e lidos de volta, mas não passam para a cópia.
     expect(o.premios).toEqual([{ id: 'p1', titulo: 'Artilheiro', jogador: 'Digão', equipeId: o.equipes[0].id, detalhe: '9 gols' }]);
     expect(a.premios).toBeUndefined();
+    // Financeiro também: é gravado e lido, mas cada edição começa o seu.
+    expect(o.financeiro?.patrocinios[0]).toMatchObject({ patrocinador: 'Padaria', valor: 50000 });
+    expect(a.financeiro).toBeUndefined();
     expect(b.jogadores).toHaveLength(1);
     expect(b.jogadores[0]).toMatchObject({ nome: 'Digão', pago: false });
     expect(b.equipes[0].capitaoId).toBe(b.jogadores[0].id);

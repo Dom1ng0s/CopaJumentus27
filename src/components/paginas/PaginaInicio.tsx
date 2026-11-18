@@ -2,6 +2,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { AutoAtualizar } from '@/components/campeonato/AutoAtualizar';
 import { LinhaPartida, partesDaData } from '@/components/campeonato/Partidas';
+import { Patrocinadores } from '@/components/campeonato/Patrocinadores';
 import { Premiacao } from '@/components/campeonato/Premiacao';
 import { Escudo, Numero, SeloStatus, Vazio, edicaoSemJogos } from '@/components/campeonato/ui';
 import { fundoVisivel } from '@/lib/campeonato/cores';
@@ -14,7 +15,7 @@ import { ordenarPartidas } from '@/lib/domain/campeonato/suspensoes';
 import { ROTULO_STATUS_CAMPEONATO, type Campeonato, type Equipe, type Partida } from '@/lib/domain/campeonato/tipos';
 
 /** Início de uma edição: banner, escudo, status, período, pódio, franquias e jogos. */
-export function PaginaInicio({ c, base, edicoes }: CampeonatoPublico) {
+export function PaginaInicio({ c, base, edicoes, patrocinadores }: CampeonatoPublico) {
   const { equipe } = indices(c);
   const ordenadas = ordenarPartidas(c.partidas);
   const aoVivo = ordenadas.filter((p) => p.status === 'ao-vivo');
@@ -175,6 +176,8 @@ export function PaginaInicio({ c, base, edicoes }: CampeonatoPublico) {
             </Link>
           </div>
         )}
+
+        <Patrocinadores patrocinadores={patrocinadores} />
 
         {outras.length > 0 && (
           <section>

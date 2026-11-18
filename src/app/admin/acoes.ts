@@ -11,6 +11,16 @@ import { COOKIE_CAMPEONATO, idDoCampeonatoDoAdmin } from '@/lib/campeonato/selec
 import { gerarRodadas, nomeGrupo, sortearGrupos } from '@/lib/domain/campeonato/grupos';
 import { DIAS_DO_MODELO, sortearNumerosTabela } from '@/lib/domain/campeonato/modelo';
 import { lerRankingManual } from '@/lib/domain/campeonato/historico';
+import {
+  financeiroPadrao,
+  formatarReais,
+  lerReais,
+  resumirFinanceiro,
+  type Entrada,
+  type Financeiro,
+  type Gasto,
+  type Patrocinio,
+} from '@/lib/domain/campeonato/financeiro';
 import { aplicarProgramacao, problemaNaProgramacao, remarcarPartida, type Programacao } from '@/lib/domain/campeonato/programacao';
 import {
   ehGol,
@@ -761,5 +771,135 @@ export async function decidirDesempate(f: FormData): Promise<void> {
     }
     const mesmas = (d: string[]) => d.length === ordem.length && d.every((id) => ordem.includes(id));
     fase.desempates = [...(fase.desempates ?? []).filter((d) => !mesmas(d)), ordem];
+  });
+}
+
+// ---------- financeiro (pedido do operador em 18/11/2026) ----------
+
+function exigirFinanceiro(c: Campeonato): Financeiro {
+  if (!c.financeiro) throw new ErroRegra('Comece o financeiro deste campeonato primeiro.');
+  return c.financeiro;
+}
+
+function reais(f: FormData, campo: string, rotulo: string): number {
+  const v = lerReais(texto(f, campo));
+  if (v === null || v < 0) throw new ErroRegra(`${rotulo}: informe um valor em reais (ex.: 78,50).`);
+  return v;
+}
+
+function salvarNaLista<T extends { id: string }>(lista: T[], item: T): { lista: T[]; novo: boolean } {
+  const i = lista.findIndex((x) => x.id === item.id);
+  return i >= 0 ? { lista: lista.map((x, k) => (k === i ? item : x)), novo: false } : { lista: [...lista, item], novo: true };
+}
+
+/** Cria o financeiro com o modelo da planilha (custos fixos, uniforme e as 5 cotas). */
+export async function iniciarFinanceiroAcao(f: FormData): Promise<void> {
+  await alterar(f, (c) => {
+    if (c.financeiro) return 'O financeiro já existe.';
+    const atletas = c.jogadores.length || c.equipes.length * 8 || 64;
+    c.financeiro = financeiroPadrao(novoId, atletas);
+    return 'Financeiro criado com o modelo da planilha. Preencha os valores.';
+  });
+}
+
+export async function salvarParametrosFinanceiroAcao(f: FormData): Promise<void> {
+  await alterar(f, (c) => {
+    const fin = exigirFinanceiro(c);
+    const atletas = inteiro(f, 'atletas', 0);
+    fin.atletas = atletas > 0 ? atletas : undefined;
+    const meta = texto(f, 'metaPorAtleta');
+    fin.metaPorAtleta = meta ? reais(f, 'metaPorAtleta', 'Meta por atleta') : undefined;
+    return 'Parâmetros salvos.';
+  });
+}
+
+export async function salvarGastoAcao(f: FormData): Promise<void> {
+  await alterar(f, (c) => {
+    const fin = exigirFinanceiro(c);
+    const descricao = texto(f, 'descricao');
+    if (!descricao) throw new ErroRegra('Descreva o gasto.');
+    const gasto: Gasto = {
+      id: texto(f, 'itemId') || novoId(),
+      descricao,
+      categoria: texto(f, 'categoria') || 'Outros',
+      quantidade: Math.max(1, inteiro(f, 'quantidade', 1)),
+      valorUnitario: reais(f, 'valorUnitario', 'Valor'),
+      status: texto(f, 'status') === 'pago' ? 'pago' : 'previsto',
+    };
+    const r = salvarNaLista(fin.gastos, gasto);
+    fin.gastos = r.lista;
+    return r.novo ? `Gasto adicionado: ${descricao}.` : 'Gasto atualizado.';
+  });
+}
+
+export async function removerGastoAcao(f: FormData): Promise<void> {
+  await alterar(f, (c) => {
+    const fin = exigirFinanceiro(c);
+    fin.gastos = fin.gastos.filter((g) => g.id !== texto(f, 'itemId'));
+    return 'Gasto removido.';
+  });
+}
+
+export async function salvarPatrocinioAcao(f: FormData): Promise<void> {
+  await alterar(f, (c) => {
+    const fin = exigirFinanceiro(c);
+    const status = texto(f, 'status');
+    const patrocinio: Patrocinio = {
+      id: texto(f, 'itemId') || novoId(),
+      patrocinador: texto(f, 'patrocinador') || 'A definir',
+      cota: texto(f, 'cota') || 'Apoio',
+      valor: reais(f, 'valor', 'Valor da cota'),
+      status: status === 'recebido' || status === 'confirmado' ? status : 'negociando',
+      logo: opcional(f, 'logo'),
+      link: opcional(f, 'link'),
+      exibir: Boolean(f.get('exibir')),
+    };
+    const r = salvarNaLista(fin.patrocinios, patrocinio);
+    fin.patrocinios = r.lista;
+    return r.novo ? `Patrocínio adicionado: ${patrocinio.patrocinador}.` : 'Patrocínio atualizado.';
+  });
+}
+
+export async function removerPatrocinioAcao(f: FormData): Promise<void> {
+  await alterar(f, (c) => {
+    const fin = exigirFinanceiro(c);
+    fin.patrocinios = fin.patrocinios.filter((p) => p.id !== texto(f, 'itemId'));
+    return 'Patrocínio removido.';
+  });
+}
+
+export async function salvarEntradaAcao(f: FormData): Promise<void> {
+  await alterar(f, (c) => {
+    const fin = exigirFinanceiro(c);
+    const descricao = texto(f, 'descricao');
+    if (!descricao) throw new ErroRegra('Descreva a entrada.');
+    const entrada: Entrada = {
+      id: texto(f, 'itemId') || novoId(),
+      descricao,
+      categoria: texto(f, 'categoria') || 'Outros',
+      valor: reais(f, 'valor', 'Valor'),
+      status: texto(f, 'status') === 'recebido' ? 'recebido' : 'previsto',
+    };
+    const r = salvarNaLista(fin.entradas, entrada);
+    fin.entradas = r.lista;
+    return r.novo ? `Entrada adicionada: ${descricao}.` : 'Entrada atualizada.';
+  });
+}
+
+export async function removerEntradaAcao(f: FormData): Promise<void> {
+  await alterar(f, (c) => {
+    const fin = exigirFinanceiro(c);
+    fin.entradas = fin.entradas.filter((e) => e.id !== texto(f, 'itemId'));
+    return 'Entrada removida.';
+  });
+}
+
+/** Copia o valor por atleta calculado para o valor da inscrição (usado em Pagamentos). */
+export async function usarValorPorAtletaAcao(f: FormData): Promise<void> {
+  await alterar(f, (c) => {
+    const r = resumirFinanceiro(exigirFinanceiro(c), c.jogadores.length);
+    if (r.valorPorAtleta === null) throw new ErroRegra('Informe quantos atletas dividem a conta.');
+    c.valorInscricao = r.valorPorAtleta / 100;
+    return `Valor da inscrição atualizado para ${formatarReais(r.valorPorAtleta)}.`;
   });
 }

@@ -16,6 +16,7 @@ const ITENS = [
   { href: '/admin/partidas', rotulo: 'Partidas' },
   { href: '/admin/equipes', rotulo: 'Equipes' },
   { href: '/admin/pagamentos', rotulo: 'Pagamentos' },
+  { href: '/admin/financeiro', rotulo: 'Financeiro' },
   { href: '/sorteio', rotulo: 'Sorteio' },
   { href: '/admin/admins', rotulo: 'Admins' },
 ];

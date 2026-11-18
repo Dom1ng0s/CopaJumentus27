@@ -18,6 +18,7 @@ import {
 } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 import type { Programacao } from '../domain/campeonato/programacao';
+import type { Financeiro } from '../domain/campeonato/financeiro';
 import type { Historico, Premio } from '../domain/campeonato/tipos';
 
 /** Um campeonato (edição) por linha. Vários por instalação (CLAUDE.md §8.6). */
@@ -49,6 +50,8 @@ export const campeonato = pgTable(
     programacao: jsonb('programacao').$type<Programacao>(),
     /** Premiação individual (lib/domain/campeonato/tipos.ts, Premio). */
     premios: jsonb('premios').$type<Premio[]>(),
+    /** Financeiro da edição: gastos, patrocínios, entradas (lib/domain/campeonato/financeiro.ts). */
+    financeiro: jsonb('financeiro').$type<Financeiro>(),
     /** Pódio e rankings lançados à mão de edição antiga (Historico). */
     historico: jsonb('historico').$type<Historico>(),
     atualizadoEm: timestamp('atualizado_em', { withTimezone: true }).notNull().defaultNow(),
