@@ -174,6 +174,11 @@ export function PaginaInicio({ c, base, edicoes, patrocinadores }: CampeonatoPub
             <Link href={`${base}/jogos`} className="btn-hud">
               Todos os jogos
             </Link>
+            {!base && (
+              <Link href="/regulamento" className="btn-hud">
+                Regulamento
+              </Link>
+            )}
           </div>
         )}
 

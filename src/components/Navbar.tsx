@@ -167,6 +167,9 @@ export function Rodape() {
       <div className="filete mb-4 w-full opacity-40" aria-hidden="true" />
       <div className="flex flex-wrap items-center justify-between gap-3 font-mono text-[13px] font-semibold uppercase tracking-[0.06em] text-text-3">
         <span>@c.r.jumentus</span>
+        <Link href="/regulamento" className="underline decoration-dotted underline-offset-4 hover:text-text-1">
+          Regulamento
+        </Link>
       </div>
     </footer>
   );

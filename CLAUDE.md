@@ -315,7 +315,7 @@ Nunca introduza visual corporativo/SaaS genérico, biblioteca de componentes com
 - **Estrelas nunca aparecem em página pública.** O pote foi para `/sorteio`, protegido.
 
 ### 8.5 Rotas
-- Públicas: `/`, `/classificacao`, `/jogos`, `/jogos/[id]`, `/rankings`, `/equipes` mostram o **campeonato atual**: o mais recente em andamento; senão em inscrições; senão o último encerrado. Rascunho nunca é público. Histórico: `/edicoes` e `/edicoes/[slug]/…` (as mesmas telas, componentes em `src/components/paginas/`). Mais `/resultado/[payload]`.
+- Públicas: `/`, `/classificacao`, `/jogos`, `/jogos/[id]`, `/rankings`, `/equipes`, `/regulamento` mostram o **campeonato atual**: o mais recente em andamento; senão em inscrições; senão o último encerrado. Rascunho nunca é público. Histórico: `/edicoes` e `/edicoes/[slug]/…` (as mesmas telas, componentes em `src/components/paginas/`). Mais `/resultado/[payload]`.
 - Admin: `/admin`, `/admin/campeonatos`, `/admin/inscricoes`, `/admin/campeonato`, `/admin/fases`, `/admin/partidas`, `/admin/partidas/[id]`, `/admin/equipes`, `/admin/pagamentos`, `/admin/financeiro`, `/admin/admins`, `/admin/conta`, `/sorteio`, `/cerimonia`. Login em `/admin/entrar`.
 
 ### 8.6 Modelo oficial "Copa Jumentus · 8 times · 34 jogos"
@@ -341,6 +341,11 @@ Pedido do operador em 18/11/2026. Domínio em `lib/domain/campeonato/financeiro.
 - **Resumo** (`resumirFinanceiro`): a cobrar dos atletas = gastos − patrocínio fechado (confirmado ou recebido) − outras entradas; valor por atleta arredonda para cima no centavo; "falta para a meta" usa a meta por atleta (padrão R$ 70). Caixa = inscrições pagas (Pagamentos) + patrocínio e entradas recebidos − gastos pagos. Um botão copia o valor por atleta para o valor da inscrição.
 - **Site:** o Início mostra "Patrocinadores" só com cotas fechadas, marcadas para o site e com nome (`patrocinadoresPublicos`), master em destaque; nunca valores. `campeonatoPublico()` tira o financeiro do campeonato antes de entregar às páginas públicas.
 - Duplicar não copia o financeiro.
+
+### 8.9 Regulamento e prévia do link
+Pedido do operador em 18/11/2026.
+- **`/regulamento`** (link no rodapé e no Início) é montado por `montarRegulamento(c)` (`lib/domain/campeonato/regulamento.ts`, puro e testado) a partir da configuração do campeonato atual: times, formato (modelo oficial ou fases do livre), tempos da programação, pontuação, ordem de desempate, mata-mata e cartões. Não é texto solto: mudar a pontuação, os critérios ou os tempos no admin muda o regulamento. Regra nova que não esteja no sistema entra aqui só por decisão do operador.
+- **Prévia no WhatsApp/redes:** `app/opengraph-image.jpg` (1200×630, banner do celular com o brasão na faixa de baixo) e Open Graph no `layout.tsx`, com `metadataBase` no domínio de produção.
 
 ---
 
