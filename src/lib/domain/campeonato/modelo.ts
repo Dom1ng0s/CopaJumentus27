@@ -36,12 +36,21 @@ function chaveMataMata(faseGrupo: string): Array<[number, string, Origem, Origem
   return [
     [29, 'Repescagem 1', pos(3), pos(6)],
     [30, 'Repescagem 2', pos(4), pos(5)],
-    [31, 'Semifinal 1', pos(1), { tipo: 'vencedor', partidaNumero: 30 }],
-    [32, 'Semifinal 2', pos(2), { tipo: 'vencedor', partidaNumero: 29 }],
+    // Semifinal 1 recebe o vencedor da J29 (jogado antes) e a Semifinal 2 o da J30:
+    // os dois vencedores da repescagem descansam o mesmo tempo (comissão, 18/11/2026).
+    [31, 'Semifinal 1', pos(2), { tipo: 'vencedor', partidaNumero: 29 }],
+    [32, 'Semifinal 2', pos(1), { tipo: 'vencedor', partidaNumero: 30 }],
     [33, 'Disputa de 3º lugar', { tipo: 'perdedor', partidaNumero: 31 }, { tipo: 'perdedor', partidaNumero: 32 }],
     [34, 'Final', { tipo: 'vencedor', partidaNumero: 31 }, { tipo: 'vencedor', partidaNumero: 32 }],
   ];
 }
+
+/** Etapas do mata-mata do modelo, na ordem em que acontecem (usadas na programação e na chave). */
+export const ETAPAS_MATA_MATA: ReadonlyArray<{ titulo: string; jogos: readonly number[] }> = [
+  { titulo: 'Repescagem', jogos: [29, 30] },
+  { titulo: 'Semifinais', jogos: [31, 32] },
+  { titulo: 'Finais', jogos: [33, 34] },
+];
 
 export const TOTAL_EQUIPES_MODELO = 8;
 /** O modelo acontece em 2 dias (rodadas 1–4 no dia 1; 5–7 e mata-mata no dia 2). */

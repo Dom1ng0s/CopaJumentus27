@@ -119,7 +119,7 @@ describe('modelo Copa Jumentus · 8 times · 34 jogos', () => {
     const c = aplicarChaveamento(campeonato());
     expect(c.partidas.every((p) => !p.mandanteId && !p.visitanteId)).toBe(true);
     expect(descreverOrigem(jogo(c, 29).origemMandante!, c)).toBe('3º do Grupo Único');
-    expect(descreverOrigem(jogo(c, 31).origemVisitante!, c)).toBe('Vencedor J30');
+    expect(descreverOrigem(jogo(c, 31).origemVisitante!, c)).toBe('Vencedor J29');
     expect(descreverOrigem(jogo(c, 1).origemMandante!, c)).toBe('T1');
   });
 
@@ -143,21 +143,23 @@ describe('modelo Copa Jumentus · 8 times · 34 jogos', () => {
     expect(classificacaoDoGrupo(c).map((l) => [l.posicao, l.equipeId])).toEqual(IDS.map((id, i) => [i + 1, id]));
     expect([jogo(c, 29).mandanteId, jogo(c, 29).visitanteId]).toEqual(['c', 'f']);
     expect([jogo(c, 30).mandanteId, jogo(c, 30).visitanteId]).toEqual(['d', 'e']);
-    expect(jogo(c, 31).mandanteId).toBe('a');
+    // Semifinal 1: 2º x vencedor J29; Semifinal 2: 1º x vencedor J30 (comissão, 18/11/2026).
+    expect(jogo(c, 31).mandanteId).toBe('b');
     expect(jogo(c, 31).visitanteId).toBeUndefined();
+    expect(jogo(c, 32).mandanteId).toBe('a');
 
     jogar(c, 29, 0, 2); // f elimina c
     jogar(c, 30, 1, 1, [3, 4]); // empate, e vence nos pênaltis
-    expect([jogo(c, 31).mandanteId, jogo(c, 31).visitanteId]).toEqual(['a', 'e']);
-    expect([jogo(c, 32).mandanteId, jogo(c, 32).visitanteId]).toEqual(['b', 'f']);
+    expect([jogo(c, 31).mandanteId, jogo(c, 31).visitanteId]).toEqual(['b', 'f']);
+    expect([jogo(c, 32).mandanteId, jogo(c, 32).visitanteId]).toEqual(['a', 'e']);
     jogar(c, 31, 2, 0);
     jogar(c, 32, 0, 0, [5, 4]);
-    expect([jogo(c, 33).mandanteId, jogo(c, 33).visitanteId]).toEqual(['e', 'f']);
-    expect([jogo(c, 34).mandanteId, jogo(c, 34).visitanteId]).toEqual(['a', 'b']);
+    expect([jogo(c, 33).mandanteId, jogo(c, 33).visitanteId]).toEqual(['f', 'e']);
+    expect([jogo(c, 34).mandanteId, jogo(c, 34).visitanteId]).toEqual(['b', 'a']);
     expect(podio(c)).toBeNull();
     jogar(c, 33, 1, 0);
     jogar(c, 34, 1, 2);
-    expect(podio(c)).toEqual({ primeiro: 'b', segundo: 'a', terceiro: 'e' });
+    expect(podio(c)).toEqual({ primeiro: 'a', segundo: 'b', terceiro: 'f' });
     expect(problemaDeConsistencia(c)).toBeNull();
   });
 
@@ -179,7 +181,7 @@ describe('modelo Copa Jumentus · 8 times · 34 jogos', () => {
     expect(problemaDeConsistencia(c)).toMatch(/pênaltis/);
     jogar(c, 29, 1, 1, [2, 3]);
     expect(problemaDeConsistencia(c)).toBeNull();
-    expect(jogo(c, 32).visitanteId).toBe('f');
+    expect(jogo(c, 31).visitanteId).toBe('f');
   });
 
   it('partida sem os dois participantes não pode começar', () => {

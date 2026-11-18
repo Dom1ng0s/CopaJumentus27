@@ -13,7 +13,7 @@ import { banco, type Banco } from '@/lib/db/cliente';
 import * as t from '@/lib/db/schema';
 import { aplicarChaveamento, problemaDeConsistencia, violacaoDaTrava } from '@/lib/domain/campeonato/chaveamento';
 import { aplicarModelo, DIAS_DO_MODELO } from '@/lib/domain/campeonato/modelo';
-import { aplicarProgramacao, problemaNaProgramacao, programacaoPadrao } from '@/lib/domain/campeonato/programacao';
+import { aplicarProgramacao, normalizarProgramacao, problemaNaProgramacao, programacaoPadrao } from '@/lib/domain/campeonato/programacao';
 import {
   CRITERIOS_PADRAO,
   type Campeonato,
@@ -155,7 +155,8 @@ async function ler(db: Leitor, id: number): Promise<Campeonato | null> {
     criterios: criteriosCompletos(cfg.criterios),
     valorInscricao: Number(cfg.valorInscricao),
     sorteioOficializadoEm: cfg.sorteioOficializadoEm?.toISOString(),
-    programacao: cfg.programacao ?? undefined,
+    // Programações antigas (uma duração para todos os jogos) são convertidas na leitura.
+    programacao: normalizarProgramacao(cfg.programacao),
     premios: cfg.premios ?? undefined,
     historico: cfg.historico ?? undefined,
     equipes: equipes.map((e) => ({
@@ -484,12 +485,12 @@ export interface DadosNovoCampeonato {
 }
 
 /**
- * Programação sugerida para o modelo (08:00, jogos de 30 min, 5 min entre eles).
+ * Programação sugerida para o modelo (grade da comissão: 16:00, grupos 2 × 8, mata-mata 2 × 10).
  * Com o período do campeonato preenchido, os 34 jogos já nascem com horário; o admin ajusta em Partidas.
  */
 function programarModelo(c: Campeonato): void {
   c.programacao ??= programacaoPadrao(c.inicio, c.fim, DIAS_DO_MODELO);
-  if (!problemaNaProgramacao(c.programacao, DIAS_DO_MODELO)) aplicarProgramacao(c.partidas, c.programacao);
+  if (!problemaNaProgramacao(c.programacao, DIAS_DO_MODELO)) aplicarProgramacao(c.partidas, c.fases, c.programacao);
 }
 
 /** Novo campeonato com as 8 equipes do manual; no modelo oficial, já com os 34 jogos. */

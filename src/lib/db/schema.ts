@@ -45,7 +45,7 @@ export const campeonato = pgTable(
     criterios: jsonb('criterios').$type<string[]>().notNull(),
     valorInscricao: numeric('valor_inscricao', { precision: 10, scale: 2 }).notNull().default('0'),
     sorteioOficializadoEm: timestamp('sorteio_oficializado_em', { withTimezone: true }),
-    /** Início de cada dia, duração e intervalo dos jogos (lib/domain/campeonato/programacao.ts). */
+    /** Início de cada dia, tempos e intervalos (lib/domain/campeonato/programacao.ts). Formato antigo convertido na leitura. */
     programacao: jsonb('programacao').$type<Programacao>(),
     /** Premiação individual (lib/domain/campeonato/tipos.ts, Premio). */
     premios: jsonb('premios').$type<Premio[]>(),

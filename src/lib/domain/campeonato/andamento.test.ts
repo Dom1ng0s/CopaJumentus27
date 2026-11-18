@@ -71,7 +71,7 @@ describe('projeção do mata-mata ("se acabasse agora")', () => {
     // J1 é T1 x T8 (a x h): a vence e lidera; h é o último.
     jogar(c, 1, 3, 0);
     const proj = projecaoMataMata(c);
-    expect(proj.get(jogo(c, 31).id)).toEqual({ mandanteId: 'a', visitanteId: undefined }); // 1º x Vencedor J30
+    expect(proj.get(jogo(c, 32).id)).toEqual({ mandanteId: 'a', visitanteId: undefined }); // Semifinal 2: 1º x Vencedor J30
     expect(proj.has(jogo(c, 33).id)).toBe(false); // perdedores: sem projeção
     const j29 = proj.get(jogo(c, 29).id)!;
     expect(j29.mandanteId).toBeDefined();
