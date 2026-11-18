@@ -20,9 +20,21 @@ const bigShoulders = localFont({
 const barlowCondensed = Barlow_Condensed({ subsets: ['latin'], weight: ['500', '600', '700'], variable: '--font-barlow-condensed' });
 const barlow = Barlow({ subsets: ['latin'], weight: ['400', '500', '600', '700'], variable: '--font-barlow' });
 
+const DESCRICAO = 'Tabela, jogos, rankings e elencos da Copa Jumentus, o campeonato do @c.r.jumentus.';
+
+// Prévia do link no WhatsApp e redes: a imagem vem de app/opengraph-image.jpg (1200×630).
 export const metadata: Metadata = {
+  metadataBase: new URL('https://copa-jumentus.vercel.app'),
   title: `${NOME_COMPETICAO} — ${SUBTITULO_COMPETICAO}`,
-  description: 'Sorteio balanceado dos elencos da Copa Jumentus.',
+  description: DESCRICAO,
+  openGraph: {
+    type: 'website',
+    locale: 'pt_BR',
+    siteName: NOME_COMPETICAO,
+    title: `${NOME_COMPETICAO} — ${SUBTITULO_COMPETICAO}`,
+    description: DESCRICAO,
+  },
+  twitter: { card: 'summary_large_image' },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
