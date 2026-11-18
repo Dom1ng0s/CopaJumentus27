@@ -707,18 +707,22 @@ export async function aplicarModeloAcao(f: FormData): Promise<void> {
 }
 
 /** Sorteio de T1 a T8 (random.ts), depois de oficializar os elencos. */
-/** Programação do modelo: início de cada dia, duração e intervalo; grava e gera os horários. */
+/** Programação do modelo: início de cada dia, tempos e intervalos; grava e gera os horários. */
 export async function programarJogosAcao(f: FormData): Promise<void> {
   await alterar(f, (c) => {
     const programacao: Programacao = {
       dias: Array.from({ length: DIAS_DO_MODELO }, (_, i) => ({ data: texto(f, `data${i + 1}`), inicio: texto(f, `inicio${i + 1}`) })),
-      duracaoMin: inteiro(f, 'duracaoMin', -1),
-      intervaloMin: inteiro(f, 'intervaloMin', -1),
+      tempoGrupoMin: inteiro(f, 'tempoGrupoMin', -1),
+      tempoMataMataMin: inteiro(f, 'tempoMataMataMin', -1),
+      intervaloTemposMin: inteiro(f, 'intervaloTemposMin', -1),
+      intervaloGrupoMin: inteiro(f, 'intervaloGrupoMin', -1),
+      intervaloMataMataMin: inteiro(f, 'intervaloMataMataMin', -1),
+      intervaloFasesMin: inteiro(f, 'intervaloFasesMin', -1),
     };
     const problema = problemaNaProgramacao(programacao, DIAS_DO_MODELO);
     if (problema) throw new ErroRegra(problema);
     const fixos = c.partidas.filter((p) => p.dia !== undefined && p.status !== 'agendada' && p.dataHora).length;
-    noDominio(() => aplicarProgramacao(c.partidas, programacao));
+    noDominio(() => aplicarProgramacao(c.partidas, c.fases, programacao));
     c.programacao = programacao;
     return fixos
       ? `Horários gerados. ${fixos} jogo${fixos > 1 ? 's' : ''} já começado${fixos > 1 ? 's mantiveram' : ' manteve'} o horário.`

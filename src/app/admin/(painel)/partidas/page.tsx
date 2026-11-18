@@ -18,7 +18,7 @@ export default async function Partidas({ searchParams }: { searchParams: Promise
   const tabela = [...c.equipes].filter((e) => e.numeroTabela !== undefined).sort((a, b) => a.numeroTabela! - b.numeroTabela!);
   const algumaComecou = c.partidas.some(partidaTravada);
   const programacao = c.programacao ?? programacaoPadrao(c.inicio, c.fim, DIAS_DO_MODELO);
-  const resumo = problemaNaProgramacao(programacao, DIAS_DO_MODELO) ? [] : resumirProgramacao(c.partidas, programacao);
+  const resumo = problemaNaProgramacao(programacao, DIAS_DO_MODELO) ? [] : resumirProgramacao(c.partidas, c.fases, programacao);
 
   const opcoesEquipes = c.equipes.map((e) => (
     <option key={e.id} value={e.id}>
@@ -35,7 +35,8 @@ export default async function Partidas({ searchParams }: { searchParams: Promise
       {modelo && (
         <Secao titulo="Programação dos jogos">
           <p className="mb-4 text-sm text-text-2">
-            Um campo, um jogo por vez: cada jogo começa depois do anterior, somando a duração e o intervalo. Jogos que já começaram mantêm o horário.
+            Um campo, um jogo por vez: cada jogo começa quando o anterior termina, mais o intervalo. O jogo tem 2 tempos e o intervalo entre eles; o mata-mata
+            tem tempos próprios e um intervalo maior ao trocar de etapa (grupos → repescagem → semifinais → finais). Jogos que já começaram mantêm o horário.
             Para um atraso no meio do dia, remarque o jogo e marque &ldquo;empurrar os seguintes&rdquo;.
           </p>
           <form action={programarJogosAcao} className="grid grid-cols-2 gap-3 lg:grid-cols-4">
@@ -53,14 +54,30 @@ export default async function Partidas({ searchParams }: { searchParams: Promise
               </fieldset>
             ))}
             <label>
-              <span className="rotulo-campo">Duração do jogo (min)</span>
-              <input name="duracaoMin" type="number" inputMode="numeric" min={5} max={180} defaultValue={programacao.duracaoMin} required className="campo" />
+              <span className="rotulo-campo">Grupos · minutos por tempo (min)</span>
+              <input name="tempoGrupoMin" type="number" inputMode="numeric" min={1} max={90} defaultValue={programacao.tempoGrupoMin} required className="campo" />
             </label>
             <label>
-              <span className="rotulo-campo">Intervalo entre jogos (min)</span>
-              <input name="intervaloMin" type="number" inputMode="numeric" min={0} max={120} defaultValue={programacao.intervaloMin} required className="campo" />
+              <span className="rotulo-campo">Mata-mata · minutos por tempo (min)</span>
+              <input name="tempoMataMataMin" type="number" inputMode="numeric" min={1} max={90} defaultValue={programacao.tempoMataMataMin} required className="campo" />
             </label>
-            <div className="col-span-2 flex items-end">
+            <label>
+              <span className="rotulo-campo">Intervalo entre os tempos (min)</span>
+              <input name="intervaloTemposMin" type="number" inputMode="numeric" min={0} max={30} defaultValue={programacao.intervaloTemposMin} required className="campo" />
+            </label>
+            <label>
+              <span className="rotulo-campo">Entre jogos dos grupos (min)</span>
+              <input name="intervaloGrupoMin" type="number" inputMode="numeric" min={0} max={120} defaultValue={programacao.intervaloGrupoMin} required className="campo" />
+            </label>
+            <label>
+              <span className="rotulo-campo">Entre jogos do mata-mata (min)</span>
+              <input name="intervaloMataMataMin" type="number" inputMode="numeric" min={0} max={120} defaultValue={programacao.intervaloMataMataMin} required className="campo" />
+            </label>
+            <label>
+              <span className="rotulo-campo">Entre etapas do mata-mata (min)</span>
+              <input name="intervaloFasesMin" type="number" inputMode="numeric" min={0} max={120} defaultValue={programacao.intervaloFasesMin} required className="campo" />
+            </label>
+            <div className="col-span-2 flex items-end lg:col-span-2">
               <button type="submit" className="btn-cta">
                 <span>Salvar e gerar horários</span>
               </button>

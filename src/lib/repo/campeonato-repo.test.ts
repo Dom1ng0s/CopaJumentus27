@@ -125,7 +125,7 @@ describe('vários campeonatos', () => {
     const c = await carregarCampeonato(id, db);
     expect(c).toMatchObject({ slug: 'copa-jumentus-2028', status: 'rascunho', modelo: 'copa-jumentus-8' });
     expect(c.partidas).toHaveLength(34);
-    expect(c.partidas[30].origemVisitante).toEqual({ tipo: 'vencedor', partidaNumero: 30 });
+    expect(c.partidas[30].origemVisitante).toEqual({ tipo: 'vencedor', partidaNumero: 29 });
     expect(c.fases[0].zonas).toHaveLength(3);
     // Nenhum participante antes do sorteio de T1–T8; nada gravado em mandante_id.
     expect(c.partidas.every((p) => !p.mandanteId)).toBe(true);
@@ -135,16 +135,14 @@ describe('vários campeonatos', () => {
     await primeiro();
     const id = await criarCampeonato({ nome: 'Copa', edicao: '2029', modelo: 'copa-jumentus-8', inicio: '2029-01-13', fim: '2029-01-14' }, db);
     const c = await carregarCampeonato(id, db);
-    expect(c.programacao).toEqual({
-      dias: [
-        { data: '2029-01-13', inicio: '08:00' },
-        { data: '2029-01-14', inicio: '08:00' },
-      ],
-      duracaoMin: 30,
-      intervaloMin: 5,
-    });
-    expect(c.partidas.find((p) => p.numero === 1)?.dataHora).toBe('2029-01-13T08:00');
-    expect(c.partidas.find((p) => p.numero === 17)?.dataHora).toBe('2029-01-14T08:00');
+    expect(c.programacao?.dias).toEqual([
+      { data: '2029-01-13', inicio: '16:00' },
+      { data: '2029-01-14', inicio: '16:00' },
+    ]);
+    expect(c.programacao?.tempoGrupoMin).toBe(8);
+    expect(c.partidas.find((p) => p.numero === 1)?.dataHora).toBe('2029-01-13T16:00');
+    expect(c.partidas.find((p) => p.numero === 17)?.dataHora).toBe('2029-01-14T16:00');
+    expect(c.partidas.find((p) => p.numero === 34)?.dataHora).toBe('2029-01-14T22:38');
     expect(c.partidas.every((p) => p.dataHora)).toBe(true);
 
     // Sem período, a programação fica sugerida e os jogos sem hora até o admin informar as datas.

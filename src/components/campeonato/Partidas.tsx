@@ -165,7 +165,7 @@ export function LinhaPartida({
 
 /** Etapas da chave do modelo oficial, pelos números dos jogos (CLAUDE.md §8.6). */
 const ETAPAS: Array<{ titulo: string; jogos: number[]; destino?: Record<number, string> }> = [
-  { titulo: 'Repescagem', jogos: [29, 30], destino: { 29: 'Vencedor → Semifinal 2', 30: 'Vencedor → Semifinal 1' } },
+  { titulo: 'Repescagem', jogos: [29, 30], destino: { 29: 'Vencedor → Semifinal 1', 30: 'Vencedor → Semifinal 2' } },
   { titulo: 'Semifinais', jogos: [31, 32], destino: { 31: 'Vencedor → Final · perdedor → 3º lugar', 32: 'Vencedor → Final · perdedor → 3º lugar' } },
   { titulo: 'Finais', jogos: [34, 33] },
 ];
