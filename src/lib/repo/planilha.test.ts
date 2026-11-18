@@ -2,20 +2,20 @@ import { describe, expect, it } from 'vitest';
 import { sortear } from '@/lib/domain/sorteio';
 import { interpretarPlanilha, lerCsv, ORDEM_TIMES } from './planilha';
 
-const CAB = 'ID,Nome,Apelido,Posição,Estrelas,Capitão do time,Status,Ref';
+const CAB = 'ID,Nome,Apelido,Posição,Estrelas,Status,Ref';
 
-function linha(nome: string, pos: string, est: string, cap = '', status = 'Confirmado'): string {
-  return `,${nome},,${pos},${est},${cap},${status},`;
+function linha(nome: string, pos: string, est: string, status = 'Confirmado'): string {
+  return `,${nome},,${pos},${est},${status},`;
 }
 
 function cadastroCompleto(): string {
   const linhas = [CAB];
   ORDEM_TIMES.forEach((t, i) => {
-    linhas.push(linha(`Capitao ${i}`, 'MEI', String((i % 6) + 1), t));
+    linhas.push(linha(`Veterano ${i} ${t}`, 'MEI', String((i % 6) + 1)));
     linhas.push(linha(`Goleiro ${i}`, 'GOL', ''));
     for (let k = 0; k < 6; k++) linhas.push(linha(`Jogador ${i}-${k}`, 'ATA', String(((i + k) % 6) + 1)));
   });
-  linhas.push(linha('Reserva', 'ZAG', '3', '', 'Lista de espera'));
+  linhas.push(linha('Reserva', 'ZAG', '3', 'Lista de espera'));
   return linhas.join('\r\n');
 }
 
@@ -35,13 +35,13 @@ describe('interpretarPlanilha', () => {
     expect(r.jogadores).toHaveLength(64);
     expect(r.ignorados).toBe(1);
     expect(r.times.map((t) => t.nome)).toEqual([...ORDEM_TIMES]);
-    expect(r.jogadores.filter((j) => j.ehCapitao)).toHaveLength(8);
+    expect(r.times.every((t) => !('capitaoId' in t))).toBe(true);
   });
 
   it('o resultado alimenta o sorteio sem erro', () => {
     const r = interpretarPlanilha(cadastroCompleto());
     const s = sortear({ jogadores: r.jogadores, times: r.times });
-    expect(s.sorteio.linha).toHaveLength(48);
+    expect(s.sorteio.linha).toHaveLength(56);
     expect(s.sorteio.goleiros).toHaveLength(8);
   });
 
@@ -52,20 +52,25 @@ describe('interpretarPlanilha', () => {
     expect(r.problemas.some((p) => p.startsWith('Linha (linha 3): estrelas vazias'))).toBe(true);
   });
 
-  it('acusa posicao vazia, capitao duplicado, time sem capitao e nome repetido', () => {
-    const csv = [
-      CAB,
-      linha('Ana', '', '3'),
-      linha('Bia', 'MEI', '4', 'LAFC'),
-      linha('Caio', 'ATA', '4', 'LA FC'),
-      linha('bia', 'ZAG', '2'),
-    ].join('\n');
+  it('acusa posicao vazia e nome repetido; nao cobra capitao', () => {
+    const csv = [CAB, linha('Ana', '', '3'), linha('Bia', 'MEI', '4'), linha('Caio', 'ATA', '4'), linha('bia', 'ZAG', '2')].join('\n');
     const r = interpretarPlanilha(csv);
     expect(r.problemas).toContain('Ana (linha 2): posição vazia.');
-    expect(r.problemas).toContain('LAFC: 2 capitães marcados (deve ser 1).');
-    expect(r.problemas).toContain('Inter Miami: sem capitão.');
     expect(r.problemas).toContain('Nome repetido: bia (linhas 3 e 5).');
-    expect(r.times).toHaveLength(0);
+    expect(r.problemas.some((p) => /capit/i.test(p))).toBe(false);
+    expect(r.times).toHaveLength(8);
+  });
+
+  it('os times sao as equipes informadas, na ordem dada', () => {
+    const r = interpretarPlanilha([CAB, linha('Ana', 'MEI', '3')].join('\n'), ['Roma', 'Milan', 'Roma']);
+    expect(r.times.map((t) => t.nome)).toEqual(['Roma', 'Milan']);
+  });
+
+  it('ignora uma coluna antiga de capitao no CSV', () => {
+    const csv = ['Nome,Apelido,Posição,Estrelas,Capitão do time,Status', 'Ana,,MEI,3,LAFC,Confirmado'].join('\n');
+    const r = interpretarPlanilha(csv);
+    expect(r.problemas).toEqual([]);
+    expect(r.jogadores).toHaveLength(1);
   });
 
   it('acusa cabecalho incompleto', () => {

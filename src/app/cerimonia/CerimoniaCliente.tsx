@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { oficializarSorteio } from '@/app/admin/acoes';
-import { EscudoPorNome, IconeLuva, SeloCapitao } from '@/components/campeonato/ui';
+import { EscudoPorNome, IconeLuva } from '@/components/campeonato/ui';
 import { HudCard } from '@/components/HudCard';
 import { PalmBackdrop } from '@/components/PalmBackdrop';
 import { WordmarkCopaJumentus, WordmarkViceCity } from '@/components/Wordmark';
@@ -312,7 +312,6 @@ export function CerimoniaCliente({ jogadores, times, problemas = [] }: Props) {
     const r = await oficializarSorteio(
       elencos.map((e) => ({
         time: e.time.nome,
-        capitao: { nome: nome(e.capitao), posicao: e.capitao.posicao },
         goleiro: e.goleiro ? { nome: nome(e.goleiro) } : null,
         linha: e.linha.map((j) => ({ nome: nome(j), posicao: j.posicao })),
       })),
@@ -681,8 +680,8 @@ export function CerimoniaCliente({ jogadores, times, problemas = [] }: Props) {
 
                   {oficial.estado === 'ok' && (
                     <Aviso cor="var(--success)" titulo="Elencos oficializados">
-                      As equipes do campeonato já estão com estes jogadores. Ajuste números e
-                      capitães em Admin › Equipes.
+                      As equipes do campeonato já estão com estes jogadores. Quando cada time
+                      escolher o capitão, registre em Admin › Equipes.
                     </Aviso>
                   )}
                   {oficial.estado === 'erro' && (
@@ -776,12 +775,6 @@ export function CerimoniaCliente({ jogadores, times, problemas = [] }: Props) {
                     </div>
 
                     <ul className="mt-2 space-y-1.5 px-3.5">
-                      <LinhaElenco
-                        nome={e.capitao.apelido ?? e.capitao.nome}
-                        posicao="CAP"
-                        cor="var(--accent)"
-                        ehCapitao
-                      />
                       {e.goleiro ? (
                         <LinhaElenco
                           nome={e.goleiro.apelido ?? e.goleiro.nome}
@@ -870,14 +863,12 @@ function LinhaElenco({
   nome,
   posicao,
   cor,
-  ehCapitao = false,
   ehGoleiro = false,
   selecionado = false,
 }: {
   nome: string;
   posicao: string;
   cor?: string;
-  ehCapitao?: boolean;
   ehGoleiro?: boolean;
   selecionado?: boolean;
 }) {
@@ -895,7 +886,6 @@ function LinhaElenco({
           {posicao}
         </span>
         <span className="truncate text-[13px] font-medium">{nome}</span>
-        {ehCapitao && <SeloCapitao tamanho={18} />}
         {ehGoleiro && <IconeLuva tamanho={14} cor="var(--accent-armor)" />}
       </span>
     </li>

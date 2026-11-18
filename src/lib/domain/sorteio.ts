@@ -183,9 +183,6 @@ export function montarElencos(
   const goleirosVisiveis = sorteio.goleiros.slice(0, reveladasGoleiros);
 
   return times.map((time) => {
-    const capitao = porId.get(time.capitaoId);
-    if (!capitao) throw new Error(`Time ${time.nome} sem capitao valido`);
-
     const linha = linhaVisivel
       .filter((a) => a.timeId === time.id)
       .map((a) => porId.get(a.jogadorId))
@@ -196,10 +193,9 @@ export function montarElencos(
 
     return {
       time,
-      capitao,
       goleiro,
       linha,
-      somaEstrelas: capitao.estrelas + linha.reduce((s, j) => s + j.estrelas, 0),
+      somaEstrelas: linha.reduce((s, j) => s + j.estrelas, 0),
     };
   });
 }

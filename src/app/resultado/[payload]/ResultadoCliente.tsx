@@ -27,7 +27,7 @@ export function ResultadoCliente({ dados }: Props) {
       if (timeFiltro && nomeTime !== timeFiltro) return false;
       if (!termo) return true;
       if (nomeTime.toLowerCase().includes(termo)) return true;
-      if (capitao[0].toLowerCase().includes(termo)) return true;
+      if (capitao !== 0 && capitao[0].toLowerCase().includes(termo)) return true;
       if (goleiro !== 0 && goleiro[0].toLowerCase().includes(termo)) return true;
       return linha.some(([nome, , pos]) => {
         return nome.toLowerCase().includes(termo) || pos.toLowerCase().includes(termo);
@@ -147,7 +147,7 @@ export function ResultadoCliente({ dados }: Props) {
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           {timesFiltrados.map(([nomeTime, capitao, goleiro, linha], i) => {
             const marca = marcaPorNome(nomeTime);
-            const capBate = Boolean(termo && capitao[0].toLowerCase().includes(termo));
+            const capBate = Boolean(termo && capitao !== 0 && capitao[0].toLowerCase().includes(termo));
             const golBate = Boolean(
               termo && goleiro !== 0 && goleiro[0].toLowerCase().includes(termo),
             );
@@ -199,14 +199,16 @@ export function ResultadoCliente({ dados }: Props) {
                     </li>
                   )}
 
-                  {/* Capitao com filete dourado na base e selo C */}
-                  <Item
-                    nome={capitao[0]}
-                    rotulo="CAP"
-                    cor="var(--accent)"
-                    ehCapitao
-                    destacado={capBate}
-                  />
+                  {/* Capitão só em links antigos: desde 18/11/2026 o time escolhe depois. */}
+                  {capitao !== 0 && (
+                    <Item
+                      nome={capitao[0]}
+                      rotulo="CAP"
+                      cor="var(--accent)"
+                      ehCapitao
+                      destacado={capBate}
+                    />
+                  )}
 
                   {/* Jogadores de linha */}
                   {linha.map(([nome, , pos], k) => {

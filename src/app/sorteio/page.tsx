@@ -20,9 +20,6 @@ export default async function PaginaPote() {
   );
   const pote = poteDeLinha(jogadores);
   const goleiros = poteDeGoleiros(jogadores);
-  const capitaoPorId = new Map(
-    jogadores.filter((j) => j.ehCapitao).map((j) => [j.id, j]),
-  );
 
   return (
     <>
@@ -70,8 +67,8 @@ export default async function PaginaPote() {
           <p className="hud-label mb-5">Edição 2027 · Comissão organizadora</p>
 
           <p className="mx-auto max-w-xl text-sm leading-relaxed text-text-2 sm:text-base">
-            Sorteio balanceado por nível. Oito capitães, um pote de {pote.length} jogadores de
-            linha e {goleiros.length} goleiros. Na cerimônia saem primeiro os goleiros e depois a
+            Sorteio balanceado por nível. {times.length} times começando do zero, um pote de{' '}
+            {pote.length} jogadores de linha e {goleiros.length} goleiros. Na cerimônia saem primeiro os goleiros e depois a
             linha, um por um, em ordem aleatória, sem mostrar estrelas.
           </p>
 
@@ -119,16 +116,15 @@ export default async function PaginaPote() {
       <section className="relative px-4 py-10">
         <div className="mx-auto max-w-6xl">
           <CabecalhoSecao
-            titulo="Os oito times"
-            legenda="Capitães fixos — não entram no pote"
+            titulo={`Os ${times.length} times`}
+            legenda="Começam vazios. O capitão é escolhido pelo time depois do sorteio e registrado em Admin › Equipes."
           />
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {times.map((time, i) => {
-              const capitao = capitaoPorId.get(time.capitaoId);
               const marca = marcaPorNome(time.nome);
               return (
-                <HudCard key={time.id} clip className="modulo overflow-hidden pb-5">
+                <HudCard key={time.id} clip className="modulo overflow-hidden">
                   <div
                     className="malha-camisa flex items-center gap-3 px-4 py-3.5"
                     style={
@@ -157,19 +153,6 @@ export default async function PaginaPote() {
                     </div>
                   </div>
 
-                  {capitao && (
-                    <div className="px-4 pt-3">
-                      <div className="mb-1 flex items-center justify-between">
-                        <p className="hud-label text-[10px]">Capitão</p>
-                        <SeloCapitao tamanho={20} />
-                      </div>
-                      <p className="text-sm font-semibold">{capitao.apelido ?? capitao.nome}</p>
-                      <p className="mb-2 font-mono text-[11px] text-text-3">
-                        {capitao.nome} · {capitao.posicao}
-                      </p>
-                      <Estrelas nivel={capitao.estrelas} tamanho={13} />
-                    </div>
-                  )}
                 </HudCard>
               );
             })}

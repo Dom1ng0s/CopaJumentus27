@@ -10,8 +10,12 @@ interface PayloadResultado {
   d: string;
   /** amplitude de estrelas */
   a: number;
-  /** [nomeTime, [capitaoNome, estrelas], [goleiroNome, estrelas] | 0, [[nome, estrelas, posicao], ...]] */
-  t: Array<[string, [string, number], [string, number] | 0, Array<[string, number, string]>]>;
+  /**
+   * [nomeTime, capitão | 0, [goleiroNome, estrelas] | 0, [[nome, estrelas, posicao], ...]].
+   * Desde 18/11/2026 o sorteio não tem capitão (o time escolhe depois): links novos
+   * trazem 0 nessa posição; links antigos ainda trazem [nome, estrelas].
+   */
+  t: Array<[string, [string, number] | 0, [string, number] | 0, Array<[string, number, string]>]>;
 }
 
 export const LIMITE_URL = 2000;
@@ -23,7 +27,7 @@ export function codificarResultado(elencos: readonly ElencoDoTime[], amplitude: 
     a: amplitude,
     t: elencos.map((e) => [
       e.time.nome,
-      [e.capitao.apelido ?? e.capitao.nome, e.capitao.estrelas],
+      0,
       e.goleiro ? [e.goleiro.apelido ?? e.goleiro.nome, e.goleiro.estrelas] : 0,
       e.linha.map((j) => [j.apelido ?? j.nome, j.estrelas, j.posicao]),
     ]),
@@ -66,7 +70,7 @@ export function formatarPayloadWhatsApp(dados: PayloadResultado, url?: string): 
   const blocos = dados.t.map(([nomeTime, capitao, goleiro, linha]) => {
     const linhasJogadores = [
       `  • [GOL] ${goleiro !== 0 ? goleiro[0] : 'A definir'}`,
-      `  • [CAP] ${capitao[0]}`,
+      ...(capitao !== 0 ? [`  • [CAP] ${capitao[0]}`] : []),
       ...linha.map(([nome, , pos]) => `  • [${pos}] ${nome}`),
     ];
     return `*${nomeTime.toUpperCase()}*\n${linhasJogadores.join('\n')}`;

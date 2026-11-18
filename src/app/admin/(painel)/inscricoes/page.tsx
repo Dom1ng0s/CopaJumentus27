@@ -20,7 +20,6 @@ const FILTROS: ReadonlyArray<readonly [string, string]> = [
   ['', 'Todos'],
   ['confirmados', 'Confirmados'],
   ['espera', 'Lista de espera'],
-  ['capitaes', 'Capitães'],
   ['incompletos', 'Incompletos'],
   ['GOL', 'GOL'],
   ['ZAG', 'ZAG'],
@@ -46,13 +45,12 @@ export default async function Inscricoes({
   const cadastro = interpretarInscricoes(paraLinhas(inscricoes));
   const confirmados = inscricoes.filter((i) => i.status === 'confirmado');
   const goleiros = confirmados.filter((i) => i.posicao === 'GOL').length;
-  const capitaes = confirmados.filter((i) => i.capitaoDe).length;
+  const linha = confirmados.filter((i) => i.posicao && i.posicao !== 'GOL').length;
 
   const termo = q.trim().toLowerCase();
   const filtradas = inscricoes.filter((i) => {
     if (filtro === 'confirmados' && i.status !== 'confirmado') return false;
     if (filtro === 'espera' && i.status !== 'espera') return false;
-    if (filtro === 'capitaes' && !i.capitaoDe) return false;
     if (
       filtro === 'incompletos' &&
       !(i.status === 'confirmado' && (!i.posicao || (i.posicao !== 'GOL' && !i.estrelas)))
@@ -63,8 +61,7 @@ export default async function Inscricoes({
     if (!termo) return true;
     return (
       i.nome.toLowerCase().includes(termo) ||
-      (i.apelido && i.apelido.toLowerCase().includes(termo)) ||
-      (i.capitaoDe && i.capitaoDe.toLowerCase().includes(termo))
+      (i.apelido && i.apelido.toLowerCase().includes(termo))
     );
   });
 
@@ -86,7 +83,7 @@ export default async function Inscricoes({
         <Numero valor={confirmados.length} rotulo="Confirmados" />
         <Numero valor={inscricoes.length - confirmados.length} rotulo="Lista de espera" />
         <Numero valor={`${goleiros}/${MARCAS.length}`} rotulo="Goleiros" />
-        <Numero valor={`${capitaes}/${MARCAS.length}`} rotulo="Capitães" />
+        <Numero valor={linha} rotulo="Linha" />
       </div>
 
       {inscricoes.length > 0 && cadastro.problemas.length > 0 && (
@@ -101,7 +98,7 @@ export default async function Inscricoes({
       )}
 
       <Secao titulo="Nova inscrição">
-        <form action={criarInscricaoAcao} className="grid gap-2 sm:grid-cols-[1fr_1fr_6rem_8rem_1fr_9rem_auto]">
+        <form action={criarInscricaoAcao} className="grid gap-2 sm:grid-cols-[1fr_1fr_6rem_8rem_9rem_auto]">
           <Volta filtro={filtro} q={q} />
           <CamposInscricao />
           <button type="submit" className="btn-mini">
@@ -164,7 +161,7 @@ export default async function Inscricoes({
               <li key={i.id}>
                 <form
                   action={editarInscricaoAcao}
-                  className="grid grid-cols-2 gap-2 bg-[var(--surface1)] p-2 sm:grid-cols-[1fr_1fr_6rem_8rem_1fr_9rem_auto_auto]"
+                  className="grid grid-cols-2 gap-2 bg-[var(--surface1)] p-2 sm:grid-cols-[1fr_1fr_6rem_8rem_9rem_auto_auto]"
                   style={{ opacity: i.status === 'espera' ? 0.65 : 1 }}
                 >
                   <Volta filtro={filtro} q={q} />
@@ -203,7 +200,7 @@ export default async function Inscricoes({
 function CamposInscricao({
   valores,
 }: {
-  valores?: { nome: string; apelido: string | null; posicao: string | null; estrelas: number | null; capitaoDe: string | null; status: string };
+  valores?: { nome: string; apelido: string | null; posicao: string | null; estrelas: number | null; status: string };
 }) {
   return (
     <>
@@ -220,14 +217,6 @@ function CamposInscricao({
         {[6, 5, 4, 3, 2, 1].map((n) => (
           <option key={n} value={n}>
             {'★'.repeat(n)}
-          </option>
-        ))}
-      </select>
-      <select name="capitaoDe" defaultValue={valores?.capitaoDe ?? ''} aria-label="Capitão do time" className="campo">
-        <option value="">Não é capitão</option>
-        {MARCAS.map((m) => (
-          <option key={m.slug} value={m.nome}>
-            Capitão · {m.nome}
           </option>
         ))}
       </select>
