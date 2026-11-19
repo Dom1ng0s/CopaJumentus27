@@ -11,9 +11,10 @@ function linha(nome: string, pos: string, est: string, status = 'Confirmado'): s
 function cadastroCompleto(): string {
   const linhas = [CAB];
   ORDEM_TIMES.forEach((t, i) => {
-    linhas.push(linha(`Veterano ${i} ${t}`, 'MEI', String((i % 6) + 1)));
+    // Cotas fechadas (composição idêntica, 19/11/2026): por time 6, 5, 4, 3, 3, 2, 1.
+    linhas.push(linha(`Veterano ${i} ${t}`, 'MEI', '3'));
     linhas.push(linha(`Goleiro ${i}`, 'GOL', ''));
-    for (let k = 0; k < 6; k++) linhas.push(linha(`Jogador ${i}-${k}`, 'ATA', String(((i + k) % 6) + 1)));
+    for (let k = 0; k < 6; k++) linhas.push(linha(`Jogador ${i}-${k}`, 'ATA', String(6 - k)));
   });
   linhas.push(linha('Reserva', 'ZAG', '3', 'Lista de espera'));
   return linhas.join('\r\n');
@@ -41,6 +42,7 @@ describe('interpretarPlanilha', () => {
   it('o resultado alimenta o sorteio sem erro', () => {
     const r = interpretarPlanilha(cadastroCompleto());
     const s = sortear({ jogadores: r.jogadores, times: r.times });
+    if (!s.ok) throw new Error(s.pendencias.join(' '));
     expect(s.sorteio.linha).toHaveLength(56);
     expect(s.sorteio.goleiros).toHaveLength(8);
   });

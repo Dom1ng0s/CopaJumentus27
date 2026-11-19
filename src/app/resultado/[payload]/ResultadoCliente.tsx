@@ -28,9 +28,9 @@ export function ResultadoCliente({ dados }: Props) {
       if (timeFiltro && nomeTime !== timeFiltro) return false;
       if (!termo) return true;
       if (nomeTime.toLowerCase().includes(termo)) return true;
-      if (capitao !== 0 && capitao[0].toLowerCase().includes(termo)) return true;
-      if (goleiro !== 0 && goleiro[0].toLowerCase().includes(termo)) return true;
-      return linha.some(([nome, , pos]) => {
+      if (capitao !== 0 && capitao.toLowerCase().includes(termo)) return true;
+      if (goleiro !== 0 && goleiro.toLowerCase().includes(termo)) return true;
+      return linha.some(([nome, pos]) => {
         return nome.toLowerCase().includes(termo) || pos.toLowerCase().includes(termo);
       });
     });
@@ -148,9 +148,9 @@ export function ResultadoCliente({ dados }: Props) {
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           {timesFiltrados.map(([nomeTime, capitao, goleiro, linha], i) => {
             const marca = marcaPorNome(nomeTime);
-            const capBate = Boolean(termo && capitao !== 0 && capitao[0].toLowerCase().includes(termo));
+            const capBate = Boolean(termo && capitao !== 0 && capitao.toLowerCase().includes(termo));
             const golBate = Boolean(
-              termo && goleiro !== 0 && goleiro[0].toLowerCase().includes(termo),
+              termo && goleiro !== 0 && goleiro.toLowerCase().includes(termo),
             );
 
             return (
@@ -188,7 +188,7 @@ export function ResultadoCliente({ dados }: Props) {
                   {/* Linha 1: Goleiro sempre no topo (manual §7.3 — Elenco) */}
                   {goleiro !== 0 ? (
                     <Item
-                      nome={goleiro[0]}
+                      nome={goleiro}
                       rotulo="GOL"
                       cor="var(--accent-armor)"
                       ehGoleiro
@@ -203,7 +203,7 @@ export function ResultadoCliente({ dados }: Props) {
                   {/* Capitão só em links antigos: desde 18/11/2026 o time escolhe depois. */}
                   {capitao !== 0 && (
                     <Item
-                      nome={capitao[0]}
+                      nome={capitao}
                       rotulo="CAP"
                       cor="var(--accent)"
                       ehCapitao
@@ -212,7 +212,7 @@ export function ResultadoCliente({ dados }: Props) {
                   )}
 
                   {/* Jogadores de linha */}
-                  {linha.map(([nome, , pos], k) => {
+                  {linha.map(([nome, pos], k) => {
                     const bate = Boolean(
                       termo &&
                         (nome.toLowerCase().includes(termo) || pos.toLowerCase().includes(termo)),

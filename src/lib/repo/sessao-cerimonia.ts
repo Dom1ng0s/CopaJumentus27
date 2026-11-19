@@ -1,13 +1,13 @@
 // Persistencia local da sessao de cerimonia (CLAUDE.md §4.2).
 // Nenhum componente de UI acessa localStorage diretamente; tudo passa por este modulo.
 
-import type { ResultadoSorteio } from '@/lib/domain/sorteio';
+import type { ResultadoSorteioOk } from '@/lib/domain/sorteio';
 
 /** Goleiros primeiro, depois a linha (decisão do operador em 18/11/2026). */
 export type FaseCerimonia = 'pronto' | 'goleiros' | 'pre-linha' | 'linha' | 'fim';
 
 export interface SessaoCerimonia {
-  resultado: ResultadoSorteio;
+  resultado: ResultadoSorteioOk;
   reveladasLinha: number;
   reveladasGol: number;
   fase: FaseCerimonia;
@@ -16,7 +16,8 @@ export interface SessaoCerimonia {
   assinaturaCadastro: string;
 }
 
-const CHAVE_SESSAO = 'copa-jumentus:sessao-cerimonia:v2';
+// v3: sorteio com composição idêntica (19/11/2026); sessões antigas são descartadas.
+const CHAVE_SESSAO = 'copa-jumentus:sessao-cerimonia:v3';
 
 /** Gera uma assinatura simples do cadastro atual para invalidar sessao se o elenco mudar. */
 export function assinarCadastro(idsJogadores: readonly string[], idsTimes: readonly string[]): string {

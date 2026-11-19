@@ -13,15 +13,16 @@ interface LinhaSeed {
 }
 
 // Ex-capitaes fixos: desde 18/11/2026 entram no pote como qualquer jogador.
+// As cotas do exemplo fecham para 8 times (19/11/2026): 6★ 8, 5★ 8, 4★ 8, 3★ 16, 2★ 8, 1★ 8.
 const VETERANOS: LinhaSeed[] = [
   { nome: 'Rodrigo Albuquerque', apelido: 'Digão', posicao: 'LIN', estrelas: 6 },
   { nome: 'Marcelo Tavares', apelido: 'Celo', posicao: 'LIN', estrelas: 5 },
   { nome: 'Fernando Quirino', apelido: 'Nando', posicao: 'LIN', estrelas: 5 },
-  { nome: 'Thiago Bastos', apelido: 'Thiagão', posicao: 'LIN', estrelas: 4 },
-  { nome: 'Leandro Paiva', apelido: 'Léo', posicao: 'LIN', estrelas: 4 },
-  { nome: 'Gustavo Rangel', apelido: 'Guto', posicao: 'LIN', estrelas: 4 },
-  { nome: 'Vinícius Sampaio', apelido: 'Vina', posicao: 'LIN', estrelas: 3 },
-  { nome: 'Rafael Cordeiro', apelido: 'Rafa', posicao: 'LIN', estrelas: 3 },
+  { nome: 'Thiago Bastos', apelido: 'Thiagão', posicao: 'LIN', estrelas: 6 },
+  { nome: 'Leandro Paiva', apelido: 'Léo', posicao: 'LIN', estrelas: 6 },
+  { nome: 'Gustavo Rangel', apelido: 'Guto', posicao: 'LIN', estrelas: 6 },
+  { nome: 'Vinícius Sampaio', apelido: 'Vina', posicao: 'LIN', estrelas: 6 },
+  { nome: 'Rafael Cordeiro', apelido: 'Rafa', posicao: 'LIN', estrelas: 6 },
 ];
 
 const GOLEIROS: LinhaSeed[] = [
@@ -66,6 +67,12 @@ const LINHA: LinhaSeed[] = [
   { nome: 'Válter Nunes', apelido: 'Val', posicao: 'LIN', estrelas: 3 },
   { nome: 'Wesley Portela', apelido: 'Wes', posicao: 'LIN', estrelas: 3 },
   { nome: 'Yuri Chagas', apelido: 'Yuri', posicao: 'LIN', estrelas: 3 },
+  { nome: 'Zeca Moura', apelido: 'Zeca', posicao: 'LIN', estrelas: 3 },
+  { nome: 'Alan Freitas', apelido: 'Alanzinho', posicao: 'LIN', estrelas: 3 },
+  { nome: 'Bento Ribeiro', apelido: 'Bentinho', posicao: 'LIN', estrelas: 3 },
+  { nome: 'Cícero Lopes', apelido: 'Ciço', posicao: 'LIN', estrelas: 3 },
+  { nome: 'Danilo Prado', apelido: 'Dan', posicao: 'LIN', estrelas: 3 },
+  { nome: 'Edson Queiroz', apelido: 'Edinho', posicao: 'LIN', estrelas: 3 },
   // 2 estrelas
   { nome: 'Adilson Ramalho', apelido: 'Dilso', posicao: 'LIN', estrelas: 2 },
   { nome: 'Breno Falcão', apelido: 'Brenão', posicao: 'LIN', estrelas: 2 },
@@ -82,6 +89,8 @@ const LINHA: LinhaSeed[] = [
   { nome: 'Norberto Faria', apelido: 'Beto', posicao: 'LIN', estrelas: 1 },
   { nome: 'Plínio Gusmão', apelido: 'Pliu', posicao: 'LIN', estrelas: 1 },
   { nome: 'Quirino Salles', apelido: 'Qui', posicao: 'LIN', estrelas: 1 },
+  { nome: 'Rogério Teles', apelido: 'Rogerinho', posicao: 'LIN', estrelas: 1 },
+  { nome: 'Sandro Viana', apelido: 'Sandrinho', posicao: 'LIN', estrelas: 1 },
 ];
 
 /** Os 8 times da edicao, definidos pela comissao. */

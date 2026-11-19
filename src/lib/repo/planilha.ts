@@ -209,7 +209,8 @@ export function interpretarInscricoes(
       estrelasBrutas !== '' && Number.isInteger(numero) && numero >= ESTRELAS_MIN && numero <= ESTRELAS_MAX;
     if (!estrelasValidas) {
       problemas.push(
-        `${rotulo}: estrelas ${estrelasBrutas ? `"${estrelasBrutas}" fora de ${ESTRELAS_MIN}–${ESTRELAS_MAX}` : 'vazias'}.`,
+        // Sem repetir o valor: esta lista também aparece na tela de sorteio.
+        `${rotulo}: estrelas ${estrelasBrutas ? `fora de ${ESTRELAS_MIN}–${ESTRELAS_MAX}` : 'vazias'}.`,
       );
     }
 

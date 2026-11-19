@@ -9,7 +9,8 @@ import { PalmBackdrop } from '@/components/PalmBackdrop';
 import { WordmarkCopaJumentus, WordmarkViceCity } from '@/components/Wordmark';
 import { marcaPorNome } from '@/lib/campeonato/marcas';
 import { NOME_COMPETICAO, SUBTITULO_COMPETICAO } from '@/lib/config';
-import { montarElencos, sortear, type ResultadoSorteio } from '@/lib/domain/sorteio';
+import { AVISO_COTAS_SORTEIO } from '@/lib/domain/cotas';
+import { montarElencos, sortear, type ResultadoSorteioOk } from '@/lib/domain/sorteio';
 import { ehGoleiro, rotuloPosicao, type Jogador, type Time } from '@/lib/domain/tipos';
 import {
   assinarCadastro,
@@ -29,7 +30,9 @@ interface Props {
 
 export function CerimoniaCliente({ jogadores, times, problemas = [] }: Props) {
   const bloqueado = problemas.length > 0;
-  const [resultado, setResultado] = useState<ResultadoSorteio | null>(null);
+  const [resultado, setResultado] = useState<ResultadoSorteioOk | null>(null);
+  // Cotas de estrelas que não fecham: o domínio não sorteia. A tela não cita níveis.
+  const [cotasPendentes, setCotasPendentes] = useState(false);
   const [reveladasLinha, setReveladasLinha] = useState(0);
   const [reveladasGol, setReveladasGol] = useState(0);
   const [fase, setFase] = useState<FaseCerimonia>('pronto');
@@ -111,6 +114,11 @@ export function CerimoniaCliente({ jogadores, times, problemas = [] }: Props) {
   const iniciar = useCallback(() => {
     if (bloqueado) return;
     const r = sortear({ jogadores, times });
+    if (!r.ok) {
+      setCotasPendentes(true);
+      return;
+    }
+    setCotasPendentes(false);
     setResultado(r);
     setReveladasLinha(0);
     setReveladasGol(0);
@@ -292,7 +300,7 @@ export function CerimoniaCliente({ jogadores, times, problemas = [] }: Props) {
 
   const gerarLink = useCallback(() => {
     if (!resultado) return;
-    const payload = codificarResultado(elencos, resultado.sorteio.amplitudeEstrelas);
+    const payload = codificarResultado(elencos);
     const url = `${window.location.origin}/resultado/${payload}`;
     setLink(url);
     setCopiadoLink(false);
@@ -331,9 +339,9 @@ export function CerimoniaCliente({ jogadores, times, problemas = [] }: Props) {
 
   const copiarResumoWhatsApp = useCallback(async () => {
     if (!resultado) return;
-    const payload = codificarResultado(elencos, resultado.sorteio.amplitudeEstrelas);
+    const payload = codificarResultado(elencos);
     const url = link ?? `${window.location.origin}/resultado/${payload}`;
-    const texto = formatarElencosWhatsApp(elencos, resultado.sorteio.amplitudeEstrelas, url);
+    const texto = formatarElencosWhatsApp(elencos, url);
     try {
       await navigator.clipboard.writeText(texto);
       setCopiadoResumo(true);
@@ -430,6 +438,11 @@ export function CerimoniaCliente({ jogadores, times, problemas = [] }: Props) {
                     <button onClick={iniciar} className="btn-cta mt-8">
                       <span>Sortear agora</span>
                     </button>
+                    {cotasPendentes && (
+                      <p className="mx-auto mt-4 max-w-md text-sm" style={{ color: 'var(--warning-text)' }}>
+                        {AVISO_COTAS_SORTEIO}
+                      </p>
+                    )}
                     <p className="hud-label mt-4 text-[10px]">
                       ou pressione <span className="text-text-1">espaço</span>
                     </p>
@@ -639,20 +652,11 @@ export function CerimoniaCliente({ jogadores, times, problemas = [] }: Props) {
               {resultado && fase === 'fim' && (
                 <div className="mx-auto mt-6 max-w-2xl space-y-2">
                   {/* Projetado: confirma o equilíbrio sem mostrar estrelas. */}
-                  {!resultado.sorteio.toleranciaEstourada && (
+                  {resultado.violacoes.length === 0 && (
                     <HudCard barra={false} className="px-4 py-3">
                       <p className="hud-label mb-1 text-[10px]">Equilíbrio</p>
-                      <p className="text-sm">
-                        Times equilibrados dentro da tolerância definida pela organização.
-                      </p>
+                      <p className="text-sm">Todos os times com a mesma composição de níveis definida pela organização.</p>
                     </HudCard>
-                  )}
-
-                  {resultado.sorteio.toleranciaEstourada && (
-                    <Aviso cor="var(--error)" titulo="Tolerância não atingida">
-                      O melhor resultado encontrado ficou acima da tolerância. Reveja as estrelas do
-                      elenco ou sorteie de novo.
-                    </Aviso>
                   )}
 
                   {resultado.violacoes.map((v) => (

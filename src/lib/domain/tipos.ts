@@ -52,10 +52,6 @@ export interface Sorteio {
   goleirosReservaIds: string[];
   /** Times que ficaram sem goleiro por falta de goleiros no pote. */
   timesSemGoleiroIds: string[];
-  /** Diferenca final entre a maior e a menor soma de estrelas. */
-  amplitudeEstrelas: number;
-  /** true quando a tolerancia nao foi atingida em MAX_TENTATIVAS. */
-  toleranciaEstourada: boolean;
 }
 
 export interface ElencoDoTime {
