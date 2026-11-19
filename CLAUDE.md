@@ -318,7 +318,7 @@ Nunca introduza visual corporativo/SaaS genérico, biblioteca de componentes com
 
 ### 8.5 Rotas
 - Públicas: `/`, `/classificacao`, `/jogos`, `/jogos/[id]`, `/rankings`, `/equipes`, `/regulamento` mostram o **campeonato atual**: o mais recente em andamento; senão em inscrições; senão o último encerrado. Rascunho nunca é público. Histórico: `/edicoes` e `/edicoes/[slug]/…` (as mesmas telas, componentes em `src/components/paginas/`). Mais `/resultado/[payload]`.
-- Admin: `/admin`, `/admin/campeonatos`, `/admin/inscricoes`, `/admin/campeonato`, `/admin/fases`, `/admin/partidas`, `/admin/partidas/[id]`, `/admin/equipes`, `/admin/pagamentos`, `/admin/financeiro`, `/admin/admins`, `/admin/conta`, `/sorteio`, `/cerimonia`. Login em `/admin/entrar`.
+- Admin: `/admin`, `/admin/campeonatos`, `/admin/inscricoes`, `/admin/campeonato`, `/admin/fases`, `/admin/partidas`, `/admin/partidas/[id]`, `/admin/equipes`, `/admin/pagamentos`, `/admin/financeiro`, `/admin/artes`, `/admin/admins`, `/admin/conta`, `/sorteio`, `/cerimonia`. Login em `/admin/entrar`.
 
 ### 8.6 Modelo oficial "Copa Jumentus · 8 times · 34 jogos"
 Decisão do operador em 17/11/2026. Código em `lib/domain/campeonato/modelo.ts` (tabela e aplicação) e `chaveamento.ts` (participantes, trava e consistência), puro e testado.
@@ -348,6 +348,12 @@ Pedido do operador em 18/11/2026. Domínio em `lib/domain/campeonato/financeiro.
 Pedido do operador em 18/11/2026.
 - **`/regulamento`** (link no rodapé e no Início) é montado por `montarRegulamento(c)` (`lib/domain/campeonato/regulamento.ts`, puro e testado) a partir da configuração do campeonato atual: times, formato (modelo oficial ou fases do livre), tempos da programação, pontuação, ordem de desempate, mata-mata e cartões. Não é texto solto: mudar a pontuação, os critérios ou os tempos no admin muda o regulamento. Regra nova que não esteja no sistema entra aqui só por decisão do operador.
 - **Prévia no WhatsApp/redes:** `app/opengraph-image.jpg` (1200×630, banner do celular com o brasão na faixa de baixo) e Open Graph no `layout.tsx`, com `metadataBase` no domínio de produção.
+
+### 8.10 Artes do Instagram
+Pedido do operador em 19/11/2026: "o botão de gerar a arte já pronta, pra feed e story".
+- **Admin › Artes** gera três artes do campeonato em edição, em **feed 1080×1350** e **stories 1080×1920**: resultados de uma rodada (ou etapa do mata-mata: Repescagem, Semifinais, Finais), **artilharia** e **garçons** (assistências), top 8 com empatados dividindo a posição. Sem faixa de estatísticas (jogos, gols, média): o operador pediu para tirar.
+- Dados em `lib/domain/campeonato/artes.ts` (`blocosDeJogos`, `rankingArte`, puro e testado): placar do vencedor em dourado, pênaltis só no mata-mata empatado, jogo sem resultado com o horário, vaga aberta com a origem, cor do time por `fundoVisivel`.
+- Desenho em `components/admin/GeradorArtes.tsx`, **canvas 2D no navegador** (sem dependência), na grade do manual (margens 80, cabeçalho com brasão e rótulo, rodapé com filete dourado e @C.R.JUMENTUS; no stories, nada antes de y 250 nem depois de y 1580), com as fontes do site (`--font-*`) e os escudos oficiais. "Baixar PNG" e, no celular, "Compartilhar" (Web Share com arquivo).
 
 ---
 
