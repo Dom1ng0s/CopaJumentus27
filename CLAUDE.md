@@ -76,9 +76,9 @@ interface Time {
 
 ### 3.3 Sorteio de linha com composição idêntica
 
-Decisão do operador em 19/11/2026; substituiu a serpentina com tolerância de 2 estrelas. Todo time recebe **exatamente a mesma quantidade de jogadores de cada nível**. Com 8 times e 56 jogadores de linha: **1 de 6★, 1 de 5★, 1 de 4★, 2 de 3★, 1 de 2★, 1 de 1★** por time (24 estrelas cada).
+Decisão do operador em 19/11/2026; substituiu a serpentina com tolerância de 2 estrelas. Todo time recebe **exatamente a mesma quantidade de jogadores de cada nível**. Com 8 times e 56 jogadores de linha: **1 de 6★, 1 de 5★, 2 de 4★, 1 de 3★, 1 de 2★, 1 de 1★** por time (25 estrelas cada).
 
-**Cotas** (`lib/domain/cotas.ts`, `calcularCotas`, puro e testado), derivadas do cadastro (§3.6): vagas por time = jogadores de linha ÷ times; 1 vaga por nível e a sobra no `NIVEL_DUPLO` (`config.ts`, 3). Para esta edição: 6★ 8, 5★ 8, 4★ 8, 3★ 16, 2★ 8, 1★ 8. Total que não divide pelos times, ou nível com contagem diferente da cota, é pendência por nível ("3★: 14 de 16, faltam 2.") e **bloqueia o sorteio**.
+**Cotas** (`lib/domain/cotas.ts`, `calcularCotas`, puro e testado), derivadas do cadastro (§3.6): vagas por time = jogadores de linha ÷ times; 1 vaga por nível e a sobra no `NIVEL_DUPLO` (`config.ts`, **4**; decisão do operador em 19/11/2026, antes era 3). Para esta edição: 6★ 8, 5★ 8, 4★ 16, 3★ 8, 2★ 8, 1★ 8. Total que não divide pelos times, ou nível com contagem diferente da cota, é pendência por nível ("4★: 14 de 16, faltam 2.") e **bloqueia o sorteio**.
 
 Algoritmo (`lib/domain/sorteio.ts`):
 1. Validar as cotas. Se não fecharem, **não sortear**: `sortear` devolve `{ ok: false, pendencias }`.
@@ -105,7 +105,7 @@ Posição de linha (ZAG/MEI/ATA) não entra no sorteio: a inscrição marca só 
 
 ### 3.6 Configuração
 Constantes de regra ficam num único módulo (`src/lib/config.ts`), não espalhadas:
-`ESTRELAS_MIN = 1`, `ESTRELAS_MAX = 6`, `NIVEL_DUPLO = 3`. (`TOLERANCIA_ESTRELAS` e `MAX_TENTATIVAS` saíram em 19/11/2026 com a composição idêntica.)
+`ESTRELAS_MIN = 1`, `ESTRELAS_MAX = 6`, `NIVEL_DUPLO = 4`. (`TOLERANCIA_ESTRELAS` e `MAX_TENTATIVAS` saíram em 19/11/2026 com a composição idêntica.)
 Número de times e tamanho de elenco são **derivados do cadastro**, nunca hardcoded.
 
 ---
@@ -139,7 +139,7 @@ interface CopaRepo {
   - Colunas do CSV (cabeçalho, sem acento/caixa): `Nome`, `Apelido`, `Estrelas` (1–6), `Status` (só `Confirmado` entra) e, opcional, `Goleiro` (sim/x/1) — ou a antiga `Posição`, da qual só `GOL` importa (`lerGoleiro`). Sem as duas, todos são de linha. Uma coluna `Capitão do time` antiga é ignorada, e a coluna `inscricao.capitao_de` do banco ficou sem uso.
   - Os times do sorteio são as **equipes do campeonato em edição**, na ordem cadastrada (`carregarCadastro`).
   - Goleiro com `Estrelas` vazio recebe `ESTRELAS_MIN` (não conta no balanceamento, §3.2).
-  - Qualquer pendência (estrelas vazias em jogador de linha, nome repetido, menos de 2 equipes, **cota de estrelas aberta**) **bloqueia** o botão de sorteio. Na tela de sorteio e na cerimônia, a cota aberta aparece só como "As cotas de estrelas ainda não fecharam. Ajuste em Admin › Inscrições.", sem citar níveis; o contador por nível (6★ 8/8 … 3★ 14/16) fica em Admin › Inscrições.
+  - Qualquer pendência (estrelas vazias em jogador de linha, nome repetido, menos de 2 equipes, **cota de estrelas aberta**) **bloqueia** o botão de sorteio. Na tela de sorteio e na cerimônia, a cota aberta aparece só como "As cotas de estrelas ainda não fecharam. Ajuste em Admin › Inscrições.", sem citar níveis; o contador por nível (6★ 8/8 … 4★ 14/16) fica em Admin › Inscrições.
 - **`dados/` está no `.gitignore`** (exceto `dados/*.example.*`): lá fica o banco local (`dados/pglite`). Mantenha `dados/inscritos.example.csv` como referência de formato do CSV.
 - Nenhum componente de UI importa `localStorage`, `fs`, caminho de arquivo ou o cliente do banco direto. Tudo pelos módulos de `src/lib/repo/`.
 
