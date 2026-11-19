@@ -2,6 +2,8 @@ import Link from 'next/link';
 import { Aviso, Numero, Secao } from '@/components/campeonato/ui';
 import { MARCAS } from '@/lib/campeonato/marcas';
 import { idDoCampeonatoDoAdmin } from '@/lib/campeonato/selecao';
+import { calcularCotas } from '@/lib/domain/cotas';
+import { carregarCampeonato } from '@/lib/repo/campeonato-repo';
 import { listarInscricoes, paraLinhas } from '@/lib/repo/inscricoes-repo';
 import { interpretarInscricoes } from '@/lib/repo/planilha';
 import {
@@ -38,8 +40,12 @@ export default async function Inscricoes({
   searchParams: Promise<{ erro?: string; ok?: string; filtro?: string; q?: string }>;
 }) {
   const { erro, ok, filtro = '', q = '' } = await searchParams;
-  const inscricoes = await listarInscricoes(await idDoCampeonatoDoAdmin());
-  const cadastro = interpretarInscricoes(paraLinhas(inscricoes));
+  const campeonatoId = await idDoCampeonatoDoAdmin();
+  const inscricoes = await listarInscricoes(campeonatoId);
+  const { equipes } = await carregarCampeonato(campeonatoId);
+  const cadastro = interpretarInscricoes(paraLinhas(inscricoes), equipes.length ? equipes.map((e) => e.nome) : undefined);
+  // Cotas de estrelas (composição idêntica, 19/11/2026): o detalhe por nível só aparece aqui.
+  const cotas = calcularCotas(cadastro.jogadores, cadastro.times.length);
   const confirmados = inscricoes.filter((i) => i.status === 'confirmado');
   const goleiros = confirmados.filter((i) => i.posicao === 'GOL').length;
   const linha = confirmados.filter((i) => i.posicao !== 'GOL').length;
@@ -72,7 +78,7 @@ export default async function Inscricoes({
         </Link>
       </div>
       <p className="text-sm text-text-2">
-        Cadastro que alimenta o sorteio. As estrelas só aparecem aqui e no pote; nunca em página pública.
+        Cadastro que alimenta o sorteio. As estrelas só aparecem aqui: nunca na tela de sorteio, na cerimônia, no link de resultado ou em página pública.
       </p>
       <Aviso texto={erro} />
       <Aviso texto={ok} tipo="ok" />
@@ -83,6 +89,42 @@ export default async function Inscricoes({
         <Numero valor={`${goleiros}/${MARCAS.length}`} rotulo="Goleiros" />
         <Numero valor={linha} rotulo="Linha" />
       </div>
+
+      {inscricoes.length > 0 && (
+        <Secao titulo={cotas.fechou ? 'Cotas de estrelas · fechadas' : 'Cotas de estrelas · abertas'}>
+          <p className="mb-3 text-sm text-text-2">
+            Todo time recebe a mesma quantidade de cada nível: {cotas.vagasPorTime} jogadores de linha por time em {cotas.times} times.
+            Cada nível precisa ter exatamente o número abaixo. Enquanto alguma cota não fechar, o sorteio fica bloqueado.
+          </p>
+          <ul className="grid grid-cols-3 gap-2 sm:grid-cols-6">
+            {cotas.niveis.map((n) => {
+              const fechada = n.tem === n.necessario;
+              return (
+                <li
+                  key={n.nivel}
+                  className="border-l-[3px] bg-[var(--surface1)] px-3 py-2"
+                  style={{ borderColor: fechada ? 'var(--accent)' : 'var(--error)' }}
+                >
+                  <p className="hud-label !text-[11px]">
+                    {n.nivel}★ · {n.porTime} por time
+                  </p>
+                  <p className="numero text-2xl" style={{ color: fechada ? 'var(--text1)' : 'var(--error)' }}>
+                    {n.tem}/{n.necessario}
+                  </p>
+                  <p className="text-xs text-text-3">
+                    {fechada ? 'Fechada' : n.tem < n.necessario ? `Faltam ${n.necessario - n.tem}` : `Sobram ${n.tem - n.necessario}`}
+                  </p>
+                </li>
+              );
+            })}
+          </ul>
+          {cotas.jogadoresDeLinha % Math.max(1, cotas.times) !== 0 && (
+            <p className="mt-3 text-sm" style={{ color: 'var(--error)' }}>
+              {cotas.pendencias[0]}
+            </p>
+          )}
+        </Secao>
+      )}
 
       {inscricoes.length > 0 && cadastro.problemas.length > 0 && (
         <Secao titulo={`Pendências (${cadastro.problemas.length})`}>

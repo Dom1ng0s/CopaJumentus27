@@ -1,7 +1,6 @@
-// As invariantes de CLAUDE.md §3.3 como funcoes.
+// As invariantes de CLAUDE.md §3.3 como funcoes (composicao identica, 19/11/2026).
 // Toda invariante aqui tem teste. Nada e exibido ao operador sem passar por validarSorteio.
 
-import { TOLERANCIA_ESTRELAS } from '@/lib/config';
 import type { Alocacao, Jogador, Time } from './tipos';
 
 export interface Violacao {
@@ -78,26 +77,35 @@ export function validarSorteio({
     });
   }
 
-  // Invariante 2: diferenca de tamanho de elenco no maximo 1.
+  // Invariante 2: elencos do mesmo tamanho.
   const tamanhos = new Map<string, number>(times.map((t) => [t.id, 0]));
   for (const a of alocacoesLinha) {
     tamanhos.set(a.timeId, (tamanhos.get(a.timeId) ?? 0) + 1);
   }
   const valoresTamanho = [...tamanhos.values()];
-  const difTamanho = Math.max(...valoresTamanho) - Math.min(...valoresTamanho);
-  if (difTamanho > 1) {
+  const difTamanho = valoresTamanho.length ? Math.max(...valoresTamanho) - Math.min(...valoresTamanho) : 0;
+  if (difTamanho > 0) {
     violacoes.push({
       invariante: 2,
-      mensagem: `Elencos desequilibrados em tamanho: diferenca de ${difTamanho} jogadores`,
+      mensagem: `Elencos de tamanhos diferentes: diferenca de ${difTamanho} jogador(es)`,
     });
   }
 
-  // Invariante 3: amplitude de estrelas dentro da tolerancia.
+  // Invariante 3: mesma quantidade de cada nivel em todos os times (e, por isso,
+  // a mesma soma de estrelas). A mensagem nao cita jogadores.
+  const porId = new Map(jogadores.map((j) => [j.id, j]));
+  const niveis = [...new Set(pote.map((j) => j.estrelas))];
+  const niveisDiferentes = niveis.filter((nivel) => {
+    const contagens = times.map(
+      (t) => alocacoesLinha.filter((a) => a.timeId === t.id && porId.get(a.jogadorId)?.estrelas === nivel).length,
+    );
+    return Math.max(...contagens) !== Math.min(...contagens);
+  });
   const amp = amplitude(somasDeEstrelas(jogadores, times, alocacoesLinha));
-  if (amp > TOLERANCIA_ESTRELAS) {
+  if (niveisDiferentes.length > 0 || amp !== 0) {
     violacoes.push({
       invariante: 3,
-      mensagem: `Amplitude de estrelas ${amp} acima da tolerancia ${TOLERANCIA_ESTRELAS}`,
+      mensagem: 'Os times nao ficaram com a mesma composicao de niveis',
     });
   }
 

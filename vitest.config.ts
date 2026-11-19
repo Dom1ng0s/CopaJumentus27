@@ -7,6 +7,8 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url)),
     },
   },
+  // Testes que renderizam componentes (sem estrelas na tela de sorteio, 19/11/2026).
+  esbuild: { jsx: 'automatic' },
   test: {
     environment: 'node',
     include: ['src/**/*.test.ts'],

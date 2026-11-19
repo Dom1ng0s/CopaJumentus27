@@ -1,12 +1,12 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { EscudoPorNome, SeloCapitao } from '@/components/campeonato/ui';
-import { Estrelas } from '@/components/Estrelas';
 import { HudCard } from '@/components/HudCard';
-import { PoteInterativo } from '@/components/PoteInterativo';
+import { PoteInterativo, type InscritoDoPote } from '@/components/PoteInterativo';
 import { marcaPorNome } from '@/lib/campeonato/marcas';
 import { idDoCampeonatoDoAdmin } from '@/lib/campeonato/selecao';
-import { NOME_COMPETICAO, SUBTITULO_COMPETICAO, TOLERANCIA_ESTRELAS } from '@/lib/config';
+import { NOME_COMPETICAO, SUBTITULO_COMPETICAO } from '@/lib/config';
+import type { Jogador } from '@/lib/domain/tipos';
 import { poteDeGoleiros, poteDeLinha } from '@/lib/domain/validacao';
 import { carregarCadastro } from '@/lib/repo/cadastro';
 
@@ -18,8 +18,11 @@ export default async function PaginaPote() {
   const { jogadores, times, problemas, ignorados, origem } = await carregarCadastro(
     await idDoCampeonatoDoAdmin(),
   );
-  const pote = poteDeLinha(jogadores);
-  const goleiros = poteDeGoleiros(jogadores);
+  // Sem estrelas no que vai para a página (nem nos dados do cliente).
+  const semNivel = (j: Jogador): InscritoDoPote => ({ id: j.id, nome: j.nome, apelido: j.apelido, posicao: j.posicao });
+  const pote = poteDeLinha(jogadores).map(semNivel);
+  const goleiros = poteDeGoleiros(jogadores).map(semNivel);
+  const porTime = times.length > 0 ? pote.length / times.length : 0;
 
   return (
     <>
@@ -67,7 +70,7 @@ export default async function PaginaPote() {
           <p className="hud-label mb-5">Edição 2027 · Comissão organizadora</p>
 
           <p className="mx-auto max-w-xl text-sm leading-relaxed text-text-2 sm:text-base">
-            Sorteio balanceado por nível. {times.length} times começando do zero, um pote de{' '}
+            Sorteio com a mesma composição de níveis em todos os times. {times.length} times começando do zero, um pote de{' '}
             {pote.length} jogadores de linha e {goleiros.length} goleiros. Na cerimônia saem primeiro os goleiros e depois a
             linha, um por um, em ordem aleatória, sem mostrar estrelas.
           </p>
@@ -91,7 +94,7 @@ export default async function PaginaPote() {
           <Metrica rotulo="Times" valor={String(times.length)} cor="var(--text1)" />
           <Metrica rotulo="No pote" valor={String(pote.length)} cor="var(--text1)" />
           <Metrica rotulo="Goleiros" valor={String(goleiros.length)} cor="var(--text1)" />
-          <Metrica rotulo="Tolerância" valor={`±${TOLERANCIA_ESTRELAS}`} cor="var(--accent)" />
+          <Metrica rotulo="Linha por time" valor={Number.isInteger(porTime) ? String(porTime) : porTime.toFixed(1)} cor="var(--accent)" />
         </div>
       </section>
 

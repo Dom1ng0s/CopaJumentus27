@@ -22,7 +22,7 @@ Há **contas de admin**, só para a organização (decisão do operador em 17/11
 ### Fase 1 — Sorteio (escopo atual, único que deve ser implementado agora)
 1. Cadastro/edição do **elenco**: cada inscrito com nome, apelido, nível em estrelas e a marca **"Goleiro"** (decisão do operador em 18/11/2026: a posição de linha ZAG/MEI/ATA saiu da inscrição). O **número da camisa** não é pedido na inscrição: é lançado depois, em Admin › Equipes, quando os times estiverem montados.
 2. **Times**: são as equipes do campeonato e começam vazios. **Não há capitão fixo** (decisão do operador em 18/11/2026): depois do sorteio, cada time escolhe o seu capitão e um admin o registra em Admin › Equipes.
-3. **Sorteio balanceado** dos jogadores de linha entre os times.
+3. **Sorteio com composição idêntica** dos jogadores de linha entre os times (§3.3).
 4. **Sorteio separado de goleiros**: segunda etapa, 1 goleiro por time.
 5. **Cerimônia de revelação**: primeiro os goleiros, depois os jogadores de linha um por vez em ordem aleatória, sem estrelas na tela, controlada pelo operador. Cada revelação tem **dois botões** (decisão do operador em 18/11/2026): "Sortear jogador" roda uma roleta curta pelos nomes que ainda estão no pote da etapa e para no sorteado, mostrando só o nome; "Sortear time" passa uma roleta curta pelos times com vaga e mostra o destino, e só então o jogador entra no elenco. Depois vem o próximo. O time já está decidido pela divisão equilibrada (§3.3); o segundo botão revela, não decide.
 6. **Link de resultado estático**: ao fim, gerar uma URL compartilhável que renderiza os elencos finais sem precisar de backend.
@@ -71,25 +71,26 @@ interface Time {
 - Escala **1 a 6 estrelas**, atribuída manualmente pelo operador. 6 = craque, 1 = perna de pau.
 - Visualmente a escala usa o **Wanted System de 6 estrelas** do design system (ver §5). A escala de domínio e a escala visual são a mesma coisa de propósito — nunca converta nem reescale.
 - Todo time começa com **0 estrelas**: não há capitão pré-alocado.
+- As estrelas funcionam como **cotas** (decisão do operador em 19/11/2026): cada nível precisa ter um múltiplo do número de times (§3.3).
 - Estrelas do **goleiro NÃO contam** no balanceamento de linha (goleiro é sorteado em etapa separada, depois).
 
-### 3.3 Sorteio balanceado de jogadores de linha
+### 3.3 Sorteio de linha com composição idêntica
 
-Objetivo: distribuir todos os jogadores de linha (todos, exceto goleiros) entre os times de forma que **a soma de estrelas de cada time fique o mais próxima possível**, mantendo aleatoriedade real dentro das restrições.
+Decisão do operador em 19/11/2026; substituiu a serpentina com tolerância de 2 estrelas. Todo time recebe **exatamente a mesma quantidade de jogadores de cada nível**. Com 8 times e 56 jogadores de linha: **1 de 6★, 1 de 5★, 1 de 4★, 2 de 3★, 1 de 2★, 1 de 1★** por time (24 estrelas cada).
 
-Restrições obrigatórias (invariantes — valide-as antes de exibir qualquer resultado):
+**Cotas** (`lib/domain/cotas.ts`, `calcularCotas`, puro e testado), derivadas do cadastro (§3.6): vagas por time = jogadores de linha ÷ times; 1 vaga por nível e a sobra no `NIVEL_DUPLO` (`config.ts`, 3). Para esta edição: 6★ 8, 5★ 8, 4★ 8, 3★ 16, 2★ 8, 1★ 8. Total que não divide pelos times, ou nível com contagem diferente da cota, é pendência por nível ("3★: 14 de 16, faltam 2.") e **bloqueia o sorteio**.
+
+Algoritmo (`lib/domain/sorteio.ts`):
+1. Validar as cotas. Se não fecharem, **não sortear**: `sortear` devolve `{ ok: false, pendencias }`.
+2. Em cada nível, embaralhar (`random.ts`) e distribuir em blocos: cada time recebe as suas vagas daquele nível, em ordem de times também embaralhada. A aleatoriedade é quem cai em qual time.
+3. **Ordem de revelação aleatória** (decisão do operador em 18/11/2026): a divisão fica pronta ao clicar em Sortear, e a ordem em que a linha é revelada na cerimônia é embaralhada de novo. A plateia não vê os níveis saindo em sequência.
+
+Invariantes (`validacao.ts`, todas com teste; valide antes de exibir qualquer resultado):
 1. Todo jogador de linha é alocado a exatamente um time.
-2. O tamanho dos elencos é equilibrado: a diferença entre o maior e o menor elenco é no máximo 1 jogador.
-3. A diferença entre a maior e a menor soma de estrelas entre os times é no máximo **`TOLERANCIA_ESTRELAS` (default: 2)**.
+2. Elencos do mesmo tamanho.
+3. Contagem por nível idêntica em todos os times (e, por isso, soma de estrelas idêntica). A mensagem de violação não cita jogadores nem níveis.
 
-Algoritmo (serpentina aleatorizada — simples, explicável em voz alta na hora do sorteio):
-1. Agrupe os jogadores do pote por nível de estrelas (6, 5, 4, … 1).
-2. **Embaralhe dentro de cada grupo de estrelas** (a aleatoriedade vive aqui).
-3. Percorra os níveis do mais forte para o mais fraco, distribuindo em **ordem serpentina**, onde a ordem de cada passada é dada pela soma de estrelas atual crescente — time mais fraco recebe primeiro.
-4. Ao fim, valide as invariantes. Se a restrição 3 falhar, execute até `MAX_TENTATIVAS` (default: 200) novas tentativas com novo embaralhamento. Se ainda falhar, **mostre o melhor resultado encontrado e avise o operador explicitamente** que a tolerância não foi atingida — nunca falhe em silêncio nem relaxe a regra escondido.
-5. **Ordem de revelação aleatória** (decisão do operador em 18/11/2026): a divisão equilibrada fica pronta ao clicar em Sortear, e a ordem em que a linha é revelada na cerimônia é embaralhada de novo (`random.ts`). A plateia não vê os níveis saindo do mais forte para o mais fraco; os times de cada jogador não mudam. Testado em `sorteio.test.ts`.
-
-Balanceamento por posição é um **objetivo secundário** (sem efeito desde 18/11/2026, quando a inscrição passou a marcar só goleiro/linha; vale apenas para dados antigos com ZAG/MEI/ATA): distribua ZAG/MEI/ATA o mais uniformemente possível como critério de desempate entre tentativas válidas, mas nunca a ponto de violar as invariantes 1–3.
+Posição de linha (ZAG/MEI/ATA) não entra no sorteio: a inscrição marca só goleiro (18/11/2026).
 
 ### 3.4 Sorteio de goleiros
 - Etapa **separada**. Na cerimônia, os goleiros são revelados **primeiro**, antes da linha (decisão do operador em 18/11/2026); no cálculo continuam fora do balanceamento.
@@ -104,7 +105,7 @@ Balanceamento por posição é um **objetivo secundário** (sem efeito desde 18/
 
 ### 3.6 Configuração
 Constantes de regra ficam num único módulo (`src/lib/config.ts`), não espalhadas:
-`TOLERANCIA_ESTRELAS = 2`, `MAX_TENTATIVAS = 200`, `ESTRELAS_MIN = 1`, `ESTRELAS_MAX = 6`.
+`ESTRELAS_MIN = 1`, `ESTRELAS_MAX = 6`, `NIVEL_DUPLO = 3`. (`TOLERANCIA_ESTRELAS` e `MAX_TENTATIVAS` saíram em 19/11/2026 com a composição idêntica.)
 Número de times e tamanho de elenco são **derivados do cadastro**, nunca hardcoded.
 
 ---
@@ -137,7 +138,7 @@ interface CopaRepo {
   - Colunas do CSV (cabeçalho, sem acento/caixa): `Nome`, `Apelido`, `Estrelas` (1–6), `Status` (só `Confirmado` entra) e, opcional, `Goleiro` (sim/x/1) — ou a antiga `Posição`, da qual só `GOL` importa (`lerGoleiro`). Sem as duas, todos são de linha. Uma coluna `Capitão do time` antiga é ignorada, e a coluna `inscricao.capitao_de` do banco ficou sem uso.
   - Os times do sorteio são as **equipes do campeonato em edição**, na ordem cadastrada (`carregarCadastro`).
   - Goleiro com `Estrelas` vazio recebe `ESTRELAS_MIN` (não conta no balanceamento, §3.2).
-  - Qualquer pendência (estrelas vazias em jogador de linha, nome repetido, menos de 2 equipes) **bloqueia** o botão de sorteio.
+  - Qualquer pendência (estrelas vazias em jogador de linha, nome repetido, menos de 2 equipes, **cota de estrelas aberta**) **bloqueia** o botão de sorteio. Na tela de sorteio e na cerimônia, a cota aberta aparece só como "As cotas de estrelas ainda não fecharam. Ajuste em Admin › Inscrições.", sem citar níveis; o contador por nível (6★ 8/8 … 3★ 14/16) fica em Admin › Inscrições.
 - **`dados/` está no `.gitignore`** (exceto `dados/*.example.*`): lá fica o banco local (`dados/pglite`). Mantenha `dados/inscritos.example.csv` como referência de formato do CSV.
 - Nenhum componente de UI importa `localStorage`, `fs`, caminho de arquivo ou o cliente do banco direto. Tudo pelos módulos de `src/lib/repo/`.
 
@@ -162,7 +163,7 @@ A lógica de sorteio em `lib/domain` precisa ser testável sem renderizar nada. 
 ### 4.4 Link de resultado estático
 - O resultado é serializado e **codificado na própria URL** (JSON compacto → base64url), rota `/resultado/[payload]`.
 - A página de resultado é read-only: renderiza do payload, não lê `localStorage` nem repo.
-- Mantenha o payload enxuto: ids curtos, nomes, estrelas, times. Se a URL passar de ~2000 caracteres, avise e proponha alternativa (publicar página estática) em vez de truncar dados.
+- Mantenha o payload enxuto: nomes, posições e times. **Sem estrelas** desde 19/11/2026 (payload v2); links v1 antigos ainda abrem e as estrelas deles são descartadas na leitura (`decodificarResultado`). Se a URL passar de ~2000 caracteres, avise e proponha alternativa (publicar página estática) em vez de truncar dados.
 
 ### 4.5 Contas de admin
 
@@ -194,6 +195,7 @@ Tokens em `src/app/globals.css` (fonte única; o Tailwind só aponta para eles):
 - **Sem verde e sem azul fora dos times:** confirmação (`--success`) é dourada; goleiro (`--accent-armor`) é cinza concreto. `--text4` tem no mínimo 5:1 sobre as superfícies (leitura sob sol).
 - **Texto sobre cor de time:** nunca fixo em branco. `textoSobre(cor)` (`src/lib/campeonato/cores.ts`, testado) escolhe off-white ou marinho profundo pelo contraste WCAG (≥ 4,5:1 nas 16 cores do manual), e `fundoVisivel([...])` troca a cor que some no marinho (preto do LAFC, marinho do NYC) pela outra cor do time. Nome e número ficam sempre sobre marinho nos destaques (líder dos rankings: a cor do time vira barra de 6 px à esquerda).
 - **Navegação** (decisão do operador em 17/11/2026: "tire" o Admin do menu): o menu público tem Início, Tabela, Jogos, Rankings, Equipes e Edições (lista geral, mesmo dentro de uma edição antiga); no celular ele vira barra inferior fixa de 6 ícones. A área dos admins é um botão "Admin" (cadeado) no canto direito da barra de cima, em todas as telas (decisão do operador em 18/11/2026; antes ficava no rodapé), e tem menu próprio, numa linha que rola no celular. Admin, sorteio, cerimônia e resultado não mostram o menu público.
+- **Aba antiga após um deploy:** server action desconhecida (`UnrecognizedActionError`) no `app/error.tsx` recarrega a tela uma vez (`lib/atualizacao.ts`, testado; sem laço: no máximo uma recarga automática a cada 30 s) e `AvisoAtualizacao` mostra "O site foi atualizado. Recarregamos esta tela." em toast.
 - **Retorno de ação:** confirmação vira toast (`Toast`, some em 4,5 s e tira o `?ok=` da URL); erro continua fixo na página (`Aviso`). Telas carregando mostram esqueleto (`app/loading.tsx`); página inexistente e erro inesperado têm tela própria.
 - **Classificação:** posição em quadrado neutro; a zona é a faixa de 6 px à esquerda, o fundo levemente tingido e a linha tracejada de corte onde a zona muda. No celular só PTS, J e SG, sem rolagem lateral.
 - **Rankings:** empatados dividem a posição (1, 1, 3).
@@ -235,7 +237,7 @@ Ficam em `public/imagens/` (logo oficial, kits, escudos, artes), descritas em `p
 A página de resultado **não** usa o banner: ela é consumida no celular, onde 4:1 fica pequeno demais. Lá o título é o wordmark SVG, que escala melhor em retrato.
 
 Pontos de amarração entre domínio e design:
-- **Nível do jogador → 6 estrelas.** Mesma escala do domínio, sem conversão. Estrelas só em telas de admin que não vão para o projetor (pote em `/sorteio`, inscrições); a cerimônia não mostra estrelas em lugar nenhum (decisão do operador em 18/11/2026).
+- **Nível do jogador → 6 estrelas.** Mesma escala do domínio, sem conversão. Estrelas **só em Admin › Inscrições**, onde são atribuídas (operador, 19/11/2026: "não deve mostrar em hipótese alguma as estrelas de cada jogador na tela de sorteio"). O pote de `/sorteio` é alfabético e nem recebe as estrelas nos dados da página; a cerimônia e o link de resultado também não mostram. Teste de renderização em `components/sem-estrelas.test.ts`.
 - **Cards de jogador e de time → módulos de transmissão** (`.hud-card`), com canto cortado e filete dourado na base.
 - **Botão de sortear e de revelar próximo → botão principal** dourado metálico, com a ponta cortada a 45°.
 - **Cerimônia de revelação** usa as transições snappy (140–320ms, `cubic-bezier(0.16, 1, 0.3, 1)`) e o selection flash. O suspense vem do **ritmo controlado pelo operador**, não de animação lenta: cada revelação é rápida; quem controla a pausa é o clique.
@@ -312,7 +314,7 @@ Nunca introduza visual corporativo/SaaS genérico, biblioteca de componentes com
 - **Inscrições** são de cada campeonato (`inscricao.campeonato_id`).
 - No fim da cerimônia, **"Oficializar no campeonato"** grava os elencos (goleiro e linha) nas equipes do campeonato em edição, **sem capitão**: cada time escolhe o seu e um admin registra em Admin › Equipes. É bloqueado se já houver súmula preenchida. O pagamento de quem já estava cadastrado (pelo nome) é preservado.
 - **Pagamentos** (pago/pendente por jogador, valor da inscrição) só aparecem em `/admin/pagamentos`.
-- **Estrelas nunca aparecem em página pública.** O pote foi para `/sorteio`, protegido.
+- **Estrelas nunca aparecem em página pública** nem na tela de sorteio (§5).
 
 ### 8.5 Rotas
 - Públicas: `/`, `/classificacao`, `/jogos`, `/jogos/[id]`, `/rankings`, `/equipes`, `/regulamento` mostram o **campeonato atual**: o mais recente em andamento; senão em inscrições; senão o último encerrado. Rascunho nunca é público. Histórico: `/edicoes` e `/edicoes/[slug]/…` (as mesmas telas, componentes em `src/components/paginas/`). Mais `/resultado/[payload]`.

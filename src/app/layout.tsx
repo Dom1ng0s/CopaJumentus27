@@ -1,3 +1,4 @@
+import { AvisoAtualizacao } from '@/components/AvisoAtualizacao';
 import type { Metadata } from 'next';
 import { Anton, Barlow, Barlow_Condensed } from 'next/font/google';
 import localFont from 'next/font/local';
@@ -49,6 +50,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         {/* 58 px = barra (56) + filete (2). O espaço de respiro fica com cada tela. */}
         <main className="pt-[58px]">{children}</main>
         <Rodape />
+        <AvisoAtualizacao />
       </body>
     </html>
   );

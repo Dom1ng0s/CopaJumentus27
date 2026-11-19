@@ -2,16 +2,22 @@
 
 import { useMemo, useState } from 'react';
 import { IconeLuva } from '@/components/campeonato/ui';
-import { Estrelas } from '@/components/Estrelas';
 import { HudCard } from '@/components/HudCard';
-import { rotuloPosicao, type Estrelas as NivelEstrelas, type Jogador, type Posicao } from '@/lib/domain/tipos';
+import { rotuloPosicao, type Jogador, type Posicao } from '@/lib/domain/tipos';
+
+/**
+ * Inscrito como aparece no pote: sem estrelas. A tela de sorteio nunca mostra o
+ * nível de ninguém (pedido do operador em 19/11/2026), nem nos dados da página.
+ */
+export type InscritoDoPote = Pick<Jogador, 'id' | 'nome' | 'apelido' | 'posicao'>;
 
 interface Props {
-  pote: Jogador[];
-  goleiros: Jogador[];
+  pote: InscritoDoPote[];
+  goleiros: InscritoDoPote[];
 }
 
-const NIVEIS = [6, 5, 4, 3, 2, 1] as const;
+const porNome = (a: InscritoDoPote, b: InscritoDoPote) =>
+  (a.apelido ?? a.nome).localeCompare(b.apelido ?? b.nome, 'pt-BR');
 const POSICOES: Array<{ valor: 'TODOS' | Posicao; rotulo: string }> = [
   { valor: 'TODOS', rotulo: 'Todos' },
   { valor: 'LIN', rotulo: 'Linha' },
@@ -26,25 +32,29 @@ export function PoteInterativo({ pote, goleiros }: Props) {
 
   const poteFiltrado = useMemo(() => {
     if (posicaoFiltro === 'GOL') return [];
-    return pote.filter((j) => {
-      // "Linha" mostra todo o pote (inclui dados antigos com ZAG/MEI/ATA).
-      if (!termo) return true;
-      return (
-        j.nome.toLowerCase().includes(termo) ||
-        (j.apelido && j.apelido.toLowerCase().includes(termo))
-      );
-    });
+    return pote
+      .filter((j) => {
+        // "Linha" mostra todo o pote (inclui dados antigos com ZAG/MEI/ATA).
+        if (!termo) return true;
+        return (
+          j.nome.toLowerCase().includes(termo) ||
+          (j.apelido && j.apelido.toLowerCase().includes(termo))
+        );
+      })
+      .sort(porNome);
   }, [pote, posicaoFiltro, termo]);
 
   const goleirosFiltrados = useMemo(() => {
     if (posicaoFiltro !== 'TODOS' && posicaoFiltro !== 'GOL') return [];
-    return goleiros.filter((g) => {
-      if (!termo) return true;
-      return (
-        g.nome.toLowerCase().includes(termo) ||
-        (g.apelido && g.apelido.toLowerCase().includes(termo))
-      );
-    });
+    return goleiros
+      .filter((g) => {
+        if (!termo) return true;
+        return (
+          g.nome.toLowerCase().includes(termo) ||
+          (g.apelido && g.apelido.toLowerCase().includes(termo))
+        );
+      })
+      .sort(porNome);
   }, [goleiros, posicaoFiltro, termo]);
 
   const totalExibido = poteFiltrado.length + goleirosFiltrados.length;
@@ -115,29 +125,12 @@ export function PoteInterativo({ pote, goleiros }: Props) {
         </HudCard>
       )}
 
-      {/* Jogadores de linha agrupados por nivel de estrela */}
+      {/* Jogadores de linha em ordem alfabética, sem nível */}
       {poteFiltrado.length > 0 && (
-        <div className="space-y-6">
-          {NIVEIS.map((nivel) => {
-            const doNivel = poteFiltrado.filter((j) => j.estrelas === nivel);
-            if (doNivel.length === 0) return null;
-            return (
-              <div key={nivel}>
-                <div className="mb-3 flex items-center gap-3">
-                  <Estrelas nivel={nivel} tamanho={14} pulsar={false} />
-                  <span className="font-mono text-xs font-bold uppercase tracking-wider text-text-2">
-                    {doNivel.length} jogador{doNivel.length > 1 ? 'es' : ''}
-                  </span>
-                  <div className="halftone h-[8px] flex-1 opacity-60" />
-                </div>
-                <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
-                  {doNivel.map((j) => (
-                    <FichaPote key={j.id} jogador={j} />
-                  ))}
-                </div>
-              </div>
-            );
-          })}
+        <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
+          {poteFiltrado.map((j) => (
+            <FichaPote key={j.id} jogador={j} />
+          ))}
         </div>
       )}
 
@@ -147,7 +140,7 @@ export function PoteInterativo({ pote, goleiros }: Props) {
           <div className="mb-5">
             <h3 className="titulo-hero text-3xl sm:text-4xl">Goleiros</h3>
             <p className="mt-1 text-sm text-text-2">
-              Sorteio separado, 1 por time — estrelas não contam no balanceamento
+              Sorteio separado, 1 por time
             </p>
           </div>
           <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
@@ -161,7 +154,7 @@ export function PoteInterativo({ pote, goleiros }: Props) {
   );
 }
 
-function FichaPote({ jogador, armor = false }: { jogador: Jogador; armor?: boolean }) {
+function FichaPote({ jogador, armor = false }: { jogador: InscritoDoPote; armor?: boolean }) {
   const temApelidoDistinto = Boolean(jogador.apelido && jogador.apelido !== jogador.nome);
 
   return (
@@ -178,7 +171,6 @@ function FichaPote({ jogador, armor = false }: { jogador: Jogador; armor?: boole
           {[rotuloPosicao(jogador.posicao), temApelidoDistinto ? jogador.nome : ''].filter(Boolean).join(' · ')}
         </p>
       </div>
-      <Estrelas nivel={jogador.estrelas as NivelEstrelas} tamanho={11} pulsar={false} />
     </HudCard>
   );
 }
