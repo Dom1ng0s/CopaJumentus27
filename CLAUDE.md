@@ -117,6 +117,7 @@ Número de times e tamanho de elenco são **derivados do cadastro**, nunca hardc
 - **Postgres com Drizzle ORM** (§9): Neon em produção (Vercel), PGlite (Postgres em WebAssembly, arquivo local) em desenvolvimento. Decisão do operador em 17/11/2026.
 - **Contas de admin** (tabela `admin`, §9), detalhes em §4.5. `src/middleware.ts` protege `/admin`, `/sorteio` e `/cerimonia` conferindo só o cookie; cada server action e cada layout do admin passam por `exigirAdmin()`, que confere a conta no banco.
 - Testes: **Vitest** — obrigatórios para a camada de domínio (§4.3).
+- **Ponta a ponta: Playwright** (pedido do operador em 19/11/2026: "um script de automação que abre o site e testa todas as funcionalidades"). `e2e/publico.spec.ts` (páginas públicas, só leitura, desktop e celular) e `e2e/admin.spec.ts` (fluxo completo do admin, em ordem). `npm run e2e` sobe o `next dev` com `PGLITE_PASTA=dados/e2e-pglite` e `DATABASE_URL` vazia (`e2e/preparar.mjs` apaga o banco e cria a conta `e2e` com troca obrigatória); `npm run e2e:producao` roda só o público contra o site no ar. O fluxo do admin **nunca** roda em produção. Mudou uma tela coberta, atualize o teste na mesma mudança.
 
 ### 4.2 Camada de dados — trocável de propósito
 A decisão de persistência foi **adiada**. Portanto toda leitura/escrita passa por uma interface única:
